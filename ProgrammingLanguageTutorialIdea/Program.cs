@@ -21,28 +21,36 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		public static void Main (String[] args) {
 			
-			Console.WriteLine(Marshal.SizeOf(typeof(PEHeader)));
+			Parser psr=new Parser();
 			
-			UInt32 memAddress=0x004001000;
+			const String outputFilename="thing.exe",sourceFilename="source.txt";
 			
-			List<Byte> opcodes=new List<Byte>(),importOpcodes=null,finalBytes=new List<Byte>();
-			opcodes.Add(0xC3);
-			++memAddress;
-			
-			Console.WriteLine(memAddress.ToString("X"));
-			PEHeader hdr=PEHeaderFactory.newHdr(opcodes,importOpcodes,memAddress,0);
-			
-			while(opcodes.Count%512!=0)
-				opcodes.Add(0);
-			
-			finalBytes.AddRange(hdr.toBytes());
-			finalBytes.AddRange(opcodes);
-			if (importOpcodes!=null)
-				finalBytes.AddRange(importOpcodes);
-			
-			const String outputFilename="thing.exe";
-			
-			File.WriteAllBytes(outputFilename,finalBytes.ToArray());
+			try {
+				File.WriteAllBytes(outputFilename,psr.parse(File.ReadAllText(sourceFilename)));
+			}
+			catch (ParsingError ex) {
+				
+				#if DEBUG
+				Console.WriteLine("Error compiling: "+ex.ToString());
+				#else
+				Console.WriteLine("There was an error in your code: "+ex.Message);
+				#endif
+				
+			}
+			catch (IOException ex) {
+				
+				#if DEBUG
+				Console.WriteLine("Error compiling: "+ex.ToString());
+				#else
+				Console.WriteLine("There was an error writing to the file: "+ex.Message);
+				#endif
+				
+			}
+			catch (Exception ex) {
+				
+				Console.WriteLine("Unexpected exception: "+ex.ToString());
+				
+			}
 			
 			UInt32 checkSum;
 			Program.MapFileAndCheckSum(outputFilename,out checkSum,out checkSum);
@@ -53,7 +61,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 			}
 			
-			halt:goto halt;
+			Console.WriteLine("\n\nDone compiling,\nSource file: "+sourceFilename+"\nOutput file: "+outputFilename+"\nChecksum: "+checkSum.ToString("X")+'\n');
 			
 		}
 		

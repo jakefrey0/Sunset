@@ -60,13 +60,23 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Keywords\Keyword.cs" />
+    <Compile Include="Keywords\KeywordResult.cs" />
+    <Compile Include="Keywords\KeywordMgr.cs" />
+    <Compile Include="Keywords\KWByte.cs" />
     <Compile Include="Machine.cs" />
+    <Compile Include="Parser.cs" />
+    <Compile Include="ParsingError.cs" />
+    <Compile Include="ParsingStatus.cs" />
     <Compile Include="PEHeader.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Keywords" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

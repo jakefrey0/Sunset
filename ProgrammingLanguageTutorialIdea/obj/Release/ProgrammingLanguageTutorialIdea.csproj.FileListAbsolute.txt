@@ -1,0 +1,4 @@
+C:\Users\Elite\Documents\SharpDevelop Projects\ProgrammingLanguageTutorialIdea\ProgrammingLanguageTutorialIdea\bin\Release\ProgrammingLanguageTutorialIdea.exe.config
+C:\Users\Elite\Documents\SharpDevelop Projects\ProgrammingLanguageTutorialIdea\ProgrammingLanguageTutorialIdea\bin\Release\ProgrammingLanguageTutorialIdea.exe
+C:\Users\Elite\Documents\SharpDevelop Projects\ProgrammingLanguageTutorialIdea\ProgrammingLanguageTutorialIdea\obj\Release\ProgrammingLanguageTutorialIdea.csprojResolveAssemblyReference.cache
+C:\Users\Elite\Documents\SharpDevelop Projects\ProgrammingLanguageTutorialIdea\ProgrammingLanguageTutorialIdea\obj\Release\ProgrammingLanguageTutorialIdea.exe
