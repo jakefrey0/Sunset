@@ -12,7 +12,9 @@ namespace ProgrammingLanguageTutorialIdea {
 	
 	public enum ParsingStatus {
 		
-		SEARCHING_NAME,READING_NAME
+		SEARCHING_NAME,READING_NAME,
+		SEARCHING_VARIABLE_NAME,READING_VARIABLE_NAME,
+		SEARCHING_VALUE,READING_VALUE
 		
 	}
 	

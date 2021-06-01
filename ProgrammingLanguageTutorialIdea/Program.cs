@@ -61,7 +61,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 			}
 			
-			Console.WriteLine("\n\nDone compiling,\nSource file: "+sourceFilename+"\nOutput file: "+outputFilename+"\nChecksum: "+checkSum.ToString("X")+'\n');
+			Console.WriteLine("\n\nDone compiling,\nSource file: "+sourceFilename+"\nOutput file: "+outputFilename+"\nChecksum: "+checkSum.ToString("X")+"\nAt: "+DateTime.Now.ToString()+'\n');
 			
 		}
 		

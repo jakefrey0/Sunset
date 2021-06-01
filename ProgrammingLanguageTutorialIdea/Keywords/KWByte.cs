@@ -12,11 +12,14 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 	
 	public class KWByte : Keyword {
 		
-		public KWByte () : base ("byte") { }
+		public const String constName="byte";
 		
-		public override KeywordResult execute () {
+		public KWByte () : base (constName) { }
+		
+		override public KeywordResult execute (Parser sender) {
 			
-			return new KeywordResult(){newStatus=ParsingStatus.SEARCHING_NAME,newOpcodes=new Byte[]{0xCC}};
+			sender.varType=this.name;
+			return new KeywordResult(){newStatus=ParsingStatus.SEARCHING_VARIABLE_NAME,newOpcodes=new Byte[0]};
 			
 		}
 		

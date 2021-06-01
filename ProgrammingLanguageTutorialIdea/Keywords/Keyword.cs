@@ -22,7 +22,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			
 		}
 		
-		public virtual KeywordResult execute () {
+		public virtual KeywordResult execute (Parser sender) {
 			
 			return new KeywordResult(){newStatus=ParsingStatus.SEARCHING_NAME,newOpcodes=new Byte[0]};
 			

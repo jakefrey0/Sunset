@@ -19,7 +19,10 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			
 			this.keywords=new List<Keyword>(new Keyword[] {
 			                       	
-			                       	new KWByte()
+			                       	new KWByte(),
+			                       	new KWBecomes(),
+			                       	new KWIncrease(),
+			                       	new KWDecrease()
 			                       	
 			                       });
 			
