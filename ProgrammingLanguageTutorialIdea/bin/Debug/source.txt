@@ -1,15 +1,20 @@
-byte myByte becomes 17
+shr myShort becomes 61235
+
+myShort becomes 257
+
+myShort++
+
+myShort--
+
+byte myByte becomes 255
 
 myByte++
 
-myByte ++
-
 myByte --
 
-myByte--
+int myInt becomes 70000
 
-byte otherByte
-
-++otherByte
-
---otherByte
+myInt++
+myInt--
+--myInt
+++myInt

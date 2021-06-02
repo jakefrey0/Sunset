@@ -21,9 +21,32 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			if (String.IsNullOrEmpty(sender.lastReferencedVariable))
 				throw new ParsingError("Invalid use of \""+constName+"\", no referenced variable found");
 			
-			sender.variableReferences[sender.lastReferencedVariable].Add(sender.getOpcodesCount()+2);
+			Byte[] newOpcodes=new Byte[0];
+			String varType=sender.getVariablesType(sender.lastReferencedVariable);
 			
-			return new KeywordResult(){newStatus=ParsingStatus.SEARCHING_NAME,newOpcodes=new Byte[]{0xFE,5,0,0,0,0}};
+			//HACK:: check variable type
+			if (varType==KWByte.constName) {
+				
+				sender.variableReferences[sender.lastReferencedVariable].Add(sender.getOpcodesCount()+2);
+				newOpcodes=new Byte[]{0xFE,5,0,0,0,0};
+				
+			}
+			else if (varType==KWShort.constName) {
+				
+				sender.variableReferences[sender.lastReferencedVariable].Add(sender.getOpcodesCount()+3);
+				newOpcodes=new Byte[]{0x66,0xFF,5,0,0,0,0};
+				
+				
+			}
+			else if (varType==KWInteger.constName) {
+				
+				sender.variableReferences[sender.lastReferencedVariable].Add(sender.getOpcodesCount()+2);
+				newOpcodes=new Byte[]{0xFF,5,0,0,0,0};
+				
+				
+			}
+			
+			return new KeywordResult(){newStatus=ParsingStatus.SEARCHING_NAME,newOpcodes=newOpcodes};
 			
 		}
 		

@@ -230,13 +230,25 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		private void registerVariable (String varName) {
 			
-			Console.WriteLine("Regestering variable "+varName+", memAddress: "+memAddress.ToString("X"));
+			Console.WriteLine("Regestering variable "+varName+" (a type of"+this.varType+"), memAddress: "+memAddress.ToString("X"));
+		
+			this.variables.Add(varName,new Tuple<UInt32,String>(memAddress+(UInt32)appendAfter.Count,this.varType));
+			this.variableReferences.Add(varName,new List<UInt32>());
 			
+			//HACK:: check variable type
 			if (this.varType==KWByte.constName) {
 				
-				this.variables.Add(varName,new Tuple<UInt32,String>(memAddress+(UInt32)appendAfter.Count,KWByte.constName));
-				this.variableReferences.Add(varName,new List<UInt32>());
 				this.appendAfter.Add(0);
+				
+			}
+			else if (this.varType==KWShort.constName) {
+				
+				this.appendAfter.AddRange(new Byte[2]);
+				
+			}
+			else if (this.varType==KWInteger.constName) {
+				
+				this.appendAfter.AddRange(new Byte[4]);
 				
 			}
 			
@@ -247,13 +259,35 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		private void processValue (String value) {
 			
-			if (this.variables[this.referencedVariable].Item2==KWByte.constName) {
+			String type=this.variables[this.referencedVariable].Item2;
+			
+			//HACK:: check variable type
+			if (type==KWByte.constName) {
 				
 				Byte num;
 				if (!(Byte.TryParse(value,out num)))
 					throw new ParsingError("Expected a number 0-255, got \""+value+'"');
 				
 				this.addByte(num);
+				
+			}
+			else if (type==KWShort.constName) {
+				
+				UInt16 num;
+				if (!(UInt16.TryParse(value,out num)))
+					throw new ParsingError("Expected a number 0-65535, got \""+value+'"');
+				
+				this.addBytes(BitConverter.GetBytes(num));
+				
+			}
+			
+			else if (type==KWInteger.constName) {
+				
+				UInt32 num;
+				if (!(UInt32.TryParse(value,out num)))
+				    throw new ParsingError("Expected a number 0-4294967295, got \""+value+'"');
+				    
+				this.addBytes(BitConverter.GetBytes(num));
 				
 			}
 			
@@ -282,6 +316,12 @@ namespace ProgrammingLanguageTutorialIdea {
 		}
 		
 		internal UInt32 getOpcodesCount () { return (UInt32)this.opcodes.Count; }
+		
+		internal String getVariablesType (String varName) {
+			
+			return this.variables[varName].Item2;
+			
+		}
 		
 		private Boolean isFormOfBlankspace (Char c) {
 			

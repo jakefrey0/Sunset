@@ -22,7 +22,9 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			                       	new KWByte(),
 			                       	new KWBecomes(),
 			                       	new KWIncrease(),
-			                       	new KWDecrease()
+			                       	new KWDecrease(),
+			                       	new KWShort(),
+			                       	new KWInteger()
 			                       	
 			                       });
 			

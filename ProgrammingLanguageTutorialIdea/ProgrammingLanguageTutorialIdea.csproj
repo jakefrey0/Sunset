@@ -67,6 +67,8 @@
     <Compile Include="Keywords\KWByte.cs" />
     <Compile Include="Keywords\KWDecrease.cs" />
     <Compile Include="Keywords\KWIncrease.cs" />
+    <Compile Include="Keywords\KWInteger.cs" />
+    <Compile Include="Keywords\KWShort.cs" />
     <Compile Include="Machine.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="ParsingError.cs" />
