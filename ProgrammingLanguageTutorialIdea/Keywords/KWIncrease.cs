@@ -45,6 +45,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				
 				
 			}
+			else throw new ParsingError("Can't increase variable type \""+varType+'"');
 			
 			return new KeywordResult(){newStatus=ParsingStatus.SEARCHING_NAME,newOpcodes=newOpcodes};
 			

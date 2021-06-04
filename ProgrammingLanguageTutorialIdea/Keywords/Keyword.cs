@@ -14,11 +14,14 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		
 		public readonly String name;
 		public readonly Boolean hasParameters;
+		public Byte[] bytes;
 		
 		public Keyword (String name,Boolean hasParameters=false) { 
 			
 			this.name=name; 
 			this.hasParameters=hasParameters;
+			Int32 i=1632;
+			bytes= new Byte[i];
 			
 		}
 		

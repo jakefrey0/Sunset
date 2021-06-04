@@ -21,6 +21,8 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		public static void Main (String[] args) {
 			
+			//HACK:: notice, things like dynamic heap allocation won't work on non windows systems etc... this could be redone later or maybe in code
+			
 			Parser psr=new Parser();
 			
 			const String outputFilename="thing.exe",sourceFilename="source.txt";

@@ -22,10 +22,14 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				throw new ParsingError("Invalid use of \""+constName+"\", no referenced variable found");
 			
 			sender.referencedVariable=sender.lastReferencedVariable;
+			sender.referencingArray=sender.lastVariableReferencingArray;
 			
 			Byte[] newOpcodes=new Byte[0];
 			
 			//HACK:: check variable type
+			if (sender.referencingArray)
+				return new KeywordResult(){newStatus=ParsingStatus.SEARCHING_VALUE,newOpcodes=newOpcodes};
+			
 			if (sender.varType==KWByte.constName) {
 				sender.variableReferences[sender.referencedVariable].Add(sender.getOpcodesCount()+2);
 				newOpcodes=new Byte[]{0xC6,5,0,0,0,0};

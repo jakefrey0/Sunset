@@ -1,20 +1,7 @@
-shr myShort becomes 61235
+shr someValue becomes 65535
 
-myShort becomes 257
+byte# testArray becomes #16
 
-myShort++
+crash
 
-myShort--
-
-byte myByte becomes 255
-
-myByte++
-
-myByte --
-
-int myInt becomes 70000
-
-myInt++
-myInt--
---myInt
-++myInt
+shr testValue becomes 65535 

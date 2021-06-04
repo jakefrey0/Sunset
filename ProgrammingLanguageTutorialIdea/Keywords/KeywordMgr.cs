@@ -24,7 +24,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			                       	new KWIncrease(),
 			                       	new KWDecrease(),
 			                       	new KWShort(),
-			                       	new KWInteger()
+			                       	new KWInteger(),
+			                       	new KWCrash()
 			                       	
 			                       });
 			
@@ -34,6 +35,21 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		public Keyword[] getKeywords () {
 			
 			return keywords.ToArray();
+			
+		}
+		
+		public UInt32 getVarTypeByteSize (String varType) {
+			
+			//HACK:: check variable type
+			//classes should return 4 because they are ptrs
+			if (varType==KWByte.constName)
+				return 1;
+			else if (varType==KWShort.constName)
+				return 2;
+			else if (varType==KWInteger.constName)
+				return 4;
+			else
+				throw new Exception("(DEV) Invalid var type \""+varType+'"');
 			
 		}
 		
