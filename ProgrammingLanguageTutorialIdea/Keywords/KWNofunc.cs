@@ -10,15 +10,15 @@ using System;
 
 namespace ProgrammingLanguageTutorialIdea.Keywords {
 	
-	public class KWCrash : Keyword {
+	public class KWNofunc : Keyword {
 		
-		public const String constName="crash";
+		public const String constName="nofunct";
 		
-		public KWCrash () : base (constName,KeywordType.NATIVE_CALL) { }
+		public KWNofunc () : base (constName,KeywordType.NATIVE_CALL) { }
 		
 		public override KeywordResult execute (Parser sender) {
 			
-			return new KeywordResult(){newOpcodes=new Byte[]{0xCC},newStatus= ParsingStatus.SEARCHING_NAME};
+			return new KeywordResult(){newOpcodes=new Byte[]{0x90},newStatus= ParsingStatus.SEARCHING_NAME};
 			
 		}
 		

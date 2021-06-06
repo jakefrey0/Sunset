@@ -14,7 +14,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		
 		public const String constName="becomes";
 		
-		public KWBecomes () : base (constName) { }
+		public KWBecomes () : base (constName,KeywordType.ASSIGNMENT) { }
 		
 		override public KeywordResult execute (Parser sender) {
 			
@@ -22,12 +22,14 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				throw new ParsingError("Invalid use of \""+constName+"\", no referenced variable found");
 			
 			sender.referencedVariable=sender.lastReferencedVariable;
-			sender.referencingArray=sender.lastVariableReferencingArray;
+			sender.referencedVarType=sender.lastReferencedVarType;
 			
 			Byte[] newOpcodes=new Byte[0];
 			
 			//HACK:: check variable type
-			if (sender.referencingArray)
+			if (sender.referencedVarType==VarType.NATIVE_ARRAY)
+				return new KeywordResult(){newStatus=ParsingStatus.SEARCHING_VALUE,newOpcodes=newOpcodes};
+			else if (sender.referencedVarType==VarType.NATIVE_ARRAY_INDEXER)
 				return new KeywordResult(){newStatus=ParsingStatus.SEARCHING_VALUE,newOpcodes=newOpcodes};
 			
 			if (sender.varType==KWByte.constName) {

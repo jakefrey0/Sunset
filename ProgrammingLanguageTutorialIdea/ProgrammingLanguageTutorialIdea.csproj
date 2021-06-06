@@ -64,12 +64,14 @@
     <Compile Include="Keywords\Keyword.cs" />
     <Compile Include="Keywords\KeywordResult.cs" />
     <Compile Include="Keywords\KeywordMgr.cs" />
+    <Compile Include="Keywords\KeywordType.cs" />
     <Compile Include="Keywords\KWBecomes.cs" />
     <Compile Include="Keywords\KWByte.cs" />
     <Compile Include="Keywords\KWCrash.cs" />
     <Compile Include="Keywords\KWDecrease.cs" />
     <Compile Include="Keywords\KWIncrease.cs" />
     <Compile Include="Keywords\KWInteger.cs" />
+    <Compile Include="Keywords\KWNofunc.cs" />
     <Compile Include="Keywords\KWShort.cs" />
     <Compile Include="Machine.cs" />
     <Compile Include="Parser.cs" />
@@ -78,6 +80,7 @@
     <Compile Include="PEHeader.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="VarType.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

@@ -14,7 +14,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		
 		public const String constName="byte";
 		
-		public KWByte () : base (constName) { }
+		public KWByte () : base (constName,KeywordType.TYPE) { }
 		
 		override public KeywordResult execute (Parser sender) {
 			

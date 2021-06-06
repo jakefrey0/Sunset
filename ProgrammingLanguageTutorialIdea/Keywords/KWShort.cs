@@ -14,7 +14,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		
 		public const String constName="shr";
 		
-		public KWShort () : base (constName) { }
+		public KWShort () : base (constName,KeywordType.TYPE) { }
 		
 		override public KeywordResult execute (Parser sender) {
 			

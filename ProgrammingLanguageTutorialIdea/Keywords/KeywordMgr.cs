@@ -25,7 +25,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			                       	new KWDecrease(),
 			                       	new KWShort(),
 			                       	new KWInteger(),
-			                       	new KWCrash()
+			                       	new KWCrash(),
+			                       	new KWNofunc()
 			                       	
 			                       });
 			

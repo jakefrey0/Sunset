@@ -37,6 +37,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				#else
 				Console.WriteLine("There was an error in your code: "+ex.Message);
 				#endif
+				return;
 				
 			}
 			catch (IOException ex) {
@@ -46,11 +47,13 @@ namespace ProgrammingLanguageTutorialIdea {
 				#else
 				Console.WriteLine("There was an error writing to the file: "+ex.Message);
 				#endif
+				return;
 				
 			}
 			catch (Exception ex) {
 				
 				Console.WriteLine("Unexpected exception: "+ex.ToString());
+				return;
 				
 			}
 			

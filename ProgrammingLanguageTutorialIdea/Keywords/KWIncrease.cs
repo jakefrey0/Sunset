@@ -14,7 +14,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		
 		public const String constName="++";
 		
-		public KWIncrease () : base (constName) { }
+		public KWIncrease () : base (constName,KeywordType.INCREMENT) { }
 		
 		override public KeywordResult execute (Parser sender) {
 			

@@ -2,6 +2,20 @@ shr someValue becomes 65535
 
 byte# testArray becomes #16
 
+someValue --
+someValue ++
+++someValue
+someValue--
+
 crash
+
+testArray[3] becomes 13
+testArray[13] becomes 4
+
+nofunct nofunct nofunct
+
+testArray[testArray[testArray[3]]] becomes 16
+
+nofunct nofunct nofunct
 
 shr testValue becomes 65535 

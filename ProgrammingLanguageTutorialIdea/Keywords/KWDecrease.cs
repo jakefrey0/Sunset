@@ -14,7 +14,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		
 		public const String constName="--";
 		
-		public KWDecrease () : base (constName) { }
+		public KWDecrease () : base (constName,KeywordType.DECREMENT) { }
 		
 		override public KeywordResult execute (Parser sender) {
 			
