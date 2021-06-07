@@ -42,7 +42,6 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		public UInt32 getVarTypeByteSize (String varType) {
 			
 			//HACK:: check variable type
-			//classes should return 4 because they are ptrs
 			if (varType==KWByte.constName)
 				return 1;
 			else if (varType==KWShort.constName)

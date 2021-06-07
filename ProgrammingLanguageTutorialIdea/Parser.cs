@@ -125,7 +125,6 @@ namespace ProgrammingLanguageTutorialIdea {
 									name=name.Substring(2,name.Length-2);
 									this.chkName(name);
 									this.chkName(KWIncrease.constName);
-									this.resetLastReferencedVar();
 									
 								}
 								else if (name.StartsWith(KWDecrease.constName)) {
@@ -133,7 +132,6 @@ namespace ProgrammingLanguageTutorialIdea {
 									name=name.Substring(2,name.Length-2);
 									this.chkName(name);
 									this.chkName(KWDecrease.constName);
-									this.resetLastReferencedVar();
 									
 								}
 								
@@ -142,7 +140,6 @@ namespace ProgrammingLanguageTutorialIdea {
 									name=name.Substring(0,name.Length-2);
 									this.chkName(name);
 									this.chkName(KWIncrease.constName);
-									this.resetLastReferencedVar();
 									
 								}
 								else if (name.EndsWith(KWDecrease.constName)) {
@@ -150,7 +147,6 @@ namespace ProgrammingLanguageTutorialIdea {
 									name=name.Substring(0,name.Length-2);
 									this.chkName(name);
 									this.chkName(KWDecrease.constName);
-									this.resetLastReferencedVar();
 									
 								}
 								else this.chkName(name);
@@ -159,9 +155,6 @@ namespace ProgrammingLanguageTutorialIdea {
 							else this.chkName(name);
 							
 							nameReader.Clear();
-							
-							if (prevLastReferencedVariable==lastReferencedVariable)
-								this.resetLastReferencedVar();
 							
 						}
 						
@@ -174,7 +167,6 @@ namespace ProgrammingLanguageTutorialIdea {
 							
 							this.registerVariable(nameReader.ToString());
 							nameReader.Clear();
-							this.nextExpectedKeywordTypes=new KeywordType[]{KeywordType.ASSIGNMENT,KeywordType.DECREMENT,KeywordType.INCREMENT};
 							
 						}
 						
@@ -232,7 +224,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		private Byte[] compile () {
 			
-			//TODO:: add code to free all allocated memory here,maybe call HeapFree with lpMem null? not sure of the functionality on that but it might free all mem allocated to the heap
+			this.freeHeaps();
 			this.addByte(0xC3); //Add RETN call to end of our exe, so no matter what happens in terms of the source, it should not be a blank application & will exit
 			
 			opcodes.AddRange(appendAfter);
@@ -328,6 +320,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			if (this.variables.ContainsKey(name)) {
 				
 				this.lastReferencedVariable=name;
+				Console.WriteLine("LRV:"+this.lastReferencedVariable);
 				this.status=ParsingStatus.SEARCHING_NAME;
 				this.nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT,KeywordType.INCREMENT,KeywordType.DECREMENT};
 				this.lastReferencedVarType=VarType.NATIVE_VARIABLE;
@@ -363,11 +356,17 @@ namespace ProgrammingLanguageTutorialIdea {
 					KeywordResult res=kw.execute(this);
 					this.status=res.newStatus;
 					this.addBytes(res.newOpcodes);
+					
+					if (kw.type==KeywordType.ASSIGNMENT||kw.type==KeywordType.DECREMENT||kw.type==KeywordType.INCREMENT)
+						this.resetLastReferencedVar();
+					
 					return;
 					
 				}
 				
 			}
+			
+			//TODO:: check for blocks here ?
 			
 			throw new ParsingError("Unexpected name: \""+name+'"');
 			
@@ -394,10 +393,6 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		private void processValue (String value) {
 			
-			//TODO:: fix processValue so it uses Parser#pushValue
-			
-			//TODO:: make it so that bytes/shorts/ints can be parsed into bytes shortes ints just by typing the number in the code ie myFunction(1300) will parse 1300 into a short, in all check variable types
-			
 			String type=(this.referencedVarType==VarType.NATIVE_ARRAY||this.referencedVarType==VarType.NATIVE_ARRAY_INDEXER)?this.arrays[this.referencedVariable].Item2:this.variables[this.referencedVariable].Item2;
 			
 //			Console.WriteLine("referencingArray: "+referencingArray.ToString());
@@ -406,49 +401,62 @@ namespace ProgrammingLanguageTutorialIdea {
 			//HACK:: check variable type
 			if (this.referencedVarType==VarType.NATIVE_ARRAY) {
 				
-				Console.WriteLine("Making array named \""+this.referencedVariable+"\" of array type \""+type+"\" with value \""+value+"\".");
+				if (this.isnativeArrayCreationIndicator(value[0])) {
 				
-				this.addByte(0x51); //PUSH ECX
+					Console.WriteLine("Making array named \""+this.referencedVariable+"\" of array type \""+type+"\" with value \""+value+"\".");
+					
+					this.addByte(0x51); //PUSH ECX
+					
+					if (this.processHeapVar==null)
+						this.setProcessHeapVar();
+					
+					String adjustedValue=value.Substring(1);
+					this.pushValue(adjustedValue);
+					this.addByte(0xBB);//MOV FOLLOWING UINT32 TO EBX
+					this.addBytes(BitConverter.GetBytes(keywordMgr.getVarTypeByteSize(type)));//UINT32 HERE
+					this.addBytes(new Byte[]{0x0F,0xAF,0x1C,0x24});//IMUL EAX BY [ESP]
+					this.addBytes(new Byte[]{0x83,0xC4,4});//ADD 4 TO ESP
+					this.addBytes(new Byte[]{0x83,0xC3,8});//ADD 8 TO EBX
+					this.addByte(0x53);//PUSH EBX
+					this.addBytes(new Byte[]{0xBB}.Concat(BitConverter.GetBytes((UInt32)8))); //MOV EBX,08000000 (HEAP_ZERO_MEMORY)
+					this.addByte(0x53);//PUSH EBX
+					this.pushProcessHeapVar();
+					const String HL="HeapAlloc";
+					this.referenceDll(Parser.KERNEL32,HL);
+					this.referencedFuncPositions[HL].Add((UInt32)(this.opcodes.Count+2));
+					this.addBytes(new Byte[]{0xFF,0x15,0,0,0,0});//CALL FUNC HeapAlloc
+	//				Console.WriteLine(this.referencedVariable);
+	//				Console.WriteLine("------------");
+	//				foreach (String s in this.arrays.Select(x=>x.Key))
+	//					Console.WriteLine(" - "+s);
+	//				Console.WriteLine("------------");
+					Tuple<UInt32,String,ArrayStyle>_refdVar=this.arrays[this.referencedVariable];
+					this.arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle>(this.memAddress+(UInt32)(appendAfter.Count),_refdVar.Item2,_refdVar.Item3);
+					this.appendAfter.AddRange(new Byte[4]);
+					this.arrayReferences[this.referencedVariable].Add((UInt32)(opcodes.Count+1));
+					this.addBytes(new Byte[]{0xA3,0,0,0,0,//STORE ALLOCATED PTR TO VARIABLE
+					              				0x59,//POP ECX
+					              				0x6A,0,//PUSH 0
+					              				});
+					this.pushValue(adjustedValue); // PUSH ARRAY LENGTH
+					this.callSetArrayValue(this.referencedVariable);
+					this.addBytes(new Byte[]{
+					              				0x6A,4,//PUSH 4
+					              				0x6A//PUSH FOLLOWING BYTE
+					              });
+					this.addByte((Byte)(keywordMgr.getVarTypeByteSize(type)));//THIS BYTE (array member byte size)
+					this.callSetArrayValue(this.referencedVariable);
+					status=ParsingStatus.SEARCHING_NAME;
+					return;
 				
-				if (this.processHeapVar==null)
-					this.setProcessHeapVar();
-				
-				this.addByte(0xBB);//MOV FOLLOWING UINT32 TO EBX
-				this.addBytes(BitConverter.GetBytes(keywordMgr.getVarTypeByteSize(type)));//UINT32 HERE
-				this.addBytes(new Byte[]{0x6B,0xDB,Byte.Parse(value.Substring(1))});//IMUL EAX BY BYTE TODO:: update this for pushValue
-				this.addBytes(new Byte[]{0x83,0xC3,8});//ADD 8 TO EBX
-				
-				this.addByte(0x53);//PUSH EBX
-				this.addBytes(new Byte[]{0xBB}.Concat(BitConverter.GetBytes((UInt32)8))); //MOV EBX,08000000 (HEAP_ZERO_MEMORY)
-				this.addByte(0x53);//PUSH EBX
-				this.pushProcessHeapVar();
-				const String HL="HeapAlloc";
-				this.referenceDll(Parser.KERNEL32,HL);
-				this.referencedFuncPositions[HL].Add((UInt32)(this.opcodes.Count+2));
-				this.addBytes(new Byte[]{0xFF,0x15,0,0,0,0});//CALL FUNC HeapAlloc
-//				Console.WriteLine(this.referencedVariable);
-//				Console.WriteLine("------------");
-//				foreach (String s in this.arrays.Select(x=>x.Key))
-//					Console.WriteLine(" - "+s);
-//				Console.WriteLine("------------");
-				Tuple<UInt32,String,ArrayStyle>_refdVar=this.arrays[this.referencedVariable];
-				this.arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle>(this.memAddress+(UInt32)(appendAfter.Count),_refdVar.Item2,_refdVar.Item3);
-				this.appendAfter.AddRange(new Byte[4]);
-				this.arrayReferences[this.referencedVariable].Add((UInt32)(opcodes.Count+1));
-				this.addBytes(new Byte[]{0xA3,0,0,0,0,//STORE ALLOCATED PTR TO VARIABLE
-				              				0x59,//POP ECX
-				              				0x6A,0,//PUSH 0
-				              				0x6A});//PUSH FOLLOWING BYTE TODO:: update this for pushValue, since pushValue will push the value then just cut off the addBytes here, remove the following addByte and replace it all with just a processValue call
-				this.addByte(Byte.Parse(value.Substring(1)));//ARRAY LENGTH
-				this.callSetArrayValue(this.referencedVariable);
-				this.addBytes(new Byte[]{
-				              				0x6A,4,//PUSH 4
-				              				0x6A//PUSH FOLLOWING BYTE
-				              });
-				this.addByte((Byte)(keywordMgr.getVarTypeByteSize(type)));//THIS BYTE (array member byte size)
-				this.callSetArrayValue(this.referencedVariable);
-				status=ParsingStatus.SEARCHING_NAME;
-				return;
+				}
+				else if (this.arrays.ContainsKey(value)) {
+					
+					this.arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle>(this.arrays[value].Item1,this.arrays[value].Item2,this.arrays[value].Item3);
+					return;
+					
+				}
+				else throw new ParsingError("Invalid array assignment value: \""+value+'"');
 				
 			}
 			
@@ -464,33 +472,46 @@ namespace ProgrammingLanguageTutorialIdea {
 			else {
 				
 //				Console.WriteLine("Did not make an array");
-			
+				Tuple<String,VarType> tpl=this.pushValue(value);
+				if (tpl.Item2==VarType.NATIVE_ARRAY_INDEXER||tpl.Item2==VarType.NATIVE_VARIABLE) {
+					if (keywordMgr.getVarTypeByteSize(tpl.Item1)>keywordMgr.getVarTypeByteSize(type))
+						throw new ParsingError("Can't convert \""+tpl.Item1+"\" to \""+type+'"');
+				}
+				else if (this.referencedVarType!=tpl.Item2&&keywordMgr.getVarTypeByteSize(type)!=4) // TODO:: if there are ever any NON 4 byte variable types (ptrs), fix this, what this does is allow pointers of native arrays etc to be moved into native integers!
+					throw new ParsingError("Can't convert \""+this.referencedVarType.ToString()+"\" of \""+type+"\" to \""+tpl.Item2.ToString()+'"'); 
+				
 				if (type==KWByte.constName) {
 					
-					Byte num;
-					if (!(Byte.TryParse(value,out num)))
-						throw new ParsingError("Expected a number 0-255, got \""+value+'"');
-					
-					this.addByte(num);
+					this.variableReferences[this.referencedVariable].Add((UInt32)this.opcodes.Count+7);
+					this.addBytes(new Byte[]{
+					              	
+					              	0x31,0xDB, //XOR EBX,EBX
+					              	0x58, //POP EAX
+					              	0x88,0xC3, //MOV BL,AL
+					              	0x88,0x1D,0,0,0,0 //MOV BYTE[PTR],BL
+					              	
+					              });
 					
 				}
 				else if (type==KWShort.constName) {
 					
-					UInt16 num;
-					if (!(UInt16.TryParse(value,out num)))
-						throw new ParsingError("Expected a number 0-65535, got \""+value+'"');
-					
-					this.addBytes(BitConverter.GetBytes(num));
+					this.variableReferences[this.referencedVariable].Add((UInt32)this.opcodes.Count+3);
+					this.addBytes(new Byte[]{
+					              	
+					              	0x66,0x8F,5,0,0,0,0 //POP WORD [PTR]
+					              	
+					              });
 					
 				}
 				
 				else if (type==KWInteger.constName) {
 					
-					UInt32 num;
-					if (!(UInt32.TryParse(value,out num)))
-					    throw new ParsingError("Expected a number 0-4294967295, got \""+value+'"');
-					    
-					this.addBytes(BitConverter.GetBytes(num));
+					this.variableReferences[this.referencedVariable].Add((UInt32)this.opcodes.Count+2);
+					this.addBytes(new Byte[]{
+					              	
+					              	0x8F,5,0,0,0,0 //POP DWORD [PTR]
+					              	
+					              });
 					
 				}
 				
@@ -776,6 +797,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		private void resetLastReferencedVar () {
 			
+			Console.WriteLine("Resetting last referenced variable");
 			this.lastReferencedVariable=null;
 			this.lastReferencedVarType=VarType.NONE;
 			
@@ -824,9 +846,9 @@ namespace ProgrammingLanguageTutorialIdea {
 			//push the mem addr..
 			if (this.tryCheckIfValidArrayIndexer(indexer)) {
 				
-				String sub=indexer.Substring(indexer.IndexOf('[')+1);
-				String arrName0=indexer.Split('[')[0].Replace(" ",""),
-				indexer0=(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub;
+				String sub=indexer.Substring(indexer.IndexOf('[')+1),
+				  arrName0=indexer.Split('[')[0].Replace(" ",""),
+				  indexer0=(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub;
 					   
 				this.indexArray(arrName0,indexer0,true);
 				this.addBytes(
@@ -877,49 +899,118 @@ namespace ProgrammingLanguageTutorialIdea {
 		/// <summary>
 		/// Push a value (constant number,var,array,array indexer) onto the stack
 		/// </summary>
-		private void pushValue (String value) {
+		private Tuple<String,VarType> pushValue (String value) {
 			
-			//maybe return the var type, or set it to this.varType ?
-			
-			//HACK:: CHECK VAR TYPE HERE
+			//HACK:: check var type here
 			
 			//constants:
 			UInt32 _value;
 			if (UInt32.TryParse(value,out _value)) {
 				
+				String rv;
+				
 				if (_value<=Byte.MaxValue) {
 					
-					Console.WriteLine(" PUSHING BYTE VALUE!@!!");
 					this.addBytes(new Byte[]{0x6A,(Byte)(_value)});//PUSH BYTE _value
-					return;
+					return new Tuple<String,VarType>(KWByte.constName,VarType.NATIVE_VARIABLE);
 					
 				}
 				else if (_value<=UInt16.MaxValue)
-					/*.. var type == short */;
+					rv=KWShort.constName;
+				else rv=KWInteger.constName;
 				
 				//Words & Dwords use the same push opcode
 				
 				this.addBytes(new Byte[]{0x68}.Concat(BitConverter.GetBytes(_value)));
 				
-				return;
+				return new Tuple<String,VarType>(rv,VarType.NATIVE_VARIABLE);
 				
 			}
 			else if (this.variables.ContainsKey(value)) {
 				
-				//TODO:: push value
+				UInt32 byteSize=keywordMgr.getVarTypeByteSize(this.variables[value].Item2);
+				if (byteSize==1) {
+					
+					this.addBytes(new Byte[]{0x31,0xDB}); //XOR EBX,EBX
+					this.variableReferences[value].Add((UInt32)this.opcodes.Count+2);
+					this.addBytes(new Byte[]{0x8A,0x1D,0,0,0,0}); //MOV BL,[PTR]
+					this.addByte(0x53); //PUSH EBX
+					return new Tuple<String,VarType>(KWByte.constName,VarType.NATIVE_VARIABLE);
+					
+				}
+				else if (byteSize==2) {
+					
+					this.variableReferences[value].Add((UInt32)this.opcodes.Count+3);
+					this.addBytes(new Byte[]{0x66,0xFF,0x35,0,0,0,0}); //PUSH WORD [PTR]
+					return new Tuple<String,VarType>(KWShort.constName,VarType.NATIVE_VARIABLE);
+					
+				}
+				else /*byteSize==4*/ {
+					
+					this.variableReferences[value].Add((UInt32)this.opcodes.Count+2);
+					this.addBytes(new Byte[]{0xFF,0x35,0,0,0,0}); //PUSH DWORD [PTR]
+					return new Tuple<String,VarType>(KWInteger.constName,VarType.NATIVE_VARIABLE);
+					
+				}
 				
 			}
 			else if (this.arrays.ContainsKey(value)) {
 				
-				//TODO:: push ptr
+				this.arrayReferences[value].Add((UInt32)this.opcodes.Count+2);
+				this.addBytes(new Byte[]{0xFF,0x35,0,0,0,0}); //PUSH DWORD [PTR]
+				return new Tuple<String,VarType>(this.arrays[value].Item2,VarType.NATIVE_ARRAY);
 				
 			}
 			else if (this.tryCheckIfValidArrayIndexer(value)) {
 				
-				//TODO:: push value at index
+				String sub=value.Substring(value.IndexOf('[')+1),
+				   arrName=value.Split('[')[0];
+				this.indexArray(arrName,(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub);
+				
+				UInt32 varTypeByteSize=this.keywordMgr.getVarTypeByteSize(this.arrays[arrName].Item2);
+				this.addBytes((varTypeByteSize==4)?
+				              new Byte[]{0x5B,           //POP EBX
+				              			 0xFF,0x33}      //PUSH DWORD [EBX]
+				             :(varTypeByteSize==2)?
+				              new Byte[]{0x5B,           //POP EBX
+				              			 0x66,0xFF,0x33} //PUSH WORD [EBX]
+				             :/*varTypeByteSize==1*/
+				              new Byte[]{0x5B,           //POP EBX
+				              			 0x31,0xD2,      //XOR EDX,EDX
+				              			 0x8A,0x13,      //MOV DL,[EBX]
+				              			 0x52}           //PUSH EDX
+				             );
+				return new Tuple<String,VarType>((varTypeByteSize==4)?KWInteger.constName:(varTypeByteSize==2)?KWShort.constName:KWByte.constName,VarType.NATIVE_ARRAY_INDEXER);
 				
 			}
 			else throw new ParsingError("Invalid value: \""+value+'"');
+			
+		}
+		
+		private void freeHeaps () {
+			
+			//TODO:: fix freeHeaps, it doesn't work
+			
+			return;
+			
+			const String HF="HeapFree";
+			this.referenceDll(Parser.KERNEL32,HF);
+			
+			List<UInt32> doneMemAddrs=new List<UInt32>();
+			foreach (KeyValuePair<String,Tuple<UInt32,String,ArrayStyle>> array in this.arrays) {
+				
+				if (doneMemAddrs.Contains(array.Value.Item1))
+					continue;
+				
+				this.arrayReferences[array.Key].Add((UInt32)this.opcodes.Count+2);
+				this.addBytes(new Byte[]{0xFF,0x35,0,0,0,0});//push pMemory
+				this.addBytes(new Byte[]{0x6A,0});//push Flags
+				this.pushProcessHeapVar();//push hHeap
+				this.referencedFuncPositions[HF].Add((UInt32)this.opcodes.Count+2);
+				this.addBytes(new Byte[]{0xFF,0x15,0,0,0,0});
+				doneMemAddrs.Add(array.Value.Item1);
+				
+			}
 			
 		}
 		
@@ -961,6 +1052,11 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		
+		private Boolean isnativeArrayCreationIndicator (Char c) {
+			
+			return c=='#';
+			
+		}
 		
 	}
 	

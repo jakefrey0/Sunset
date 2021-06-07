@@ -15,15 +15,12 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		public readonly String name;
 		public readonly Boolean hasParameters;
 		public readonly KeywordType type;
-		public Byte[] bytes;
 		
 		public Keyword (String name,KeywordType type,Boolean hasParameters=false) { 
 			
 			this.name=name; 
 			this.hasParameters=hasParameters;
 			this.type=type;
-			Int32 i=1632;
-			bytes= new Byte[i];
 			
 		}
 		

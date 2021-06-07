@@ -1,0 +1,39 @@
+Functions:
+
+With return value and parameters:
+
+                         v--- Will expect KeywordType.TYPE or block
+func myFunc(byte b,shr s) byte {
+	
+	byte myLocalByte
+	
+	ret myLocalByte
+	
+}
+
+With return value but no parameters:
+
+func myFunc0 shr {
+	
+	shr myShort
+	
+	ret myShort
+	
+}
+
+Without return value but with parameters:
+
+	    v----- notice how in Keyword#hasParameters (C#) the parameters are optional, and if no parameters are provided, then the Keyword itself is responsible to throw a ParsingError. Parameters are seperated by commas.
+func myFunc1(int param) {
+	
+	ret
+	
+}
+
+Without return value or parameters:
+
+func myFunc2 {
+	
+	ret
+	
+}

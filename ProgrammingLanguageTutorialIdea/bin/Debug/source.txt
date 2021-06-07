@@ -1,21 +1,17 @@
-shr someValue becomes 65535
+shr myShort
+int myInteger
 
-byte# testArray becomes #16
-
-someValue --
-someValue ++
-++someValue
-someValue--
+shr# myArr becomes #16
 
 crash
-
-testArray[3] becomes 13
-testArray[13] becomes 4
+myInteger becomes myArr
 
 nofunct nofunct nofunct
+nofunct
 
-testArray[testArray[testArray[3]]] becomes 16
+myArr[0] becomes myArr
 
-nofunct nofunct nofunct
+nofunct
+nofunct
 
-shr testValue becomes 65535 
+myShort becomes myArr[0]
