@@ -61,14 +61,18 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ArrayStyle.cs" />
+    <Compile Include="Block.cs" />
     <Compile Include="Keywords\Keyword.cs" />
     <Compile Include="Keywords\KeywordResult.cs" />
     <Compile Include="Keywords\KeywordMgr.cs" />
     <Compile Include="Keywords\KeywordType.cs" />
     <Compile Include="Keywords\KWBecomes.cs" />
+    <Compile Include="Keywords\KWBoolean.cs" />
     <Compile Include="Keywords\KWByte.cs" />
     <Compile Include="Keywords\KWCrash.cs" />
     <Compile Include="Keywords\KWDecrease.cs" />
+    <Compile Include="Keywords\KWElse.cs" />
+    <Compile Include="Keywords\KWIf.cs" />
     <Compile Include="Keywords\KWIncrease.cs" />
     <Compile Include="Keywords\KWInteger.cs" />
     <Compile Include="Keywords\KWNofunc.cs" />

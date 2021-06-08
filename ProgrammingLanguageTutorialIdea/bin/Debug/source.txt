@@ -1,17 +1,14 @@
-shr myShort
-int myInteger
+int num becomes 3
+int num0 becomes 16
 
-shr# myArr becomes #16
+if (num,>=,num0) {
+	
+	crash
+	
+}
 
-crash
-myInteger becomes myArr
-
-nofunct nofunct nofunct
-nofunct
-
-myArr[0] becomes myArr
-
-nofunct
-nofunct
-
-myShort becomes myArr[0]
+else {
+	
+	nofunct
+	
+}

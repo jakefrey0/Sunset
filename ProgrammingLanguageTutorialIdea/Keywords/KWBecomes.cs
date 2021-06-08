@@ -16,7 +16,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		
 		public KWBecomes () : base (constName,KeywordType.ASSIGNMENT) { }
 		
-		override public KeywordResult execute (Parser sender) {
+		override public KeywordResult execute (Parser sender,String[] @params) {
 			
 			if (String.IsNullOrEmpty(sender.lastReferencedVariable))
 				throw new ParsingError("Invalid use of \""+constName+"\", no referenced variable found");

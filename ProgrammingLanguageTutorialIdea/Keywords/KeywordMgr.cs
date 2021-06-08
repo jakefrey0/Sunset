@@ -26,7 +26,10 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			                       	new KWShort(),
 			                       	new KWInteger(),
 			                       	new KWCrash(),
-			                       	new KWNofunc()
+			                       	new KWNofunc(),
+			                       	new KWIf(),
+			                       	new KWElse(),
+			                       	new KWBoolean()
 			                       	
 			                       });
 			
@@ -42,7 +45,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		public UInt32 getVarTypeByteSize (String varType) {
 			
 			//HACK:: check variable type
-			if (varType==KWByte.constName)
+			if (varType==KWByte.constName||varType==KWBoolean.constName)
 				return 1;
 			else if (varType==KWShort.constName)
 				return 2;

@@ -1,3 +1,30 @@
+If statements:
+
+int myInt becomes 13
+int myInt0 becomes 14
+if(myInt,>=,myInt0) {
+	
+	
+	
+}
+else {
+
+
+
+}
+
+If boolean operators:
+ - >= Greater than or equal to
+ - > Greater than
+ - <= Less than or equal to
+ - < Less than
+ - = Equal to
+ - =/= Not equal to
+
+Boolean data notes:
+Anything other than 1: true
+0: false
+
 Functions:
 
 With return value and parameters:

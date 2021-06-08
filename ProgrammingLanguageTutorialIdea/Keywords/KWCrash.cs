@@ -16,7 +16,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		
 		public KWCrash () : base (constName,KeywordType.NATIVE_CALL) { }
 		
-		public override KeywordResult execute (Parser sender) {
+		public override KeywordResult execute (Parser sender,String[] @params) {
 			
 			return new KeywordResult(){newOpcodes=new Byte[]{0xCC},newStatus= ParsingStatus.SEARCHING_NAME};
 			

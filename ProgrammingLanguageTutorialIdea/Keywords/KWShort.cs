@@ -16,7 +16,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		
 		public KWShort () : base (constName,KeywordType.TYPE) { }
 		
-		override public KeywordResult execute (Parser sender) {
+		override public KeywordResult execute (Parser sender,String[] @params) {
 			
 			sender.varType=this.name;
 			return new KeywordResult(){newStatus=ParsingStatus.SEARCHING_VARIABLE_NAME,newOpcodes=new Byte[0]};

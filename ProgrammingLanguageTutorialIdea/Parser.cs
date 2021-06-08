@@ -32,7 +32,20 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal Dictionary<String,List<String>> toImport;//DllName,Functions
 		internal Dictionary<String,List<UInt32>> referencedFuncPositions;//FuncName,Opcode pos
 		
-		private UInt32 memAddress;
+		internal Dictionary<Block,UInt32> blocks;//block,end of block mem address
+		internal Dictionary<Block,List<UInt32>> blocksMemPositions;//block,list of index in opcodes of where to place block mem address
+		internal Dictionary<Block,UInt16> blockBracketBalances;//block,bracket balance
+		internal UInt32 memAddress {
+			
+			private set;
+			get;
+			
+		}
+		
+		internal Boolean expectsBlock=false,expectsElse=false,setExpectsElse=false,setExpectsBlock=false;
+		
+		internal readonly Action elseBlockClosed;
+		
 		private readonly KeywordMgr keywordMgr;
 			
 		private List<Byte> opcodes=new List<Byte>(),importOpcodes=null,finalBytes=new List<Byte>(),appendAfter=new List<Byte>();
@@ -47,7 +60,15 @@ namespace ProgrammingLanguageTutorialIdea {
 		private Boolean winApp;
 		private Dictionary<String,UInt32> setArrayValueFuncPtrs;
 		
+		private Keyword waitingToExecute;
+		
 		private KeywordType[] nextExpectedKeywordTypes=new []{KeywordType.NONE};
+		
+		private Char nextChar;
+		
+		private UInt16 squareBracketBalance=0,roundBracketBalance=0;
+		
+		private Tuple<Block,List<UInt32>> lastBlockClosed; //Block,Opcode Index References
 		
 		private const String KERNEL32="KERNEL32.DLL";
 		
@@ -60,6 +81,29 @@ namespace ProgrammingLanguageTutorialIdea {
 			toImport=new Dictionary<String,List<String>>();
 			this.referencedFuncPositions=new Dictionary<String,List<UInt32>>();
 			this.setArrayValueFuncPtrs=new Dictionary<String,UInt32>();
+			this.blocks=new Dictionary<Block,UInt32>();
+			this.blocksMemPositions=new Dictionary<Block,List<UInt32>>();
+			this.blockBracketBalances=new Dictionary<Block,UInt16>();
+			elseBlockClosed=delegate {
+				
+				Byte i;
+				
+				foreach (UInt32 index in lastBlockClosed.Item2) {
+					
+					Int32 prevNum=BitConverter.ToInt32(new []{opcodes[(Int32)index],opcodes[(Int32)index+1],opcodes[(Int32)index+2],opcodes[(Int32)index+3]},0);
+					Byte[]newNum=BitConverter.GetBytes(prevNum+5);//5 because the opcodes are 0xE9,Integer.... (See KWElse -> JMP TO MEM ADDR)
+					
+					i=0;
+					while (i!=4) {
+						
+						opcodes[(Int32)index+i]=newNum[i];
+						++i;
+						
+					}
+					
+				}
+				
+			};
 			
 		}
 		
@@ -67,14 +111,31 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			status=ParsingStatus.SEARCHING_NAME;
 			StringBuilder nameReader=new StringBuilder();
-			UInt16 squareBracketBalance=0;
+			squareBracketBalance=0;
+			roundBracketBalance=0;
 			String arrName=null;
+			List<String> paramsList=new List<String>();
+			Int32 currentChar=0;
 			
 			data+=' ';
 			
 			foreach (Char c in data) {
 				
-				Console.WriteLine(" - Checking: \""+c+"\",ParsingStatus: "+status.ToString());
+				Console.WriteLine(" - Checking: \""+c+"\",ParsingStatus: "+status.ToString()+", blockBracketBalance #no: "+blockBracketBalances.Count.ToString());
+				
+				if (setExpectsElse) {
+					
+					setExpectsElse=false;
+					expectsElse=true;
+					
+				}
+				
+				if (setExpectsBlock) {
+					
+					setExpectsBlock=false;
+					expectsBlock=true;
+					
+				}
 				
 				switch (status) {
 					
@@ -110,6 +171,24 @@ namespace ProgrammingLanguageTutorialIdea {
 							status=ParsingStatus.READING_ARRAY_INDEXER;
 							
 						}
+						else if (this.opensBlock(c)) {
+							
+							if (!(this.expectsBlock))
+								throw new ParsingError("Got \""+c+"\" but did not expect block");
+							
+							this.updateBlockBalances(c);
+							
+							this.expectsBlock=false;
+							
+						}
+						else if (this.closesBlock(c)) {
+							
+							if (this.blockBracketBalances.Count==0)
+								throw new ParsingError("Tried to close block, when no block detected");
+							
+							this.updateBlockBalances(c);
+							
+						}
 						else if (Char.IsLetterOrDigit(c)||this.refersToIncrementOrDecrement(c)) nameReader.Append(c);
 						else {
 							
@@ -118,7 +197,7 @@ namespace ProgrammingLanguageTutorialIdea {
 							String name=nameReader.ToString();
 //							Console.WriteLine("Name: "+name);
 							
-							if ((this.refersToIncrementOrDecrement(name[0])||this.refersToIncrementOrDecrement(name[name.Length-1]))&&name.Length>2) {
+							if (name.Length>2&&(this.refersToIncrementOrDecrement(name[0])||this.refersToIncrementOrDecrement(name[name.Length-1]))) {
 								
 								if (name.StartsWith(KWIncrease.constName)) {
 									
@@ -154,6 +233,7 @@ namespace ProgrammingLanguageTutorialIdea {
 							}
 							else this.chkName(name);
 							
+							expectsElse=expectsBlock=false;
 							nameReader.Clear();
 							
 						}
@@ -214,7 +294,48 @@ namespace ProgrammingLanguageTutorialIdea {
 						
 						break;
 						
+					case ParsingStatus.SEARCHING_PARAMETERS:
+						
+						if (this.beginsParameters(c)) {
+							
+							roundBracketBalance=1;
+							status=ParsingStatus.READING_PARAMETERS;
+							
+						}
+						else if (!this.isFormOfBlankspace(c)) this.execKeyword(this.waitingToExecute,new String[0]);
+						
+						break;
+					case ParsingStatus.READING_PARAMETERS:
+						
+						if (this.beginsParameters(c)) ++roundBracketBalance;
+						
+						else if (this.endsParameters(c)) --roundBracketBalance;
+						
+						else if (this.splitsParameters(c)) { 
+							
+							paramsList.Add(nameReader.ToString());
+							nameReader.Clear();
+						
+						}
+						
+						else nameReader.Append(c);
+						
+						if (roundBracketBalance==0) {
+							
+							paramsList.Add(nameReader.ToString());
+							nameReader.Clear();
+							this.execKeyword(this.waitingToExecute,paramsList.ToArray());
+							paramsList.Clear();
+							
+						}
+						
+						break;
+						
 				}
+				
+				++currentChar;
+				if (data.Length>currentChar)
+					nextChar=data[currentChar];
 				
 			}
 			
@@ -263,7 +384,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		
-		private void addByte (Byte b) {
+		internal void addByte (Byte b) {
 			
 			Dictionary<String,Tuple<UInt32,String>> newDict=new Dictionary<String,Tuple<UInt32,String>>(this.variables.Count);
 			foreach (KeyValuePair<String,Tuple<UInt32,String>> kvp in this.variables) {
@@ -300,7 +421,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		
-		private void addBytes (IEnumerable<Byte> bytes) {
+		internal void addBytes (IEnumerable<Byte> bytes) {
 			
 			foreach (Byte b in bytes)
 				this.addByte(b);
@@ -339,9 +460,11 @@ namespace ProgrammingLanguageTutorialIdea {
 			}
 			
 			checkKeywords:
-			foreach (Keyword kw in this.keywordMgr.getKeywords().Where(x=>!x.hasParameters)) {
+			foreach (Keyword kw in this.keywordMgr.getKeywords()) {
 				
 				if (kw.name==name) {
+					
+					Console.WriteLine("Exec: "+kw.name);
 					
 					if (!pKTs.Contains(KeywordType.NONE)&&!pKTs.Contains(kw.type)) {
 						if (pKTs.Length>1) {
@@ -353,12 +476,17 @@ namespace ProgrammingLanguageTutorialIdea {
 						else throw new ParsingError("Expected a keyword of type \""+pKTs[0].ToString()+'"');
 					}
 					
-					KeywordResult res=kw.execute(this);
-					this.status=res.newStatus;
-					this.addBytes(res.newOpcodes);
-					
-					if (kw.type==KeywordType.ASSIGNMENT||kw.type==KeywordType.DECREMENT||kw.type==KeywordType.INCREMENT)
-						this.resetLastReferencedVar();
+					if (kw.name==KWElse.constName&&!expectsElse)
+						throw new ParsingError("Got \""+KWElse.constName+"\", but was not expecting an else reference");
+					else if (kw.hasParameters) {
+						
+						status=(this.beginsParameters(this.nextChar))?ParsingStatus.READING_PARAMETERS:ParsingStatus.SEARCHING_PARAMETERS;
+						waitingToExecute=kw;
+						roundBracketBalance=1;
+						
+					}
+					else
+						this.execKeyword(kw,new String[0]);
 					
 					return;
 					
@@ -366,7 +494,36 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 			}
 			
-			//TODO:: check for blocks here ?
+					
+			if (name.Length==1) {
+				
+				Char c=name[0];
+				
+				if (this.opensBlock(c)) {
+					
+					if (!(this.expectsBlock))
+						throw new ParsingError("Got \""+c+"\" but did not expect block");
+					
+					this.updateBlockBalances(c);
+					
+					this.expectsBlock=false;
+					status=ParsingStatus.SEARCHING_NAME;
+					return;
+					
+				}
+				else if (this.closesBlock(c)) {
+					
+					if (this.blockBracketBalances.Count==0)
+						throw new ParsingError("Tried to close block, when no block detected");
+					
+					this.updateBlockBalances(c);
+					
+					status=ParsingStatus.SEARCHING_NAME; 
+					return;
+					
+				}
+					
+			}
 			
 			throw new ParsingError("Unexpected name: \""+name+'"');
 			
@@ -480,7 +637,10 @@ namespace ProgrammingLanguageTutorialIdea {
 				else if (this.referencedVarType!=tpl.Item2&&keywordMgr.getVarTypeByteSize(type)!=4) // TODO:: if there are ever any NON 4 byte variable types (ptrs), fix this, what this does is allow pointers of native arrays etc to be moved into native integers!
 					throw new ParsingError("Can't convert \""+this.referencedVarType.ToString()+"\" of \""+type+"\" to \""+tpl.Item2.ToString()+'"'); 
 				
-				if (type==KWByte.constName) {
+				if (tpl.Item1==KWBoolean.constName&&type!=KWBoolean.constName)
+					throw new ParsingError("You can only apply \""+KWBoolean.constTrue+"\" and +\""+KWBoolean.constFalse+"\" to boolean variables");
+				
+				if (type==KWByte.constName||type==KWBoolean.constName) {
 					
 					this.variableReferences[this.referencedVariable].Add((UInt32)this.opcodes.Count+7);
 					this.addBytes(new Byte[]{
@@ -829,7 +989,9 @@ namespace ProgrammingLanguageTutorialIdea {
 				if (str==name) return true;
 			
 			return this.arrays.ContainsKey(name) ||
-				this.variables.ContainsKey(name);
+				this.variables.ContainsKey(name) ||
+				name==KWBoolean.constFalse       ||
+				name==KWBoolean.constTrue;
 			
 		}
 		
@@ -899,7 +1061,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		/// <summary>
 		/// Push a value (constant number,var,array,array indexer) onto the stack
 		/// </summary>
-		private Tuple<String,VarType> pushValue (String value) {
+		internal Tuple<String,VarType> pushValue (String value) {
 			
 			//HACK:: check var type here
 			
@@ -935,7 +1097,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					this.variableReferences[value].Add((UInt32)this.opcodes.Count+2);
 					this.addBytes(new Byte[]{0x8A,0x1D,0,0,0,0}); //MOV BL,[PTR]
 					this.addByte(0x53); //PUSH EBX
-					return new Tuple<String,VarType>(KWByte.constName,VarType.NATIVE_VARIABLE);
+					return new Tuple<String,VarType>(this.variables[value].Item2,VarType.NATIVE_VARIABLE);
 					
 				}
 				else if (byteSize==2) {
@@ -983,15 +1145,27 @@ namespace ProgrammingLanguageTutorialIdea {
 				return new Tuple<String,VarType>((varTypeByteSize==4)?KWInteger.constName:(varTypeByteSize==2)?KWShort.constName:KWByte.constName,VarType.NATIVE_ARRAY_INDEXER);
 				
 			}
+			else if (value==KWBoolean.constFalse) {
+				
+				this.addBytes(new Byte[]{0x6A,0}); //PUSH 0
+				return new Tuple<String,VarType>(KWBoolean.constName,VarType.NATIVE_VARIABLE);
+				
+			}
+			else if (value==KWBoolean.constTrue) {
+				
+				this.addBytes(new Byte[]{0x6A,1}); //PUSH 1
+				return new Tuple<String,VarType>(KWBoolean.constName,VarType.NATIVE_VARIABLE);
+				
+			}
 			else throw new ParsingError("Invalid value: \""+value+'"');
 			
 		}
 		
 		private void freeHeaps () {
 			
-			//TODO:: fix freeHeaps, it doesn't work
-			
-			return;
+			//If no arrays (or anything that allocates memory), no point referencing HeapFree
+			if (this.arrays.Count==0)
+				return;
 			
 			const String HF="HeapFree";
 			this.referenceDll(Parser.KERNEL32,HF);
@@ -1011,6 +1185,102 @@ namespace ProgrammingLanguageTutorialIdea {
 				doneMemAddrs.Add(array.Value.Item1);
 				
 			}
+			
+		}
+		
+		private void execKeyword (Keyword kw,String[] @params) {
+			
+			KeywordResult res=kw.execute(this,@params);
+			this.status=res.newStatus;
+			this.addBytes(res.newOpcodes);
+			
+			if (kw.type==KeywordType.ASSIGNMENT||kw.type==KeywordType.DECREMENT||kw.type==KeywordType.INCREMENT)
+				this.resetLastReferencedVar();
+			
+		}
+		
+		internal void addBlock (Block block) {
+			
+			this.blocks.Add(block,0);
+			this.blockBracketBalances.Add(block,0);
+			this.blocksMemPositions.Add(block,new List<UInt32>());
+			this.setExpectsBlock=true;
+			
+			Console.WriteLine("Blocks count: "+this.blocksMemPositions.Count.ToString());
+			
+		}
+		
+		private void onBlockClosed (Block block) {
+			
+			Console.WriteLine("onBlockClosed called (Hash code: "+block.GetHashCode().ToString()+')');
+			
+			this.addBytes(block.opcodesToAddOnBlockEnd);
+			
+			if (block.onBlockEnd!=null)
+				block.onBlockEnd.Invoke();
+			
+			this.blocks[block]=memAddress;
+			Console.WriteLine("onBlockClosed: "+memAddress.ToString("X")+','+block.startMemAddr.ToString("X"));
+			Console.WriteLine(memAddress.ToString("X")+'-'+block.startMemAddr.ToString("X")+'='+(memAddress-block.startMemAddr).ToString());
+			Byte[] memAddr=BitConverter.GetBytes((Int32)memAddress-(Int32)block.startMemAddr);
+			Byte i;
+			foreach (Block b in this.blocksMemPositions.Select(x=>x.Key)) {
+				
+				Console.WriteLine("Found block: "+b.startMemAddr.ToString("X")+" (This block: "+block.startMemAddr.ToString("X")+')');
+				
+			}
+			foreach (UInt32 index in this.blocksMemPositions[block]) {
+				
+				Console.WriteLine("Block Mem Pos @ "+index.ToString());
+				
+				i=0;
+				
+				while (i!=4) {
+					
+					opcodes[(Int32)index+i]=memAddr[i];
+					++i;
+					
+				}
+				
+				
+			}
+			
+			this.lastBlockClosed=new Tuple<Block,List<UInt32>>(block,this.blocksMemPositions[block]);
+			Console.WriteLine("blockBracketBalances ct: "+blockBracketBalances.Count.ToString());
+			this.blocks.Remove(block);
+			this.blockBracketBalances.Remove(block);
+			this.blocksMemPositions.Remove(block);
+			Console.WriteLine("blockBracketBalances post ct: "+blockBracketBalances.Count.ToString());
+			Console.WriteLine("Searching again: ");
+			foreach (Block b in this.blocksMemPositions.Select(x=>x.Key)) {
+				
+				Console.WriteLine("Found block: "+b.startMemAddr.ToString("X")+" (This block: "+block.startMemAddr.ToString("X")+", Same block: "+(b==block).ToString()+')');
+				
+			}
+			Console.WriteLine("New Block No.: "+blockBracketBalances.Count.ToString());
+		}
+		
+		private void updateBlockBalances (Char c) {
+			
+			Console.WriteLine(this.blockBracketBalances.Count.ToString());
+			Dictionary<Block,UInt16>newDict=new Dictionary<Block,UInt16>(this.blockBracketBalances.Count);
+			Block toClose=null;
+			foreach (KeyValuePair<Block,UInt16> kvp in this.blockBracketBalances) {
+				
+				Console.WriteLine("Block Mem Addr: "+kvp.Key.startMemAddr.ToString("X"));
+				Console.WriteLine("Old: "+kvp.Value.ToString());
+				
+				newDict.Add(kvp.Key,(UInt16)((this.closesBlock(c))?kvp.Value-1:kvp.Value+1));
+				if (newDict[kvp.Key]==0) {
+					toClose=kvp.Key;
+				}
+				
+				Console.WriteLine("New: "+newDict[kvp.Key].ToString());
+				
+			}
+			this.blockBracketBalances=new Dictionary<Block,UInt16>(newDict);
+			if (toClose!=null)
+				this.onBlockClosed(toClose);
 			
 		}
 		
@@ -1055,6 +1325,36 @@ namespace ProgrammingLanguageTutorialIdea {
 		private Boolean isnativeArrayCreationIndicator (Char c) {
 			
 			return c=='#';
+			
+		}
+		
+		private Boolean beginsParameters (Char c) {
+			
+			return c=='(';
+			
+		}
+		
+		private Boolean endsParameters (Char c) {
+			
+			return c==')';
+			
+		}
+		
+		private Boolean splitsParameters (Char c) {
+			
+			return c==',';
+			
+		}
+		
+		private Boolean opensBlock (Char c) {
+			
+			return c=='{';
+			
+		}
+		
+		private Boolean closesBlock (Char c) {
+			
+			return c=='}';
 			
 		}
 		

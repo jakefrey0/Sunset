@@ -24,7 +24,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			
 		}
 		
-		public virtual KeywordResult execute (Parser sender) {
+		public virtual KeywordResult execute (Parser sender,String[] @params) {
 			
 			return new KeywordResult(){newStatus=ParsingStatus.SEARCHING_NAME,newOpcodes=new Byte[0]};
 			
