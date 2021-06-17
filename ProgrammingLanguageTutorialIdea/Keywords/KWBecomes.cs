@@ -23,6 +23,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			
 			sender.referencedVariable=sender.lastReferencedVariable;
 			sender.referencedVarType=sender.lastReferencedVarType;
+			sender.referencedVariableIsLocal=sender.lastReferencedVariableIsLocal;
+			Console.WriteLine("Becomes: referencedVariableIsLocal: "+sender.referencedVariableIsLocal.ToString());
 			
 			Byte[] newOpcodes=new Byte[0];
 			

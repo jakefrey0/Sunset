@@ -26,6 +26,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			
 			String varType=sender.getVariablesType(sender.lastReferencedVariable);
 			
+			//TODO:: make this work for more than native variables
 			//HACK:: check variable type
 			if (varType==KWByte.constName) {
 				

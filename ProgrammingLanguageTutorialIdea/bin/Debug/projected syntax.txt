@@ -30,11 +30,11 @@ Functions:
 With return value and parameters:
 
                          v--- Will expect KeywordType.TYPE or block
-func myFunc(byte b,shr s) byte {
+func(byte b,shr s) myFunc byte {
 	
 	byte myLocalByte
 	
-	ret myLocalByte
+	retn(myLocalByte)
 	
 }
 
@@ -44,14 +44,14 @@ func myFunc0 shr {
 	
 	shr myShort
 	
-	ret myShort
+	retn(myShort)
 	
 }
 
 Without return value but with parameters:
 
-	    v----- notice how in Keyword#hasParameters (C#) the parameters are optional, and if no parameters are provided, then the Keyword itself is responsible to throw a ParsingError. Parameters are seperated by commas.
-func myFunc1(int param) {
+    v----- notice how in Keyword#hasParameters (C#) the parameters are optional, and if no parameters are provided, then the Keyword itself is responsible to throw a ParsingError. Parameters are seperated by commas.
+func(int param) myFunc1 {
 	
 	ret
 	
@@ -61,6 +61,25 @@ Without return value or parameters:
 
 func myFunc2 {
 	
-	ret
+	retn
+	
+}
+
+--------------------------------------
+Timestamp: 5:00PM 6/15/2021
+--------------------------------------
+
+Changing Array Style:
+SetArrStyle(HEAP)
+Param List: HEAP, STATIC, STACK
+
+Foreach loops:
+byte# myArr becomes #16
+myArr[0] becomes 3
+...
+foreach(var,myArr) {
+	
+	Byte "var" is now defined &
+	stored as a local variable
 	
 }

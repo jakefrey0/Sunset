@@ -1,18 +1,20 @@
 ﻿/*
  * Created by SharpDevelop.
  * User: Elite
- * Date: 6/3/2021
- * Time: 12:15 AM
+ * Date: 6/10/2021
+ * Time: 12:50 PM
  * 
  * To change this template use Tools | Options | Coding | Edit Standard Headers.
  */
 using System;
+using ProgrammingLanguageTutorialIdea.Keywords;
 
 namespace ProgrammingLanguageTutorialIdea {
 	
-	public enum ArrayStyle {
+	public struct Executor {
 		
-		DYNAMIC_MEMORY_HEAP,STATIC_MEMORY_BLOCK,STACK_ALLOCATION
+		public Keyword kw;
+		public String func;
 		
 	}
 	

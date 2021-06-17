@@ -37,7 +37,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				throw new ParsingError("Expected 3 or 1 necessary parameters for \""+constName+'"');
 			
 			List<Byte>newOpcodes=new List<Byte>();
-			Block ifBlock=new Block(delegate{sender.setExpectsElse=true;},sender.memAddress,new Byte[0]);
+			Block ifBlock=new Block(delegate{sender.setExpectsElse=1;},sender.memAddress,new Byte[0],false,false);
 			UInt32 opcodesCountAtStart=sender.getOpcodesCount();
 			
 			if (@params.Length==3) {
@@ -104,6 +104,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				else throw new ParsingError("Invalid boolean operator \""+boolOp+'"');
 				
 				ifBlock.startMemAddr+=(UInt32)newOpcodes.Count+(sender.getOpcodesCount()-opcodesCountAtStart);
+				newOpcodes.AddRange(sender.getEnterBlockOpcodes(ifBlock,newOpcodes.Count));
 				return new KeywordResult(){newOpcodes=newOpcodes.ToArray(),newStatus=ParsingStatus.SEARCHING_NAME};
 				
 			}
@@ -131,6 +132,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				    :new Byte[]{0x0F,0x84,0,0,0,0});//JE  (DISTANCE AS SIGNED INTEGER)
 				
 				ifBlock.startMemAddr+=(UInt32)newOpcodes.Count+(sender.getOpcodesCount()-opcodesCountAtStart);
+				newOpcodes.AddRange(sender.getEnterBlockOpcodes(ifBlock,newOpcodes.Count));
 				return new KeywordResult(){newOpcodes=newOpcodes.ToArray(),newStatus=ParsingStatus.SEARCHING_NAME};
 				
 			}

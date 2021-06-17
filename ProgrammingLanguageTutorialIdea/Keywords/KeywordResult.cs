@@ -16,4 +16,5 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		public Byte[] newOpcodes;
 		
 	}
+	
 }

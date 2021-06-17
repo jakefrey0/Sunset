@@ -1,14 +1,14 @@
-int num becomes 3
-int num0 becomes 16
-
-if (num,>=,num0) {
+func someFunc int {
 	
-	crash
+	int# myArr becomes #13
+	myArr[3] becomes 14
+	int# myArr0 becomes #13
+	myArr0[3] becomes 15
+	int# myArr1 becomes #13
+	myArr1[3] becomes 16
 	
-}
-
-else {
-	
-	nofunct
+	retn(myArr1[3])
 	
 }
+
+retn(someFunc)

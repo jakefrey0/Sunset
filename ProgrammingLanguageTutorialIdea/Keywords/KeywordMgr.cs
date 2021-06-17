@@ -29,7 +29,9 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			                       	new KWNofunc(),
 			                       	new KWIf(),
 			                       	new KWElse(),
-			                       	new KWBoolean()
+			                       	new KWBoolean(),
+			                       	new KWFunction(),
+			                       	new KWReturn()
 			                       	
 			                       });
 			

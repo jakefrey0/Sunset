@@ -62,6 +62,7 @@
   <ItemGroup>
     <Compile Include="ArrayStyle.cs" />
     <Compile Include="Block.cs" />
+    <Compile Include="Executor.cs" />
     <Compile Include="Keywords\Keyword.cs" />
     <Compile Include="Keywords\KeywordResult.cs" />
     <Compile Include="Keywords\KeywordMgr.cs" />
@@ -72,10 +73,12 @@
     <Compile Include="Keywords\KWCrash.cs" />
     <Compile Include="Keywords\KWDecrease.cs" />
     <Compile Include="Keywords\KWElse.cs" />
+    <Compile Include="Keywords\KWFunction.cs" />
     <Compile Include="Keywords\KWIf.cs" />
     <Compile Include="Keywords\KWIncrease.cs" />
     <Compile Include="Keywords\KWInteger.cs" />
     <Compile Include="Keywords\KWNofunc.cs" />
+    <Compile Include="Keywords\KWReturn.cs" />
     <Compile Include="Keywords\KWShort.cs" />
     <Compile Include="Machine.cs" />
     <Compile Include="Parser.cs" />
