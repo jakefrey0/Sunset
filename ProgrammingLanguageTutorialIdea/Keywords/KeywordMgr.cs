@@ -31,7 +31,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			                       	new KWElse(),
 			                       	new KWBoolean(),
 			                       	new KWFunction(),
-			                       	new KWReturn()
+			                       	new KWReturn(),
+			                       	new KWString()
 			                       	
 			                       });
 			
@@ -51,7 +52,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				return 1;
 			else if (varType==KWShort.constName)
 				return 2;
-			else if (varType==KWInteger.constName)
+			else if (varType==KWInteger.constName||varType==KWString.constName)
 				return 4;
 			else
 				throw new Exception("(DEV) Invalid var type \""+varType+'"');

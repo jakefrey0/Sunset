@@ -80,6 +80,8 @@ namespace ProgrammingLanguageTutorialIdea {
 		private Dictionary<String,Tuple<UInt32,String>> variables=new Dictionary<String,Tuple<UInt32,String>>();//Name,(Mem Address,Var Type)
 		private Dictionary<String,Tuple<UInt32,String,ArrayStyle>> arrays=new Dictionary<String,Tuple<UInt32,String,ArrayStyle>>();//Name,(Ptr To Mem Address of Heap Handle(Dynamic) or Mem Block(Static),Array Var Type,ArrayStyle(Dynamic or Static))
 		
+		private List<Tuple<UInt32,List<UInt32>>>stringsAndRefs; //(Mem Addr,List of References by Opcode Index),Note: Currently the Inner list of Opcode Indexes will only have a length of 1 (6/19/2021 5:19PM)
+		
 		private Tuple<UInt32,List<UInt32>> processHeapVar;//Mem Addr, References
 		
 		private ArrayStyle style;//TODO:: do static memory block, later do stack allocation, and also allow this to be changed outside of compiler in the code with keyword SetArrayStyle (constName: SetArrStyle, expectsParams=true)
@@ -141,6 +143,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			blockAddrBeforeAppendingReferences=new Dictionary<Block,List<Tuple<UInt32,Int16>>>();
 			pseudoStack=new PseudoStack();
 			localVarEBPPositionsToOffset=new Dictionary<Block,List<UInt32>>();
+			stringsAndRefs=new List<Tuple<UInt32,List<UInt32>>>();
 			
 		}
 		
@@ -430,6 +433,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			this.updateVariableReferences();
 			this.fillFunctionReferences();  
 			this.fillHeapFreeReferences();
+			this.fillConstantStringReferences();
 			
 			if ((!(winApp))&&(this.toImport.Count!=0))
 				throw new ParsingError("Can not reference DLL's on non-PE app");
@@ -489,6 +493,14 @@ namespace ProgrammingLanguageTutorialIdea {
 			}
 			
 			this.arrays=new Dictionary<String,Tuple<UInt32,String,ArrayStyle>>(newDict0);
+			
+			List<Tuple<UInt32,List<UInt32>>>newList=new List<Tuple<UInt32,List<UInt32>>>(this.stringsAndRefs.Count);
+			foreach (Tuple<UInt32,List<UInt32>>str in this.stringsAndRefs) {
+				
+				newList.Add(new Tuple<UInt32,List<UInt32>>(str.Item1+1,str.Item2));
+				
+			}
+			this.stringsAndRefs=new List<Tuple<UInt32,List<UInt32>>>(newList);
 			
 			if (processHeapVar!=null){
 				
@@ -813,6 +825,9 @@ namespace ProgrammingLanguageTutorialIdea {
 				if (tpl.Item1==KWBoolean.constName&&type!=KWBoolean.constName)
 					throw new ParsingError("You can only apply \""+KWBoolean.constTrue+"\" and +\""+KWBoolean.constFalse+"\" to boolean variables");
 				
+				if (type!=KWString.constName&&tpl.Item1==KWString.constName)
+					throw new Exception("Can't convert \""+tpl.Item1+"\" to a string (\""+KWString.constName+"\").");
+				
 				if (this.referencedVariableIsLocal) {
 					if (this.getLocalVarHomeBlock(this.referencedVariable)!=this.getCurrentBlock())
 						this.localVarEBPPositionsToOffset[this.getCurrentBlock()].Add((UInt32)(this.opcodes.Count+2));
@@ -847,7 +862,7 @@ namespace ProgrammingLanguageTutorialIdea {
 						
 					}
 					
-					else if (type==KWInteger.constName) {
+					else if (type==KWInteger.constName||type==KWString.constName) {
 					
 						this.variableReferences[this.referencedVariable].Add((UInt32)this.opcodes.Count+2);
 						this.addBytes(new Byte[]{
@@ -1456,6 +1471,26 @@ namespace ProgrammingLanguageTutorialIdea {
 				return localVarHomeBlock.localVariables[value].Item1;
 				
 			}
+			else if (value.StartsWith("\"")&&value.EndsWith("\"")) {
+				
+				String innerText=value.Substring(1,value.Length-2);
+				Byte[]chars=new Byte[innerText.Length+1];//+1 = Null Byte
+				UInt16 i=0;
+				foreach (Byte ch in innerText.Select(x=>(Byte)x)) {
+					
+					chars[i]=ch;
+					
+					++i;
+					
+				}
+				
+				this.stringsAndRefs.Add(new Tuple<UInt32,List<UInt32>>((UInt32)(this.memAddress+this.appendAfter.Count),new List<UInt32>(new UInt32[]{(UInt32)(this.opcodes.Count+1)})));
+				this.appendAfter.AddRange(chars);
+				this.addBytes(new Byte[]{0x68,0,0,0,0});
+				
+				return new Tuple<String,VarType>(KWString.constName,VarType.NATIVE_VARIABLE);
+				
+			}
 			else throw new ParsingError("Invalid value: \""+value+'"');
 			
 		}
@@ -1834,6 +1869,29 @@ namespace ProgrammingLanguageTutorialIdea {
 		private void offsetEBP(SByte offset,UInt32 index) {
 		
 			this.opcodes[(Int32)index]=unchecked((Byte)((SByte)((this.opcodes[(Int32)index])+offset)));
+			
+		}
+		
+		private void fillConstantStringReferences () {
+			
+			Byte i0;
+			Byte[]bytes;
+			foreach (Tuple<UInt32,List<UInt32>>tpl in this.stringsAndRefs) {
+				
+				foreach (UInt32 i in tpl.Item2) {
+					
+					i0=0;
+					bytes=BitConverter.GetBytes(tpl.Item1);
+					while (i0!=4) {
+						
+						this.opcodes[(Int32)(i+i0)]=bytes[i0];
+						++i0;
+						
+					}
+					
+				}
+				
+			}
 			
 		}
 		

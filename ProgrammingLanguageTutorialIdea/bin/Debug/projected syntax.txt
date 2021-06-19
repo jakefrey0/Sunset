@@ -89,8 +89,8 @@ Timestamp: 1:16AM 6/19/2021
 --------------------------------------
 
 Dll Referencing:
-(Return Value) (DllRef Keyword, Params: DLL Name, Function Name, Param Var Types of function...)
+(DllRef Keyword, Params: DLL Name, Function Name, Param Var Types of function...) (Return Value)
 
-int dllref(Kernel32,MessageBoxA,int,string,string,int)
+dllref(User32,MessageBoxA,int,str,str,int) int
 
 MessageBoxA(0,"","",0)

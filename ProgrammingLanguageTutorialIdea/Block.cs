@@ -34,7 +34,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		/// <summary>
 		/// i.e If & Else
 		/// </summary>
-		public Block pairedBlock{
+		public Block pairedBlock {
 			
 			get;
 			protected set;

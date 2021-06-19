@@ -39,9 +39,6 @@ namespace ProgrammingLanguageTutorialIdea.Stack {
 			
 			Int32 topEbpIndex=items.FindLastIndex(x=>x.type==ItemType.PRESERVED_EBP)
 				 ,varIndex=items.IndexOf(items.Where(x=>x.type==ItemType.LOCAL_VAR&&((LocalVar)x).varName==varName).First());
-			//TODO:: in here, account for unassigned local variables that are being preserved by ENTER ,,.
-			//^ IDEA: maybe per variable definition, go back to all previous nested blocks and offset all values of variables EBP ctr by +4
-			
 			
 			return unchecked((Byte)((SByte)((topEbpIndex-varIndex)*4)));
 			

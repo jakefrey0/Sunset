@@ -1,0 +1,10 @@
+str myStr becomes "hello"
+str otherStr becomes "myOtherstr"
+
+
+if (true) {
+	
+	str testStr becomes "ye"
+	
+	
+}

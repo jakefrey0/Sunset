@@ -80,6 +80,7 @@
     <Compile Include="Keywords\KWNofunc.cs" />
     <Compile Include="Keywords\KWReturn.cs" />
     <Compile Include="Keywords\KWShort.cs" />
+    <Compile Include="Keywords\KWString.cs" />
     <Compile Include="Machine.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="ParsingError.cs" />
