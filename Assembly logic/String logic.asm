@@ -28,7 +28,7 @@ myStr:
     db 'Hello world',0 ; < 0 is the end null byte, expected on each string, on any programming language, to my knowledge (perhaps there are exceptions)
 
 myStrPtr:
-    dw 0
+    dd 0
 
 ; ------------------------------------------------
 section '.idata' import data readable writeable
