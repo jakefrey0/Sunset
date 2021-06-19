@@ -10,8 +10,8 @@ start:
     ; Passing the string in as arguments for a dllreference
     ; (which will be implemented afterwards)
     push    0
-    push    myStr
-    push    myStr
+    push    dword [myStrPtr]
+    push    dword [myStrPtr]
     push    0
     call    [MessageBoxA]
     
