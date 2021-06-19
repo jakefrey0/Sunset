@@ -831,10 +831,10 @@ namespace ProgrammingLanguageTutorialIdea {
 					throw new ParsingError("You can only apply \""+KWBoolean.constTrue+"\" and +\""+KWBoolean.constFalse+"\" to boolean variables");
 				
 				if (type!=KWString.constName&&tpl.Item1==KWString.constName)
-					throw new Exception("Can't convert \""+tpl.Item1+"\" to a string (\""+KWString.constName+"\").");
+					throw new ParsingError("Can't convert \""+tpl.Item1+"\" to a string (\""+KWString.constName+"\").");
 				
 				if (type==KWString.constName&&tpl.Item1!=KWString.constName)
-					throw new Exception("Can't convert a string (\""+KWString.constName+"\") to \""+tpl.Item1+"\".");
+					throw new ParsingError("Can't convert a string (\""+KWString.constName+"\") to \""+tpl.Item1+"\".");
 				
 				if (this.referencedVariableIsLocal) {
 					if (this.getLocalVarHomeBlock(this.referencedVariable)!=this.getCurrentBlock())
