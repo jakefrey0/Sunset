@@ -833,6 +833,9 @@ namespace ProgrammingLanguageTutorialIdea {
 				if (type!=KWString.constName&&tpl.Item1==KWString.constName)
 					throw new Exception("Can't convert \""+tpl.Item1+"\" to a string (\""+KWString.constName+"\").");
 				
+				if (type==KWString.constName&&tpl.Item1!=KWString.constName)
+					throw new Exception("Can't convert a string (\""+KWString.constName+"\") to \""+tpl.Item1+"\".");
+				
 				if (this.referencedVariableIsLocal) {
 					if (this.getLocalVarHomeBlock(this.referencedVariable)!=this.getCurrentBlock())
 						this.localVarEBPPositionsToOffset[this.getCurrentBlock()].Add((UInt32)(this.opcodes.Count+2));

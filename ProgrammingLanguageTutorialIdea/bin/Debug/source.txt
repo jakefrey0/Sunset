@@ -1,5 +1,5 @@
 str myStr becomes "hello"
-str otherStr becomes "my Other str"
+str otherStr becomes 123
 
 if (true) {
 
