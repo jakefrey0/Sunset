@@ -67,37 +67,37 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 					  6 Bytes
 					*/
 					
-					sender.blocksMemPositions[ifBlock].Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
+					ifBlock.blockMemPositions.Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
 					newOpcodes.AddRange(new Byte[]{0x0F,0x8E,0,0,0,0});//JNG
 					
 				}
-				else if (boolOp==KWIf.BOOL_OP_GREATER_THAN_OR_EQUAL_TO||boolOp==String.Concat(KWIf.BOOL_OP_GREATER_THAN.Reverse())) {
+				else if (boolOp==KWIf.BOOL_OP_GREATER_THAN_OR_EQUAL_TO||boolOp==String.Concat(KWIf.BOOL_OP_GREATER_THAN_OR_EQUAL_TO.Reverse())) {
 					
-					sender.blocksMemPositions[ifBlock].Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
+					ifBlock.blockMemPositions.Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
 					newOpcodes.AddRange(new Byte[]{0x0F,0x8C,0,0,0,0});//JNGE
 					
 				}
 				else if (boolOp==KWIf.BOOL_OP_LESS_THAN) {
 					
-					sender.blocksMemPositions[ifBlock].Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
+					ifBlock.blockMemPositions.Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
 					newOpcodes.AddRange(new Byte[]{0x0F,0x8D,0,0,0,0});//JNL
 					
 				}
-				else if (boolOp==KWIf.BOOL_OP_LESS_THAN_OR_EQUAL_TO||boolOp==String.Concat(KWIf.BOOL_OP_LESS_THAN.Reverse())) {
+				else if (boolOp==KWIf.BOOL_OP_LESS_THAN_OR_EQUAL_TO||boolOp==String.Concat(KWIf.BOOL_OP_LESS_THAN_OR_EQUAL_TO.Reverse())) {
 					
-					sender.blocksMemPositions[ifBlock].Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
+					ifBlock.blockMemPositions.Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
 					newOpcodes.AddRange(new Byte[]{0x0F,0x8F,0,0,0,0});//JNLE
 					
 				}
 				else if (boolOp==KWIf.BOOL_OP_EQUAL_TO) {
 					
-					sender.blocksMemPositions[ifBlock].Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
+					ifBlock.blockMemPositions.Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
 					newOpcodes.AddRange(new Byte[]{0x0F,0x85,0,0,0,0});//JNZ
 					
 				}
 				else if (boolOp==KWIf.BOOL_OP_NOT_EQUAL_TO) {
 					
-					sender.blocksMemPositions[ifBlock].Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
+					ifBlock.blockMemPositions.Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
 					newOpcodes.AddRange(new Byte[]{0x0F,0x84,0,0,0,0});//JZ
 					
 				}
@@ -126,7 +126,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				
 				newOpcodes.Add(0x58);//POP EAX
 				newOpcodes.AddRange(new Byte[]{0x84,0xC0});//TEST AL,AL
-				sender.blocksMemPositions[ifBlock].Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
+				ifBlock.blockMemPositions.Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
 				newOpcodes.AddRange((meansNot)
 				    ?new Byte[]{0x0F,0x85,0,0,0,0}  //JNE (DISTANCE AS SIGNED INTEGER)          
 				    :new Byte[]{0x0F,0x84,0,0,0,0});//JE  (DISTANCE AS SIGNED INTEGER)

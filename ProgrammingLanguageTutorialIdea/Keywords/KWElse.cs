@@ -24,8 +24,9 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			sender.addBytes(new Byte[]{0xE9,0,0,0,0});//JMP TO MEM ADDR
 			UInt32 pOpcodes=sender.getOpcodesCount();
 			Block elseBlock=new Block(sender.elseBlockClosed,sender.memAddress,new Byte[0]);
+			Block.pairBlocks(elseBlock,sender.lastBlockClosed);
 			sender.addBlock(elseBlock);
-			sender.blocksMemPositions[elseBlock].Add(sender.getOpcodesCount()-4-(sender.getOpcodesCount()-pOpcodes));
+			elseBlock.blockMemPositions.Add(sender.getOpcodesCount()-4-(sender.getOpcodesCount()-pOpcodes));
 			
 			return base.execute(sender,@params);
 			

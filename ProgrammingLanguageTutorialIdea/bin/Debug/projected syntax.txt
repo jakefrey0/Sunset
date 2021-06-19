@@ -83,3 +83,14 @@ foreach(var,myArr) {
 	stored as a local variable
 	
 }
+
+--------------------------------------
+Timestamp: 1:16AM 6/19/2021
+--------------------------------------
+
+Dll Referencing:
+(Return Value) (DllRef Keyword, Params: DLL Name, Function Name, Param Var Types of function...)
+
+int dllref(Kernel32,MessageBoxA,int,string,string,int)
+
+MessageBoxA(0,"","",0)

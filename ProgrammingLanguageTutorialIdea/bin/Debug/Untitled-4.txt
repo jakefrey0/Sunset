@@ -1,0 +1,10 @@
+if (true) {
+	
+	crash
+	
+}
+else {
+	
+	crash
+	
+}

@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ProgrammingLanguageTutorialIdea.Stack;
 
 namespace ProgrammingLanguageTutorialIdea.Keywords {
 	
@@ -28,8 +29,9 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 //			Byte[]newOpcodes=new Byte[]{0xE9,0,0,0,0}; //JMP TO MEM ADDR
 			Byte[] newOpcodes=new Byte[0],endOpcodes=(@params.Length==0)?new Byte[]{0xC3}/*RET*/:new Byte[]{0xC2/*RET SHORT:(STACK RESTORATION AMOUNT)*/}.Concat(BitConverter.GetBytes((UInt16)(@params.Length*4))).ToArray();
 			Block functionBlock=new Block(delegate{sender.inFunction=false;},sender.memAddress,endOpcodes,true);
+			sender.pseudoStack.push(new ReturnPtr());
 			sender.addBlock(functionBlock,0);
-			sender.blocksMemPositions[functionBlock].Add(pos);
+			functionBlock.blockMemPositions.Add(pos);
 			sender.inFunction=true;
 			sender.nextFunctionParamsCount=(UInt16)@params.Length;
 			sender.lastFunctionBlock=functionBlock;
@@ -46,7 +48,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				Tuple<String,VarType>varType=sender.getVarType(unparsedType);
 				paramTypes.Add(varType);
 				Console.WriteLine(varType.Item1+','+varType.Item2.ToString()+','+varName);
-				functionBlock.localVariables.Add(varName,new Tuple<Tuple<String,VarType>,SByte>(varType,(SByte)((paramIndex*4)+8)));
+				sender.pseudoStack.push(new LocalVar(varName));
 				++paramIndex;
 				
 			}
