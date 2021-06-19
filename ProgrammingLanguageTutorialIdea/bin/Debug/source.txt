@@ -1,10 +1,9 @@
 str myStr becomes "hello"
-str otherStr becomes "myOtherstr"
-
+str otherStr becomes "my Other str"
 
 if (true) {
-	
+
 	str testStr becomes "ye"
-	
-	
+
+
 }

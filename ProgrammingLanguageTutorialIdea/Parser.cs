@@ -156,6 +156,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			String arrName=null;
 			List<String> paramsList=new List<String>();
 			Int32 currentChar=0;
+			Boolean inDoubleQuotes=false;
 			
 			data+=' ';
 			
@@ -187,6 +188,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					case ParsingStatus.SEARCHING_NAME:
 						if (!this.isFormOfBlankspace(c)) {
 							
+							inDoubleQuotes=c=='"';
 							nameReader.Append(c);
 							++status;
 							
@@ -308,15 +310,18 @@ namespace ProgrammingLanguageTutorialIdea {
 						
 					case ParsingStatus.READING_VALUE:
 						
-						if (!(this.isFormOfBlankspace(c))) nameReader.Append(c);
-						else {
+						if ((inDoubleQuotes&&c=='"')||(!inDoubleQuotes&&this.isFormOfBlankspace(c))) {
 							
+							if (inDoubleQuotes) nameReader.Append(c);
 							this.processValue(nameReader.ToString());
 							nameReader.Clear();
 							referencedVariable=null;
 							referencedVarType=VarType.NONE;
+							inDoubleQuotes=false;
 							
 						}
+						else nameReader.Append(c);
+						
 						break;
 						
 					case ParsingStatus.READING_ARRAY_NAME:
