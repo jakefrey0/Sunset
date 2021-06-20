@@ -1,27 +1,38 @@
+; Reference DLLs for displaying a message box, finding the handle (ptr) of a window & showing or hiding the window, respectively
 dllref(User32,int,str,str,int) MessageBoxA int
-dllref(User32,str,str) FindWindowA int
-dllref(User32,int,int) ShowWindow bool
+dllref(User32,str,str) 	       FindWindowA int
+dllref(User32,int,int)         ShowWindow  bool
 
-int ollyHandle becomes FindWindowA("OLLYDBG",null)
-bool pBool becomes false
+int ollyHandle becomes FindWindowA("OLLYDBG",null) ; Handle for x86 (x32) OllyDbg, can be set to any window if the className is found using WinSpy, Spy++, logical thinking, etc.
+bool pBool becomes false ; This is a boolean indicating whether or not the window was last visible
+; Do notice that if the window is initially hidden, pBool should start off by being set to true. This is however generally an unlikely scenario
 
+; Define a function without parameters or a return value
 func toggleWindowPerpetually {
 	
+	; If the window is hidden
 	if (pBool) {
 		
+		; Show the window and tell the user so in the form of a MessageBox
+		; set pBool to the return value of ShowWindow which is true if previously visible, and vice versa
 		pBool becomes ShowWindow(ollyHandle,1)
 		MessageBoxA(0,"Shown the window","Hello",0)
 		
 	}
+	
+	; If the window is not hidden
 	else {
 		
+		; Hide the window
 		pBool becomes ShowWindow(ollyHandle,0)
 		MessageBoxA(0,"Hid the window","Hello",0)
 		
 	}
 	
+	; Perpetual recursion loop
 	toggleWindowPerpetually
 	
 }
 
+; Call the primary function of this exemplar
 toggleWindowPerpetually

@@ -190,9 +190,15 @@ namespace ProgrammingLanguageTutorialIdea {
 					case ParsingStatus.SEARCHING_NAME:
 						if (!this.isFormOfBlankspace(c)) {
 							
-							inDoubleQuotes=c=='"';
-							nameReader.Append(c);
-							++status;
+							if (this.indicatesComment(c))
+								status=ParsingStatus.IN_COMMENT;
+							else {
+							
+								inDoubleQuotes=c=='"';
+								nameReader.Append(c);
+								++status;
+								
+							}
 							
 						}
 						break;
@@ -414,6 +420,13 @@ namespace ProgrammingLanguageTutorialIdea {
 							this.searchingFunctionReturnType=true;
 							
 						}
+						
+						break;
+						
+					case ParsingStatus.IN_COMMENT:
+						
+						if (this.isNewlineOrReturn(c))
+							status=ParsingStatus.SEARCHING_NAME;
 						
 						break;
 						
@@ -1983,6 +1996,18 @@ namespace ProgrammingLanguageTutorialIdea {
 		private Boolean closesBlock (Char c) {
 			
 			return c=='}';
+			
+		}
+		
+		private Boolean indicatesComment (Char c) {
+			
+			return c==';';
+			
+		}
+		
+		private Boolean isNewlineOrReturn (Char c) { 
+			
+			return c=='\n'||c=='\r'; 
 			
 		}
 		
