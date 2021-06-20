@@ -63,6 +63,7 @@
     <Compile Include="ArrayStyle.cs" />
     <Compile Include="Block.cs" />
     <Compile Include="Executor.cs" />
+    <Compile Include="FunctionType.cs" />
     <Compile Include="Keywords\Keyword.cs" />
     <Compile Include="Keywords\KeywordResult.cs" />
     <Compile Include="Keywords\KeywordMgr.cs" />
@@ -72,6 +73,7 @@
     <Compile Include="Keywords\KWByte.cs" />
     <Compile Include="Keywords\KWCrash.cs" />
     <Compile Include="Keywords\KWDecrease.cs" />
+    <Compile Include="Keywords\KWDllReference.cs" />
     <Compile Include="Keywords\KWElse.cs" />
     <Compile Include="Keywords\KWFunction.cs" />
     <Compile Include="Keywords\KWIf.cs" />

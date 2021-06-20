@@ -29,14 +29,10 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 //			Byte[]newOpcodes=new Byte[]{0xE9,0,0,0,0}; //JMP TO MEM ADDR
 			Byte[] newOpcodes=new Byte[0],endOpcodes=(@params.Length==0)?new Byte[]{0xC3}/*RET*/:new Byte[]{0xC2/*RET SHORT:(STACK RESTORATION AMOUNT)*/}.Concat(BitConverter.GetBytes((UInt16)(@params.Length*4))).ToArray();
 			Block functionBlock=new Block(delegate{sender.inFunction=false;},sender.memAddress,endOpcodes,true);
-			sender.pseudoStack.push(new ReturnPtr());
-			sender.addBlock(functionBlock,0);
-			functionBlock.blockMemPositions.Add(pos);
-			sender.inFunction=true;
-			sender.nextFunctionParamsCount=(UInt16)@params.Length;
-			sender.lastFunctionBlock=functionBlock;
 			List<Tuple<String,VarType>>paramTypes=new List<Tuple<String,VarType>>();
 			UInt16 paramIndex=0;
+			foreach (String s in @params.Reverse())
+				sender.pseudoStack.push(new LocalVar(s.Split(' ')[1]));
 			foreach (String s in @params) {
 				
 				String[]split=s.Split(' ');
@@ -48,12 +44,20 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				Tuple<String,VarType>varType=sender.getVarType(unparsedType);
 				paramTypes.Add(varType);
 				Console.WriteLine(varType.Item1+','+varType.Item2.ToString()+','+varName);
-				sender.pseudoStack.push(new LocalVar(varName));
+				functionBlock.localVariables.Add(varName,new Tuple<Tuple<String,VarType>>(varType));
 				++paramIndex;
 				
 			}
+			sender.pseudoStack.push(new ReturnPtr());
+			sender.addBlock(functionBlock,0);
+			functionBlock.blockMemPositions.Add(pos);
+			sender.inFunction=true;
+			sender.nextFunctionParamsCount=(UInt16)@params.Length; 
+			sender.lastFunctionBlock=functionBlock;
+			
 			sender.nextFunctionParamTypes=paramTypes.ToArray();
 			
+			sender.nextType=FunctionType.SUNSET;
 			return new KeywordResult(){newStatus=ParsingStatus.SEARCHING_FUNCTION_NAME,newOpcodes=newOpcodes};
 		
 		}

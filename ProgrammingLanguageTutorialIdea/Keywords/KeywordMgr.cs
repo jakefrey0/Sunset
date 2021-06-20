@@ -32,7 +32,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			                       	new KWBoolean(),
 			                       	new KWFunction(),
 			                       	new KWReturn(),
-			                       	new KWString()
+			                       	new KWString(),
+			                       	new KWDllReference()
 			                       	
 			                       });
 			

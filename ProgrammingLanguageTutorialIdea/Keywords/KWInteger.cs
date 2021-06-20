@@ -19,6 +19,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		override public KeywordResult execute (Parser sender,String[] @params) {
 			
 			sender.varType=this.name;
+			sender.lastReferencedVarType=VarType.NATIVE_VARIABLE;
 			return new KeywordResult(){newStatus=ParsingStatus.SEARCHING_VARIABLE_NAME,newOpcodes=new Byte[0]};
 			
 		}

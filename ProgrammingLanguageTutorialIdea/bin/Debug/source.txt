@@ -1,9 +1,27 @@
-str myStr becomes "hello"
-str otherStr becomes 123
+dllref(User32,int,str,str,int) MessageBoxA int
+dllref(User32,str,str) FindWindowA int
+dllref(User32,int,int) ShowWindow bool
 
-if (true) {
+int ollyHandle becomes FindWindowA("OLLYDBG",null)
+bool pBool becomes false
 
-	str testStr becomes "ye"
-
-
+func toggleWindowPerpetually {
+	
+	if (pBool) {
+		
+		pBool becomes ShowWindow(ollyHandle,1)
+		MessageBoxA(0,"Shown the window","Hello",0)
+		
+	}
+	else {
+		
+		pBool becomes ShowWindow(ollyHandle,0)
+		MessageBoxA(0,"Hid the window","Hello",0)
+		
+	}
+	
+	toggleWindowPerpetually
+	
 }
+
+toggleWindowPerpetually

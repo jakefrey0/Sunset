@@ -53,7 +53,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal Boolean expectsBlock=false,expectsElse=false,searchingFunctionReturnType=false,inFunction=false;
 		internal Byte setExpectsElse=0,setExpectsBlock=0;
 		
-		internal Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16>> functions;//Function Name,(Memory Address,(Return Type, Return Var Type),No. of expected parameters)
+		internal Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType>> functions;//Function Name,(Memory Address,(Return Type, Return Var Type),No. of expected parameters,Function Type)
 		internal Dictionary<String,List<Tuple<UInt32,UInt32>>> functionReferences;//Function Name,(Indexes in Opcodes of the reference,Memory Address at time of Reference)
 		internal UInt16 nextFunctionParamsCount;
 		internal Dictionary<String,List<Tuple<String,VarType>>> functionParamTypes;//Function Name,Var Type
@@ -74,6 +74,9 @@ namespace ProgrammingLanguageTutorialIdea {
 			private set;
 							
 		}
+		
+		internal FunctionType nextType;
+		internal String nextReferencedDLL;
 			
 		private List<Byte> opcodes=new List<Byte>(),importOpcodes=null,finalBytes=new List<Byte>(),appendAfter=new List<Byte>();
 		private ParsingStatus status;
@@ -95,10 +98,9 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		private UInt16 squareBracketBalance=0,roundBracketBalance=0,nestedLevel=0;
 		
-		
 		private UInt32 freeHeapsMemAddr;
 		
-		private const String KERNEL32="KERNEL32.DLL";
+		private const String KERNEL32="KERNEL32.DLL",NULL_STR="null";
 		
 		public Parser (Boolean winApp=true) {
 			
@@ -134,7 +136,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				}
 				
 			};
-			functions=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16>>();
+			functions=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType>>();
 			functionReferences=new Dictionary<String,List<Tuple<UInt32,UInt32>>>();
 			freeHeapsRefs=new List<UInt32>();
 			functionParamTypes=new Dictionary<String,List<Tuple<String,VarType>>>();
@@ -202,7 +204,7 @@ namespace ProgrammingLanguageTutorialIdea {
 							if (searchingFunctionReturnType) {
 								
 								nameReader.Append(c);
-								this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16>(this.functions.Last().Value.Item1,this.getVarType(nameReader.ToString()),functions.Last().Value.Item3);
+								this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType>(this.functions.Last().Value.Item1,this.getVarType(nameReader.ToString()),functions.Last().Value.Item3,functions.Last().Value.Item4);
 								status=ParsingStatus.SEARCHING_NAME;
 								this.setExpectsBlock=1;
 								
@@ -374,7 +376,7 @@ namespace ProgrammingLanguageTutorialIdea {
 						
 						else if (this.endsParameters(c)) --roundBracketBalance;
 						
-						else if (this.splitsParameters(c)) { 
+						else if (this.splitsParameters(c)&&roundBracketBalance==1) { 
 							
 							paramsList.Add(nameReader.ToString());
 							nameReader.Clear();
@@ -390,7 +392,7 @@ namespace ProgrammingLanguageTutorialIdea {
 							
 						}
 						
-						else if (!(this.splitsParameters(c))) nameReader.Append(c);
+						else if (!(this.splitsParameters(c)&&roundBracketBalance==1)) nameReader.Append(c);
 						
 						break;
 						
@@ -401,10 +403,11 @@ namespace ProgrammingLanguageTutorialIdea {
 							
 							this.setExpectsBlock=1;
 							String funcName=nameReader.ToString();
+							if (this.nextType==FunctionType.DLL_REFERENCED)				
+								this.referenceDll(this.nextReferencedDLL,funcName);
 							nameReader.Clear();
-							this.functionParamTypes.Add(funcName,new List<Tuple<String,VarType>>());
-							this.functionParamTypes[funcName]=this.nextFunctionParamTypes.ToList();
-							this.functions.Add(funcName,new Tuple<UInt32,Tuple<String,VarType>,UInt16>(blocks.Keys.Last().startMemAddr,null,(UInt16)this.nextFunctionParamTypes.Length));
+							this.functionParamTypes.Add(funcName,new List<Tuple<String,VarType>>(this.nextFunctionParamTypes));
+							this.functions.Add(funcName,new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType>((this.nextType== FunctionType.SUNSET)?blocks.Keys.Last().startMemAddr:0,null,(UInt16)this.nextFunctionParamTypes.Length,this.nextType));
 							this.functionReferences.Add(funcName,new List<Tuple<UInt32,UInt32>>());
 							status=ParsingStatus.SEARCHING_NAME;
 							this.nextExpectedKeywordTypes=new []{KeywordType.TYPE};
@@ -622,7 +625,7 @@ namespace ProgrammingLanguageTutorialIdea {
 						this.execKeyword(kw,new String[0]);
 					
 					if (wasSearchingFuncReturnType) {
-						this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16>(this.functions.Last().Value.Item1,new Tuple<String,VarType>(this.varType,VarType.NATIVE_VARIABLE),functions.Last().Value.Item3);
+						this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType>(this.functions.Last().Value.Item1,new Tuple<String,VarType>(this.varType,VarType.NATIVE_VARIABLE),functions.Last().Value.Item3,functions.Last().Value.Item4);
 						status=ParsingStatus.SEARCHING_NAME;
 						this.setExpectsBlock=1;
 					}
@@ -1242,7 +1245,8 @@ namespace ProgrammingLanguageTutorialIdea {
 				name==KWBoolean.constFalse       ||
 				name==KWBoolean.constTrue        ||
 				this.functions.ContainsKey(name) ||
-				this.isALocalVar(name);
+				this.isALocalVar(name)           ||
+				name==Parser.NULL_STR;
 			
 		}
 		
@@ -1439,7 +1443,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					
 					if (c=='(') ++roundBracketBalance;
 					else if (c==')') --roundBracketBalance;
-					else if (c==',') {
+					else if (c==','&&roundBracketBalance==1) {
 						
 						@params.Add(paramBuilder.ToString());
 						paramBuilder.Clear();
@@ -1497,6 +1501,12 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.addBytes(new Byte[]{0x68,0,0,0,0});
 				
 				return new Tuple<String,VarType>(KWString.constName,VarType.NATIVE_VARIABLE);
+				
+			}
+			else if (value==Parser.NULL_STR) {
+				
+				this.addBytes(new Byte[]{0x6A,0});
+				return new Tuple<String,VarType>(Parser.NULL_STR,VarType.NONE);
 				
 			}
 			else throw new ParsingError("Invalid value: \""+value+'"');
@@ -1670,10 +1680,10 @@ namespace ProgrammingLanguageTutorialIdea {
 				throw new ParsingError("Function does not exist: \""+functionName+'"');
 			
 			if (this.functions[functionName].Item3!=@params.Length)
-				throw new ParsingError("Expected \""+this.functions[functionName].Item3.ToString()+"\" parameters for \""+functionName+'"');
+				throw new ParsingError("Expected \""+this.functions[functionName].Item3.ToString()+"\" parameters for \""+functionName+"\", got \""+@params.Length+'"');
 			
-			if (this.functionParamTypes.Count!=0) {
-				UInt16 i=(UInt16)(this.functionParamTypes.Count-1);
+			if (this.functionParamTypes[functionName].Count!=0) {
+				UInt16 i=(UInt16)(this.functionParamTypes[functionName].Count-1);
 				foreach (String str in @params.Reverse()) {
 					
 					this.tryConvertVars(this.functionParamTypes[functionName][i],this.pushValue(str));
@@ -1682,9 +1692,11 @@ namespace ProgrammingLanguageTutorialIdea {
 					
 				}
 			}
-			this.addBytes(new Byte[]{0xE8,0,0,0,0}); //CALL Mem Addr
-			this.functionReferences[functionName].Add(new Tuple<UInt32,UInt32>((UInt32)opcodes.Count-4,this.memAddress));
-			
+			this.addBytes((this.functions[functionName].Item4==FunctionType.SUNSET)?new Byte[]{0xE8,0,0,0,0}:new Byte[]{0xFF,0x15,0,0,0,0}); //CALL Mem Addr
+			if (this.functions[functionName].Item4==FunctionType.SUNSET)
+				this.functionReferences[functionName].Add(new Tuple<UInt32,UInt32>((UInt32)opcodes.Count-4,this.memAddress));
+			else
+				this.referencedFuncPositions[functionName].Add((UInt32)opcodes.Count-4);
 			status=ParsingStatus.SEARCHING_NAME;
 			
 		}
@@ -1701,8 +1713,11 @@ namespace ProgrammingLanguageTutorialIdea {
 					i=0;
 					Console.WriteLine("Writing opcodes @ "+tpl.Item1.ToString());
 					Console.WriteLine("Filling function ref @ "+tpl.Item1.ToString()+": "+this.functions[funcName].Item1.ToString("X")+'-'+tpl.Item2.ToString("X")+'='+((Int32)this.functions[funcName].Item1-(Int32)tpl.Item2).ToString());
-					memAddr=BitConverter.GetBytes(((Int32)this.functions[funcName].Item1-(Int32)tpl.Item2));
 					
+					if (this.functions[funcName].Item4==FunctionType.SUNSET)
+						memAddr=BitConverter.GetBytes(((Int32)this.functions[funcName].Item1-(Int32)tpl.Item2));
+					else 
+						memAddr=BitConverter.GetBytes(this.functions[funcName].Item1);
 					while (i!=4) {
 						
 						this.opcodes[(Int32)tpl.Item1+i]=memAddr[i];
@@ -1790,6 +1805,8 @@ namespace ProgrammingLanguageTutorialIdea {
 				if (keywordMgr.getVarTypeByteSize(to.Item1)<keywordMgr.getVarTypeByteSize(from.Item1))
 					throw new ParsingError("Can't convert \""+to.Item1+"\" to \""+from.Item1+'"');
 			}
+			if (from.Item2==VarType.NATIVE_VARIABLE&&to.Item2==VarType.NATIVE_VARIABLE&&(from.Item1==KWString.constName||to.Item1==KWString.constName)&&from.Item1!=to.Item1)
+				throw new ParsingError("Can't convert \""+from.Item1+"\" to \""+to.Item1+'"');
 			else if (from.Item2!=to.Item2&&keywordMgr.getVarTypeByteSize(to.Item1)!=4) // TODO:: if there are ever any NON 4 byte variable types (ptrs), fix this, what this does is allow pointers of native arrays etc to be moved into native integers!
 				throw new ParsingError("Can't convert \""+to.Item2.ToString()+"\" of \""+to.Item1.ToString()+"\" to \""+from.Item2.ToString()+'"');
 				
