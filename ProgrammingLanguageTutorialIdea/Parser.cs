@@ -1933,6 +1933,12 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		
+		internal void writeJump (UInt32 gotoMemAddr) {
+			
+			this.addBytes(new Byte[]{0xE9}.Concat(BitConverter.GetBytes((Int32)gotoMemAddr-(Int32)(this.memAddress+5))));
+			
+		}
+		
 		private Boolean isFormOfBlankspace (Char c) {
 			
 			return c==' '||c=='\n'||c=='\r'||c=='\t';
