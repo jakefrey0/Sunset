@@ -30,6 +30,10 @@ namespace ProgrammingLanguageTutorialIdea {
 		public UInt16 nestedLevel=0;
 		
 		public List<UInt32>blockMemPositions;
+		public List<Tuple<UInt32,UInt32>>blockRVAPositions;
+		
+		public Boolean isLoopBlock=false;
+		public UInt32 continueAddress=0;
 		
 		/// <summary>
 		/// i.e If & Else
@@ -50,6 +54,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			this.shouldXOREAX=xorEax;
 			this.addEnterAutomatically=addEnterAutomatically;
 			this.blockMemPositions=new List<UInt32>();
+			this.blockRVAPositions=new List<Tuple<UInt32,UInt32>>();
 			
 		}
 		

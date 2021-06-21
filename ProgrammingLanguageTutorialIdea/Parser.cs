@@ -1626,6 +1626,20 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 				
 			}
+			foreach (Tuple<UInt32,UInt32>RVAindex in block.blockRVAPositions) {
+				
+				memAddr=BitConverter.GetBytes((Int32)memAddress-(Int32)RVAindex.Item2);
+				
+				i=0;
+				
+				while (i!=4) {
+					
+					opcodes[(Int32)RVAindex.Item1+i]=memAddr[i];
+					++i; 
+					
+				}
+				
+			}
 			foreach (Tuple<UInt32,Int16>indexAndOffset in this.blockAddrBeforeAppendingReferences[block]) {
 				
 				i=0;

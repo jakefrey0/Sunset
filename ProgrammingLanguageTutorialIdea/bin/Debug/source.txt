@@ -1,6 +1,13 @@
-int i
-while (true) {
+shr# SYSTEMTIME becomes #8
+int ptr becomes SYSTEMTIME
+dllref(Kernel32,int) GetSystemInfo
 
-	++i
 
-}
+shr wYear becomes SYSTEMTIME[0]
+shr wMonth becomes SYSTEMTIME[1]
+shr wDayOfWeek becomes SYSTEMTIME[2]
+shr wDay becomes SYSTEMTIME[3]
+shr wHour becomes SYSTEMTIME[4]
+shr wMinute becomes SYSTEMTIME[5]
+shr wSecond becomes SYSTEMTIME[6]
+shr wMilliseconds becomes SYSTEMTIME[7]

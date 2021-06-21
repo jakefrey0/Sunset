@@ -70,7 +70,9 @@
     <Compile Include="Keywords\KeywordType.cs" />
     <Compile Include="Keywords\KWBecomes.cs" />
     <Compile Include="Keywords\KWBoolean.cs" />
+    <Compile Include="Keywords\KWBreak.cs" />
     <Compile Include="Keywords\KWByte.cs" />
+    <Compile Include="Keywords\KWContinue.cs" />
     <Compile Include="Keywords\KWCrash.cs" />
     <Compile Include="Keywords\KWDecrease.cs" />
     <Compile Include="Keywords\KWDllReference.cs" />

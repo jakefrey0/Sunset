@@ -25,7 +25,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			
 			List<Byte>newOpcodes=new List<Byte>();
 			UInt32 cMemAddr=sender.memAddress;
-			Block whileBlock=new Block(delegate {sender.writeJump(cMemAddr);},sender.memAddress,new Byte[0],false,false);
+			Block whileBlock=new Block(delegate {sender.writeJump(cMemAddr);},sender.memAddress,new Byte[0],false,false){isLoopBlock=true,continueAddress=sender.memAddress};
 			UInt32 opcodesCountAtStart=sender.getOpcodesCount();
 			if (@params.Length==3) {
 				

@@ -34,7 +34,9 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			                       	new KWReturn(),
 			                       	new KWString(),
 			                       	new KWDllReference(),
-			                       	new KWWhile()
+			                       	new KWWhile(),
+			                       	new KWBreak(),
+			                       	new KWContinue()
 			                       	
 			                       });
 			

@@ -1,0 +1,28 @@
+int i becomes 0
+
+; Loop a boolean, in this case "true", resulting in an infinite loop
+while (true) {
+	
+	if(i,=,10) {
+		
+		break
+		
+	}
+	else {
+		
+		++i
+		
+	}
+	
+}
+
+; Resetting the variable i to 0
+i becomes 0
+
+; This is the equivalent of the above loop without using break
+; (Except shortened and therefore optimized)
+while (i,=/=,10) {
+	
+	++i
+	
+}
