@@ -1,13 +1,64 @@
-shr# SYSTEMTIME becomes #8
-int ptr becomes SYSTEMTIME
-dllref(Kernel32,int) GetSystemInfo
+func(int i) g int { retn(i) }
+
+int# nums becomes #7
+nums[0] becomes 1
+nums[1] becomes 2
+nums[2] becomes 3
+nums[5] becomes 1
+nums[6] becomes 2
+
+crash
+int oop becomes 3+6*4/2+3*6-4 ;29 (1D)
+; 3+12+18-4
+; 29 (1D)
+; LTR:  122 (7A)
+
+; Adds 4 instead of subtracting
+; ^ wrong order as well
+
+crash
+
+; int oop0 becomes 3+4+3/2/1*6+3+4+5+6*3-4-5+6/3
+; int oop1 becomes (3+4+3+6/2)+3*6-2+4-4/2
+; int oop2 becomes (3+4+5+6+7+8*4)*4-200/(6*4+3)
+ 
+; 3+12+18-4
+; 29 (1D)
+; LTR:  122 (7A)
+
+;int test becomes (3+((3*4)+(3*2))+((3*3)+(4*9))-4) ; 62 (3Eh)
+; 
+
+;int num becomes nums[0]+nums[nums[0]]+nums[nums[0]+nums[1]-1]/3 ; 2
+;int num0 becomes 1*2*3*4*5*num+16 ; 256 (100h)
+
+;int num1 becomes (1*4)+(num*6) ; 4+12(0Ch), 16 (10h)
+
+;int num2 becomes 3+((1*3*num)*3)+(num*4) ; 3+(6*3)+(2*4), 3+18(12h)+8, 29(1Dh)
+;int num3 becomes nums[nums[1*(nums[0]+1-1)]] ; 3
+;nofunct
+;int num23 becomes 1*(3+4+(6*4+3)) ; 34 (22h)
+;nofunct
+;int num4 becomes 3+3*4*5+3*3 ; 72 (48h) issue: MDMAS yet to be implemented
+;int num5 becomes 3+(g(3)*3) ; 3+9, 12 (0Ch)
+;crash
+;int num6 becomes nums[nums[3*(nums[2]+1/2)]-1] ;2
+;nofunct
+;int num7 becomes 3*(nums[2]+1/2) ; 3*2, 6
+;int num8 becomes 3*((nums[1]*4)+3) ; 3*(2*4+3), 3*11, 33 (21h)
+;int num9 becomes 16%5 ; 1
+;int num10 becomes nums[(6/2)-1] ; 3
+
+; 3/6-(3*4)*3-5/5+6-4 =-30.5
+; After First Loop:
+; innerValues: "5","6","4"
+; splitChars: '-','-','+','-'
+; maybe data should be stored when a splitChars is skipped
+; telling it to Add/Multiply a stack item to a innerValue, a stack item to a stack item, a innerValue to an innerValue, or a innerValue to a stack item
+; Stack after first loop:
+; 1 (5/5)
+; 108 ((3*4)*3)
+; 0.5 (3/6)
 
 
-shr wYear becomes SYSTEMTIME[0]
-shr wMonth becomes SYSTEMTIME[1]
-shr wDayOfWeek becomes SYSTEMTIME[2]
-shr wDay becomes SYSTEMTIME[3]
-shr wHour becomes SYSTEMTIME[4]
-shr wMinute becomes SYSTEMTIME[5]
-shr wSecond becomes SYSTEMTIME[6]
-shr wMilliseconds becomes SYSTEMTIME[7]
+crash

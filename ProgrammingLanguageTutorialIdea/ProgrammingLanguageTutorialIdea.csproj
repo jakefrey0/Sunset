@@ -87,6 +87,7 @@
     <Compile Include="Keywords\KWString.cs" />
     <Compile Include="Keywords\KWWhile.cs" />
     <Compile Include="Machine.cs" />
+    <Compile Include="Order.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="ParsingError.cs" />
     <Compile Include="ParsingStatus.cs" />

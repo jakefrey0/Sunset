@@ -18,6 +18,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		
 		public override KeywordResult execute (Parser sender,String[] @params) {
 			
+//			Console.ReadKey();
 			return new KeywordResult(){newOpcodes=new Byte[]{0x90},newStatus= ParsingStatus.SEARCHING_NAME};
 			
 		}

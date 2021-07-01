@@ -3,6 +3,9 @@ dllref(User32,int,str,str,int) MessageBoxA int
 dllref(User32,str,str) 	       FindWindowA int
 dllref(User32,int,int)         ShowWindow  bool
 
+;Notice: When referencing a function of which has a calling convention other than stdcall, use this format:
+;dllref(User32,str,str,int) cdecl:wsprintfA int
+
 int ollyHandle becomes FindWindowA("OLLYDBG",null) ; Handle for x86 (x32) OllyDbg, can be set to any window if the className is found using WinSpy, Spy++, logical thinking, etc.
 bool pBool becomes false ; This is a boolean indicating whether or not the window was last visible
 ; Do notice that if the window is initially hidden, pBool should start off by being set to true. This is however generally an unlikely scenario

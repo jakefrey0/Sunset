@@ -12,6 +12,7 @@ using System.Text;
 using ProgrammingLanguageTutorialIdea.Keywords;
 using System.Linq;
 using ProgrammingLanguageTutorialIdea.Stack;
+using System.Runtime.InteropServices;
 
 namespace ProgrammingLanguageTutorialIdea {
 	
@@ -53,7 +54,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal Boolean expectsBlock=false,expectsElse=false,searchingFunctionReturnType=false,inFunction=false;
 		internal Byte setExpectsElse=0,setExpectsBlock=0;
 		
-		internal Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType>> functions;//Function Name,(Memory Address,(Return Type, Return Var Type),No. of expected parameters,Function Type)
+		internal Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>> functions;//Function Name,(Memory Address,(Return Type, Return Var Type),No. of expected parameters,Function Type,Calling Convention)
 		internal Dictionary<String,List<Tuple<UInt32,UInt32>>> functionReferences;//Function Name,(Indexes in Opcodes of the reference,Memory Address at time of Reference)
 		internal UInt16 nextFunctionParamsCount;
 		internal Dictionary<String,List<Tuple<String,VarType>>> functionParamTypes;//Function Name,Var Type
@@ -101,6 +102,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		private UInt32 freeHeapsMemAddr;
 		
 		private const String KERNEL32="KERNEL32.DLL",NULL_STR="null";
+		private readonly Char[] mathOperators=new []{'+','-','*','/','%'};
 		
 		public Parser (Boolean winApp=true) {
 			
@@ -136,7 +138,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				}
 				
 			};
-			functions=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType>>();
+			functions=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>>();
 			functionReferences=new Dictionary<String,List<Tuple<UInt32,UInt32>>>();
 			freeHeapsRefs=new List<UInt32>();
 			functionParamTypes=new Dictionary<String,List<Tuple<String,VarType>>>();
@@ -210,7 +212,7 @@ namespace ProgrammingLanguageTutorialIdea {
 							if (searchingFunctionReturnType) {
 								
 								nameReader.Append(c);
-								this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType>(this.functions.Last().Value.Item1,this.getVarType(nameReader.ToString()),functions.Last().Value.Item3,functions.Last().Value.Item4);
+								this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>(this.functions.Last().Value.Item1,this.getVarType(nameReader.ToString()),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5);
 								status=ParsingStatus.SEARCHING_NAME;
 								this.setExpectsBlock=1;
 								
@@ -404,19 +406,50 @@ namespace ProgrammingLanguageTutorialIdea {
 						
 					case ParsingStatus.READING_FUNCTION_NAME:
 						
-						if (Char.IsLetterOrDigit(c)) nameReader.Append(c);
+						if (Char.IsLetterOrDigit(c)||this.isCallingConventionIdentifier(c)) nameReader.Append(c);
 						else {
 							
 							this.setExpectsBlock=1;
 							String funcName=nameReader.ToString();
-							if (this.nextType==FunctionType.DLL_REFERENCED)				
+							CallingConvention cl=CallingConvention.StdCall;
+							if (funcName.Any(x=>this.isCallingConventionIdentifier(x))) {
+								
+								if (this.nextType==FunctionType.SUNSET)
+									throw new ParsingError("Did not expect calling convention for Sunset defined function (calling convention is stdcall)");
+								else if (this.nextType==FunctionType.DLL_REFERENCED) {
+									
+									String[]sp=funcName.Split(':');
+									if (sp.Length!=2)
+										throw new ParsingError("Invalid syntax for calling convention identifier");
+									
+									funcName=sp[1];
+									switch (sp[0].ToLower()) {
+											
+										case "stdcall":
+											break;
+										case "cdecl":
+											cl=CallingConvention.Cdecl;
+											break;
+										case "fastcall":
+										case "thiscall":
+											throw new ParsingError("Calling convention not supported: \""+sp[0]+'"');
+										default:
+											throw new ParsingError("Invalid calling convention: \""+sp[0]+"\", did you mean \"stdcall\" or \"cdecl\"?");
+											
+									}
+									
+								}
+								
+							}
+							if (this.nextType==FunctionType.DLL_REFERENCED)
 								this.referenceDll(this.nextReferencedDLL,funcName);
 							nameReader.Clear();
 							this.functionParamTypes.Add(funcName,new List<Tuple<String,VarType>>(this.nextFunctionParamTypes));
-							this.functions.Add(funcName,new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType>((this.nextType== FunctionType.SUNSET)?blocks.Keys.Last().startMemAddr:0,null,(UInt16)this.nextFunctionParamTypes.Length,this.nextType));
+							this.functions.Add(funcName,new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>((this.nextType== FunctionType.SUNSET)?blocks.Keys.Last().startMemAddr:0,null,(UInt16)this.nextFunctionParamTypes.Length,this.nextType,cl));
 							this.functionReferences.Add(funcName,new List<Tuple<UInt32,UInt32>>());
 							status=ParsingStatus.SEARCHING_NAME;
-							this.nextExpectedKeywordTypes=new []{KeywordType.TYPE};
+							if (this.nextType==FunctionType.SUNSET)
+								this.nextExpectedKeywordTypes=new []{KeywordType.TYPE};
 							this.searchingFunctionReturnType=true;
 							
 						}
@@ -638,7 +671,7 @@ namespace ProgrammingLanguageTutorialIdea {
 						this.execKeyword(kw,new String[0]);
 					
 					if (wasSearchingFuncReturnType) {
-						this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType>(this.functions.Last().Value.Item1,new Tuple<String,VarType>(this.varType,VarType.NATIVE_VARIABLE),functions.Last().Value.Item3,functions.Last().Value.Item4);
+						this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>(this.functions.Last().Value.Item1,new Tuple<String,VarType>(this.varType,VarType.NATIVE_VARIABLE),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5);
 						status=ParsingStatus.SEARCHING_NAME;
 						this.setExpectsBlock=1;
 					}
@@ -832,8 +865,12 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 				this.addByte(0x58);//POP EAX
 				this.pushValue(value);
-				this.addByte(0x5A);//POP EDX
-				this.addBytes(new Byte[]{0x89,0x10});//MOV [EAX],EDX
+				this.addByte(0x5A);//POP EDX 
+				UInt32 size=this.keywordMgr.getVarTypeByteSize(varType);
+				this.addBytes(size==1?new Byte[]{0x88,0x10}://MOV DWORD [EAX],EDX
+				              size==2?new Byte[]{0x66,0x89,0x10}:
+				              /*size==4*/new Byte[]{0x89,0x10}
+				             );
 				
 			}
 			
@@ -1160,7 +1197,8 @@ namespace ProgrammingLanguageTutorialIdea {
 		}
 		
 		/// <summary>
-		/// First push byte index and value 
+		/// First push byte index and value
+		/// this works for 4 byte member arrays
 		/// </summary>
 		private void callSetArrayValue (String arrayName) {
 			
@@ -1222,7 +1260,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		}
 		
 		
-		internal Boolean isArrayIndexer (String str) { return str.EndsWith("]")&&str.Contains("["); }
+		internal Boolean isArrayIndexer (String str) { return str.Contains('[')&&str.Where(x=>this.beginsArrayIndexer(x)).Count()==str.Where(x=>this.endsArrayIndexer(x)).Count()&&!(str[0]=='('); }
 		internal Boolean isValidArrayIndexer (String str) { return isArrayIndexer(str)&&this.arrays.ContainsKey(str.Split('[')[0]); }
 		internal Boolean tryCheckIfValidArrayIndexer (String str) {
 			
@@ -1271,44 +1309,187 @@ namespace ProgrammingLanguageTutorialIdea {
 		/// <returns>new status to update</returns>
 		private ParsingStatus indexArray (String arrName,String indexer,Boolean recursing=false) {
 			
-			Console.WriteLine("Indexing array: \""+arrName+"\", indexer: "+indexer);
+			Console.WriteLine("Indexing array: \""+arrName+"\", indexer: \""+indexer+'"');
+//			Console.ReadKey();
 			
+			Boolean containsMathOps=indexer.Any(x=>this.isMathOperator(x));
 			//push the mem addr..
-			if (this.tryCheckIfValidArrayIndexer(indexer)) {
+			if ((containsMathOps&&this.isArrayIndexer(indexer))||this.tryCheckIfValidArrayIndexer(indexer)) {
+					
+				String sub=null,arrName0=null,indexer0=null,slack=null;
 				
-				String sub=indexer.Substring(indexer.IndexOf('[')+1),
-				  arrName0=indexer.Split('[')[0].Replace(" ",""),
-				  indexer0=(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub;
-					   
-				this.indexArray(arrName0,indexer0,true);
-				this.addBytes(
-					(keywordMgr.getVarTypeByteSize(this.arrays[arrName0].Item2)==1) ?
-						 new Byte[]{
-						 	0x31,0xD2,    // XOR EDX,EDX
-						 	0x8A,0x10     // MOV DL,[EAX]
-						 }
-					: (keywordMgr.getVarTypeByteSize(this.arrays[arrName0].Item2)==2) ?
-					   new Byte[] {
-					   		0x31,0xD2,     // XOR EDX,EDX
-					   		0x66,0x8B,0x10 // MOV DX,[EAX]
-					   }
-					:
-					new Byte[] { 0x8B,0x10 } // MOV EDX,[EAX]
-				);
-				if (this.isALocalVar(arrName)) {
-					if (this.getCurrentBlock()!=this.getLocalVarHomeBlock(arrName))
-						this.localVarEBPPositionsToOffset[this.getCurrentBlock()].Add((UInt32)(this.opcodes.Count+2));
-					this.addBytes(new Byte[]{3,0x55,this.pseudoStack.getVarEbpOffset(arrName)});
+				if (containsMathOps) {
+					
+					Console.WriteLine(" ====== containsMathOps =======");
+					
+					Char[]splitChars;
+					String[]innerValues=this.parseSplit(indexer,this.mathOperators,new Char[]{'[','('},new Char[]{']',')'},out splitChars);
+					UInt16 ctr=0;
+					String fi=innerValues.First();
+					Console.WriteLine("Pushing: "+fi);
+					if (this.isArrayIndexer(fi)) {
+						sub=fi.Substring(fi.IndexOf('[')+1);
+						arrName0=fi.Split('[')[0].Replace(" ","");
+						indexer0=(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub;
+						this.indexArray(arrName0,indexer0);
+						
+						this.addBytes(
+							(keywordMgr.getVarTypeByteSize(this.arrays[arrName0].Item2)==1) ?
+								 new Byte[]{
+									0x5F,      // POP EDI
+								 	0x31,0xDB, //XOR EBX,EBX   
+								 	0x8A,0x1F, //MOV BL,BYTE [EDI]
+									0x53 //PUSH EBX
+								 }
+							: (keywordMgr.getVarTypeByteSize(this.arrays[arrName0].Item2)==2) ?
+							   new Byte[] {
+							   		0x5F,          //POP EDI
+									0x66,0xFF,0x37 //PUSH WORD [EDI]
+							   }
+							:
+							new Byte[] { 
+								0x5F,     //POP EDI
+								0xFF,0x37 //PUSH DWORD [EDI]
+							}
+						);
+						
+					}
+					else this.pushValue(fi);
+					
+					foreach (String s in innerValues.Skip(1)) {
+					
+						Char op=splitChars[ctr];
+						++ctr;
+						String pushValue=s.Replace(" ","");
+						if (this.isArrayIndexer(pushValue)) { 
+							Int32 idx=pushValue.IndexOf('[')+1;
+							sub=pushValue.Substring(idx,(pushValue.LastIndexOf(']')+1)-idx);
+							arrName0=pushValue.Split('[')[0];
+							indexer0=(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub;
+							slack=pushValue.Substring(pushValue.LastIndexOf(']')+1);
+							Console.WriteLine("pushValue: \""+pushValue+'"');
+							Console.WriteLine("arrName0: \""+arrName0+'"');
+							Console.WriteLine("indexer0: \""+indexer0+'"');
+							Console.WriteLine("sub: \""+sub+'"');
+							Console.WriteLine("slack: \""+slack+'"');
+							this.indexArray(arrName0,indexer0);
+							
+							this.addBytes(
+								(keywordMgr.getVarTypeByteSize(this.arrays[arrName0].Item2)==1) ?
+									 new Byte[]{
+									 	0x31,0xDB, //XOR EBX,EBX   
+									 	0x88,0x1F, //MOV BYTE [EDI],BL
+										0x53 //PUSH EBX
+									 }
+								: (keywordMgr.getVarTypeByteSize(this.arrays[arrName0].Item2)==2) ?
+								   new Byte[] {
+								   		0x5F,          //POP EDI
+										0x66,0xFF,0x37 //PUSH WORD [EDI]
+								   }
+								:
+								new Byte[] { 
+									0x5F,     //POP EDI
+									0xFF,0x37 //PUSH DWORD [EDI]
+								}
+							);
+						}
+						else this.pushValue(pushValue);
+						
+						
+						if (!(String.IsNullOrEmpty(slack))) {
+							
+							if (slack.Any(x=>this.isMathOperator(x)))
+								this.pushValue(arrName+'['+sub+slack);
+							else
+								throw new ParsingError("Unexpected: \""+slack+'"');
+							
+						}
+						
+						this.addByte(0x58); //POP EAX
+						if (this.isAddition(op))
+							this.addBytes(new Byte[]{1,4,0x24}); //ADD [ESP],EAX
+						else if (this.isSubtraction(op))
+							this.addBytes(new Byte[]{0x29,4,0x24}); //SUB [ESP],EAX
+						else if (this.isMultiplication(op))
+							this.addBytes(new Byte[]{
+							              	0xF7,0x24,0x24, //MUL [ESP]
+							              	0x89,4,0x24     //MOV [ESP],EAX
+							              });
+						else if (this.isDivision(op)||this.isModulus(op))
+							this.addBytes(new Byte[]{
+							              	0x31,0xD2, // XOR EDX,EDX
+							              	0x87,4,0x24, //XCHG [ESP],EAX
+							              	0xF7,0x34,0x24, //DIV [ESP+4]
+							              	0x89,(Byte)((this.isDivision(op))?4:0x14),0x24 // MOV [ESP],EAX || MOV [ESP],EDX
+							              });
+						else
+							throw new ParsingError("Unexpected math operator \""+op+"\" (?!)");
+						
+					}
+					
+					this.addBytes(new Byte[]{
+							              	
+					              			0x58,//POP EAX
+							              	0x51,//PUSH ECX
+							                0xB9}.Concat(BitConverter.GetBytes(keywordMgr.getVarTypeByteSize(this.arrays[arrName].Item2))).Concat(new Byte[]{//MOV ECX,DWORD...
+							                                                                                                                 	0xF7,0xE1,//MUL ECX
+							                                                                                                                 	0x59,//POP ECX
+							                                                                                                                     }));
+					this.addBytes(new Byte[]{0x83,0xC0,8});//ADD EAX,8
+					this.arrayReferences[arrName].Add((UInt32)(this.opcodes.Count+2));
+					this.addBytes(new Byte[]{3,5,0,0,0,0});//ADD EAX,VALUE @ PTR
+					
+					this.addByte(0x50);//PUSH EAX
+					
+					Console.WriteLine(" ====== =============== =======");
+					
 				}
 				else {
-					this.arrayReferences[arrName].Add((UInt32)(this.opcodes.Count+2));
-					this.addBytes(new Byte[]{3,0x15,0,0,0,0});//ADD EDX,VALUE @ PTR
-				}
-				this.addBytes(new Byte[]{0x83,0xC2,8});//ADD EDX,8
-				if (recursing)
+					
+					sub=indexer.Substring(indexer.IndexOf('[')+1);
+					arrName0=indexer.Split('[')[0].Replace(" ","");
+					indexer0=(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub;
+					
+					this.indexArray(arrName0,indexer0,true);
+					
+					
+					this.addBytes(
+						(keywordMgr.getVarTypeByteSize(this.arrays[arrName0].Item2)==1) ?
+							 new Byte[]{
+							 	0x31,0xD2,    // XOR EDX,EDX
+							 	0x8A,0x10     // MOV DL,[EAX]
+							 }
+						: (keywordMgr.getVarTypeByteSize(this.arrays[arrName0].Item2)==2) ?
+						   new Byte[] {
+						   		0x31,0xD2,     // XOR EDX,EDX
+						   		0x66,0x8B,0x10 // MOV DX,[EAX]
+						   }
+						:
+						new Byte[] { 0x8B,0x10 } // MOV EDX,[EAX]
+					);
+					
 					this.addByte(0x92);//XCHG EAX,EDX
-				else
+					this.addBytes(new Byte[]{0xB9}.Concat(BitConverter.GetBytes(keywordMgr.getVarTypeByteSize((this.isALocalVar(arrName)?this.getLocalVarHomeBlock(arrName).localVariables[arrName].Item1.Item1:this.arrays[arrName].Item2))))); // MOV ECX,BYTE SIZE OF ARR MEMBER
 					this.addByte(0x52);//PUSH EDX
+					this.addBytes(new Byte[]{0xF7,0xE1});//MUL ECX
+					this.addByte(0x5A);//POP EDX
+					this.addByte(0x92);//XCHG EAX,EDX
+					
+					if (this.isALocalVar(arrName)) {
+						if (this.getCurrentBlock()!=this.getLocalVarHomeBlock(arrName))
+							this.localVarEBPPositionsToOffset[this.getCurrentBlock()].Add((UInt32)(this.opcodes.Count+2));
+						this.addBytes(new Byte[]{3,0x55,this.pseudoStack.getVarEbpOffset(arrName)});
+					}
+					else {
+						this.arrayReferences[arrName].Add((UInt32)(this.opcodes.Count+2));
+						this.addBytes(new Byte[]{3,0x15,0,0,0,0});//ADD EDX,VALUE @ PTR
+					}
+					this.addBytes(new Byte[]{0x83,0xC2,8});//ADD EDX,8
+					if (recursing)
+						this.addByte(0x92);//XCHG EAX,EDX
+					else
+						this.addByte(0x52);//PUSH EDX
+				}
 					
 				
 			}
@@ -1406,28 +1587,6 @@ namespace ProgrammingLanguageTutorialIdea {
 				return new Tuple<String,VarType>(this.arrays[value].Item2,VarType.NATIVE_ARRAY);
 				
 			}
-			else if (this.tryCheckIfValidArrayIndexer(value)) {
-				
-				String sub=value.Substring(value.IndexOf('[')+1),
-				   arrName=value.Split('[')[0];
-				this.indexArray(arrName,(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub);
-				
-				UInt32 varTypeByteSize=(this.isALocalVar(arrName))?this.keywordMgr.getVarTypeByteSize(this.getLocalVarHomeBlock(arrName).localVariables[arrName].Item1.Item1):this.keywordMgr.getVarTypeByteSize(this.arrays[arrName].Item2);
-				this.addBytes((varTypeByteSize==4)?
-				              new Byte[]{0x5B,           //POP EBX
-				              			 0xFF,0x33}      //PUSH DWORD [EBX]
-				             :(varTypeByteSize==2)?
-				              new Byte[]{0x5B,           //POP EBX
-				              			 0x66,0xFF,0x33} //PUSH WORD [EBX]
-				             :/*varTypeByteSize==1*/
-				              new Byte[]{0x5B,           //POP EBX
-				              			 0x31,0xD2,      //XOR EDX,EDX
-				              			 0x8A,0x13,      //MOV DL,[EBX]
-				              			 0x52}           //PUSH EDX
-				             );
-				return new Tuple<String,VarType>((varTypeByteSize==4)?KWInteger.constName:(varTypeByteSize==2)?KWShort.constName:KWByte.constName,VarType.NATIVE_ARRAY_INDEXER);
-				
-			}
 			else if (value==KWBoolean.constFalse) {
 				
 				this.addBytes(new Byte[]{0x6A,0}); //PUSH 0
@@ -1440,7 +1599,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				return new Tuple<String,VarType>(KWBoolean.constName,VarType.NATIVE_VARIABLE);
 				
 			}
-			else if (value.Contains('(')&&functions.ContainsKey(value.Split('(')[0])) {
+			else if (value.Contains('(')&&functions.ContainsKey(value.Split('(')[0])&&!value.Any(x=>this.isMathOperator(x))) {
 				
 				String funcName=value.Split('(')[0];
 				
@@ -1462,12 +1621,12 @@ namespace ProgrammingLanguageTutorialIdea {
 						paramBuilder.Clear();
 						
 					}
-					else paramBuilder.Append(c);
 					
 					if (roundBracketBalance==0) {
 						@params.Add(paramBuilder.ToString());
 						break;
 					}
+					else if (!(c==','&&roundBracketBalance==1)) paramBuilder.Append(c);
 					
 				}
 				this.callFunction(funcName,@params.ToArray());
@@ -1518,16 +1677,150 @@ namespace ProgrammingLanguageTutorialIdea {
 			}
 			else if (value==Parser.NULL_STR) {
 				
-				this.addBytes(new Byte[]{0x6A,0});
+				this.addBytes(new Byte[]{0x6A,0}); // PUSH 0
 				return new Tuple<String,VarType>(Parser.NULL_STR,VarType.NONE);
 				
 			}
+			else if (value.Any(x=>this.isMathOperator(x))) {
+				
+				Console.WriteLine(" ! value: "+value);
+				
+				//NOTE:: math is also parsed & calculated at Parser#indexArray and Parser#pushArrValue
+				
+				//Add all this into a function:
+				Char[]splitChars;
+				String[]innerValues=this.parseSplit(value,this.mathOperators,new Char[]{'[','('},new Char[]{']',')'},out splitChars);
+				UInt16 ctr=0;//splitChars[ctr] should point to the math operator after the current iteration innerValue in the foreach loops
+				List<OrderItem>orderItems=new List<OrderItem>();
+				Order order=new Order();
+				String pushValue;
+				
+				foreach (String s in innerValues) {
+					
+					pushValue=s.Replace(" ","");
+					
+					if (this.isAddition(splitChars[ctr])||this.isSubtraction(splitChars[ctr])) {
+						
+						orderItems.Add(new OrderItem(){type=OrderItemType.UNPARSED,unparsedValue=pushValue});
+						if (orderItems.Count==2) order.addOperation(orderItems,(this.isAddition(splitChars[ctr-1]))?OrderMathType.ADDITION:OrderMathType.SUBTRACTION);
+						
+					}
+					else {
+						
+						if (orderItems.Count==1) { 
+							order.addOperation(orderItems[0],new OrderItem(){type=OrderItemType.PARSED,unparsedValue=pushValue},(this.isAddition(splitChars[ctr-1]))?OrderMathType.ADDITION:OrderMathType.SUBTRACTION);
+							orderItems.Clear();
+						}
+						
+						break;
+						
+					}
+					
+					++ctr;
+					
+				}
+				
+				innerValues=innerValues.Skip(ctr).ToArray();
+				
+				#region .
+				#if DEBUG
+				UInt16 dbg_storedCtr=ctr;
+				foreach (String s in innerValues) {
+					
+					//"6*4/2+3*6-4"
+					
+					if (ctr>=splitChars.Length) Console.WriteLine(s);
+					else {
+						Console.Write(s+splitChars[ctr]);
+						++ctr;
+					}
+					
+				}
+				Console.ReadKey();
+				order.dumpData(true);
+				ctr=dbg_storedCtr;
+				#endif
+				#endregion
+				pushValue=innerValues.First();
+				Tuple<String,VarType>retType=(this.isArrayIndexer(pushValue))?this.pushArrValue(pushValue):this.pushValue(pushValue);
+				OrderMathType nextMathType=default(OrderMathType);
+				
+				foreach (String s in innerValues.Skip(1)) {
+					
+//					Console.WriteLine("Looping innervalue: \""+s+'"');
+					
+					pushValue=s.Replace(" ","");
+					Char op=(Char)0;
+					if (splitChars.Length>ctr)
+						op=splitChars[ctr];
+					else
+						op=splitChars.Last();
+					++ctr;
+					
+					Console.WriteLine("Looping innervalue: \""+s+"\", op: '"+op+'\'');
+					
+					if (this.isSubtraction(op)||this.isAddition(op)) {
+						
+						Console.WriteLine("SUB/AD: \""+s+'"');
+						if (orderItems.Count==0) {
+							
+							orderItems.Add(new OrderItem(){type=OrderItemType.PARSED,unparsedValue=pushValue});
+							nextMathType=(this.isSubtraction(op))?OrderMathType.SUBTRACTION:OrderMathType.ADDITION;
+							this.pushValue(pushValue);
+							
+						}
+						else /*orderItems.Count==1*/ {
+							
+							orderItems.Add(new OrderItem(){type=OrderItemType.PARSED,unparsedValue=pushValue});
+							order.addOperation(orderItems,nextMathType);
+							this.pushValue(pushValue);
+							
+						}
+						continue;
+						
+					}
+					
+					Console.WriteLine("Pushing: "+pushValue);
+					if (this.isArrayIndexer(pushValue)) this.pushArrValue(pushValue);
+					else this.pushValue(pushValue);
+					this.addByte(0x58); //POP EAX
+					if (this.isMultiplication(op))
+						this.addBytes(new Byte[]{
+						              	0xF7,0x24,0x24, //MUL [ESP]
+						              	0x89,4,0x24     //MOV [ESP],EAX
+						              });
+					else if (this.isDivision(op)||this.isModulus(op))
+						this.addBytes(new Byte[]{
+						              	0x31,0xD2, // XOR EDX,EDX
+						              	0x87,4,0x24, //XCHG [ESP],EAX
+						              	0xF7,0x34,0x24, //DIV [ESP+4]
+						              	0x89,(Byte)((this.isDivision(op))?4:0x14),0x24 // MOV [ESP],EAX || MOV [ESP],EDX
+						              });
+					else
+						throw new ParsingError("Unexpected math operator \""+op+"\" (?!)");
+					
+				}
+				order.dumpData(true);
+				order.writeBytes(this);
+				
+				return retType;
+				
+			}
+			
+			else if (this.tryCheckIfValidArrayIndexer(value)) { 
+				
+				return this.pushArrValue(value);
+				
+			}
+			
 			else throw new ParsingError("Invalid value: \""+value+'"');
 			
 		}
 		
 		private void freeHeaps () {
 			
+			return;
+						
 			//If no arrays (or anything that allocates memory), no point referencing HeapFree
 			if (this.arrays.Count==0)
 				return;
@@ -1706,8 +1999,17 @@ namespace ProgrammingLanguageTutorialIdea {
 			if (!(this.functions.ContainsKey(functionName)))
 				throw new ParsingError("Function does not exist: \""+functionName+'"');
 			
+			Console.WriteLine(" == callFunction: "+functionName+" == ");
+			foreach (String str in @params)
+				Console.WriteLine(str);
+			Console.WriteLine(" == total params: "+@params.Length.ToString()+ " == ");
+			
 			if (this.functions[functionName].Item3!=@params.Length)
 				throw new ParsingError("Expected \""+this.functions[functionName].Item3.ToString()+"\" parameters for \""+functionName+"\", got \""+@params.Length+'"');
+			
+			
+			if (this.functions[functionName].Item5==CallingConvention.Cdecl)
+				this.addBytes(new Byte[]{0x89,0xE5});
 			
 			if (this.functionParamTypes[functionName].Count!=0) {
 				UInt16 i=(UInt16)(this.functionParamTypes[functionName].Count-1);
@@ -1724,6 +2026,8 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.functionReferences[functionName].Add(new Tuple<UInt32,UInt32>((UInt32)opcodes.Count-4,this.memAddress));
 			else
 				this.referencedFuncPositions[functionName].Add((UInt32)opcodes.Count-4);
+			if (this.functions[functionName].Item5==CallingConvention.Cdecl)
+				this.addBytes(new Byte[]{0x89,0xEC});
 			status=ParsingStatus.SEARCHING_NAME;
 			
 		}
@@ -1832,7 +2136,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				if (keywordMgr.getVarTypeByteSize(to.Item1)<keywordMgr.getVarTypeByteSize(from.Item1))
 					throw new ParsingError("Can't convert \""+to.Item1+"\" to \""+from.Item1+'"');
 			}
-			if (from.Item2==VarType.NATIVE_VARIABLE&&to.Item2==VarType.NATIVE_VARIABLE&&(from.Item1==KWString.constName||to.Item1==KWString.constName)&&from.Item1!=to.Item1)
+			else if (from.Item2==VarType.NATIVE_VARIABLE&&to.Item2==VarType.NATIVE_VARIABLE&&(from.Item1==KWString.constName||to.Item1==KWString.constName)&&from.Item1!=to.Item1)
 				throw new ParsingError("Can't convert \""+from.Item1+"\" to \""+to.Item1+'"');
 			else if (from.Item2!=to.Item2&&keywordMgr.getVarTypeByteSize(to.Item1)!=4) // TODO:: if there are ever any NON 4 byte variable types (ptrs), fix this, what this does is allow pointers of native arrays etc to be moved into native integers!
 				throw new ParsingError("Can't convert \""+to.Item2.ToString()+"\" of \""+to.Item1.ToString()+"\" to \""+from.Item2.ToString()+'"');
@@ -2028,6 +2332,219 @@ namespace ProgrammingLanguageTutorialIdea {
 		private Boolean isNewlineOrReturn (Char c) { 
 			
 			return c=='\n'||c=='\r'; 
+			
+		}
+		
+		private Boolean isMathOperator (Char c) {
+			
+			foreach (Char c0 in this.mathOperators)
+				if (c0==c)
+					return true;
+			
+			return false;
+			
+		}
+		
+		private Boolean isAddition (Char c) {
+			
+			return c=='+';
+			
+		}
+		
+		private Boolean isSubtraction (Char c) {
+			
+			return c=='-';
+			
+		}
+		
+		/// <summary>
+		/// probably shouldn't be used regularly, it was a broad-use function named 'split' at first but eventually had to become a specific parsing function when order of operations was introduced
+		/// </summary>
+		/// <param name="shouldAppendFunc">can be null</param>
+		private String[]parseSplit(String str,Char[]splitChars,Char[]incBalanceChars,Char[]decBalanceChars,out Char[]splitChars0) {
+			
+			StringBuilder sb=new StringBuilder();
+			List<String>splitStrings=new List<String>();
+			List<Char>splitChars1=new List<Char>();
+			UInt16 balance=0;
+			Char previousCharacter=(Char)(0);
+			List<UInt16>doAppendBalances=new List<UInt16>();
+			
+			//HACK:: sub parsing
+			foreach (Char c in str) {
+				
+				if (balance==0) {
+					foreach (Char c0 in splitChars) {
+						if (c==c0) {
+							
+							Console.WriteLine("In splitchars");
+							splitStrings.Add(sb.ToString());
+							sb.Clear();
+							splitChars1.Add(c);
+							goto skip;
+									
+						}
+					}
+				}
+				
+				if (balance>1||(balance>0&&incBalanceChars.Contains(c))) {
+					
+					sb.Append(c);
+					if (incBalanceChars.Contains(c))
+						++balance;
+					else if (decBalanceChars.Contains(c))
+						--balance;
+					previousCharacter=c;
+					continue;
+					
+				}
+				
+				if (c!='('&&c!=')')
+					sb.Append(c);
+				else if (c=='(') {
+					if (!incBalanceChars.Contains(previousCharacter)&&!this.isMathOperator(previousCharacter)&&(Char.IsLetter(previousCharacter)||Char.IsDigit(previousCharacter))) {
+						
+						sb.Append(c);
+						doAppendBalances.Add(balance);
+					}
+					
+				}
+				
+				skip:
+				if (incBalanceChars.Contains(c))
+					++balance;
+				else if (decBalanceChars.Contains(c))
+					--balance;
+				
+				if (c==')') {
+					
+					if (doAppendBalances.Contains(balance)) {
+						
+						doAppendBalances.Remove(balance);
+						sb.Append(c);
+						
+					}
+					
+				}
+				
+				previousCharacter=c;
+				Console.WriteLine("Looping char \""+c+"\", balance: "+balance.ToString()+", sb: "+sb.ToString());
+				
+			}
+			
+			splitStrings.Add(sb.ToString());
+			
+			splitChars0=splitChars1.ToArray();
+			return splitStrings.ToArray();
+			
+		}
+		
+		private Tuple<String,VarType> pushArrValue (String value) {
+			
+			Console.WriteLine("------------------------------------------------------------");
+			Console.WriteLine("Value: "+value.ToString());
+				
+			Console.WriteLine(value);
+			
+			Int32 idx=value.IndexOf('[')+1;
+			String sub=value.Substring(idx,(value.LastIndexOf(']')+1)-idx),
+			   arrName=value.Split('[')[0],
+			   slack=value.Substring(value.LastIndexOf(']')+1);
+			
+			Console.WriteLine("sub: "+sub+", arrName: "+arrName+", slack: "+slack);
+			Console.WriteLine("------------------------------------------------------------");
+			this.indexArray(arrName,(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub);
+			
+			UInt32 varTypeByteSize=(this.isALocalVar(arrName))?this.keywordMgr.getVarTypeByteSize(this.getLocalVarHomeBlock(arrName).localVariables[arrName].Item1.Item1):this.keywordMgr.getVarTypeByteSize(this.arrays[arrName].Item2);
+			this.addBytes((varTypeByteSize==4)?
+			              new Byte[]{0x5B,           //POP EBX
+			              			 0xFF,0x33}      //PUSH DWORD [EBX]
+			             :(varTypeByteSize==2)?
+			              new Byte[]{0x5B,           //POP EBX
+			              			 0x66,0xFF,0x33} //PUSH WORD [EBX]
+			             :/*varTypeByteSize==1*/
+			              new Byte[]{0x5B,           //POP EBX
+			              			 0x31,0xD2,      //XOR EDX,EDX
+			              			 0x8A,0x13,      //MOV DL,[EBX]
+			              			 0x52}           //PUSH EDX
+			             );
+			
+			if (!(String.IsNullOrEmpty(slack))) {
+				
+				if (slack.Any(x=>this.isMathOperator(x))) {
+					
+					Char[]splitChars;
+					String[]innerValues=this.parseSplit(slack,this.mathOperators,new Char[]{'[','('},new Char[]{']',')'},out splitChars);
+					UInt16 ctr=0;
+					
+					String fi=innerValues.First();
+					if (!(String.IsNullOrEmpty(fi)))
+						throw new ParsingError("Unexpected: "+fi);
+					
+					//First value already pushed
+					
+					foreach (String s in innerValues.Skip(1)) {
+						
+						Console.WriteLine(s);
+					
+						Char op=splitChars[ctr];
+						++ctr;
+						String pushValue=s.Replace(" ","");
+						if (this.isArrayIndexer(pushValue))  this.pushArrValue(pushValue);
+						else this.pushValue(pushValue);
+						this.addByte(0x58); //POP EAX
+						if (this.isAddition(op))
+							this.addBytes(new Byte[]{1,4,0x24}); //ADD [ESP],EAX
+						else if (this.isSubtraction(op))
+							this.addBytes(new Byte[]{0x29,4,0x24}); //SUB [ESP],EAX
+						else if (this.isMultiplication(op))
+							this.addBytes(new Byte[]{
+							              	0xF7,0x24,0x24, //MUL [ESP]
+							              	0x89,4,0x24     //MOV [ESP],EAX
+							              });
+						else if (this.isDivision(op)||this.isModulus(op))
+							this.addBytes(new Byte[]{
+							              	0x31,0xD2, // XOR EDX,EDX
+							              	0x87,4,0x24, //XCHG [ESP],EAX
+							              	0xF7,0x34,0x24, //DIV [ESP+4]
+							              	0x89,(Byte)((this.isDivision(op))?4:0x14),0x24 // MOV [ESP],EAX || MOV [ESP],EDX
+							              });
+						else
+							throw new ParsingError("Unexpected math operator \""+op+"\" (?!)");
+						
+					}
+					
+				}
+				else
+					throw new ParsingError("Unexpected: \""+slack+'"');
+				
+			}
+			
+			return new Tuple<String,VarType>((varTypeByteSize==4)?KWInteger.constName:(varTypeByteSize==2)?KWShort.constName:KWByte.constName,VarType.NATIVE_ARRAY_INDEXER);
+			
+		}
+		
+		private Boolean isMultiplication (Char c) {
+			
+			return c=='*';
+			
+		}
+		
+		private Boolean isCallingConventionIdentifier (Char c) {
+			
+			return c==':';
+			
+		}
+		
+		private Boolean isDivision (Char c) {
+			
+			return c=='/';
+			
+		}
+		
+		private Boolean isModulus (Char c) {
+			
+			return c=='%';
 			
 		}
 		
