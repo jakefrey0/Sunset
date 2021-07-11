@@ -77,6 +77,7 @@
     <Compile Include="Keywords\KWDecrease.cs" />
     <Compile Include="Keywords\KWDllReference.cs" />
     <Compile Include="Keywords\KWElse.cs" />
+    <Compile Include="Keywords\KWFinishCompiling.cs" />
     <Compile Include="Keywords\KWFunction.cs" />
     <Compile Include="Keywords\KWIf.cs" />
     <Compile Include="Keywords\KWIncrease.cs" />

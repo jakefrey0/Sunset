@@ -125,7 +125,6 @@ namespace ProgrammingLanguageTutorialIdea {
 					Byte[]newNum=BitConverter.GetBytes(prevNum+5);//5 because the opcodes are 0xE9,Integer.... (See KWElse -> JMP TO MEM ADDR)
 					
 					Console.WriteLine("Updating index: "+index+" (Calculated Mem Addr: "+(0x00401000+index).ToString("X")+") to "+(prevNum+5));
-//					Console.ReadKey();
 					
 					i=0;
 					while (i!=4) {
@@ -161,12 +160,13 @@ namespace ProgrammingLanguageTutorialIdea {
 			List<String> paramsList=new List<String>();
 			Int32 currentChar=0;
 			Boolean inDoubleQuotes=false;
+			UInt16 rbbrv=0;
 			
 			data+=' ';
 			
 			foreach (Char c in data) {
 				
-				Console.WriteLine(" - Checking: \""+c+"\",ParsingStatus: "+status.ToString()+", blockBracketBalance #no: "+blockBracketBalances.Count.ToString());
+				Console.WriteLine(" - Checking:\""+c+"\",ParsingStatus:"+status.ToString()+",blockBracketBalance #no:"+blockBracketBalances.Count.ToString()+",rbbrv:"+rbbrv.ToString());
 				
 				if (setExpectsElse>0) {
 					
@@ -199,6 +199,8 @@ namespace ProgrammingLanguageTutorialIdea {
 								inDoubleQuotes=c=='"';
 								nameReader.Append(c);
 								++status;
+								if (status==ParsingStatus.READING_VALUE) 
+									rbbrv=this.modRbbrv(c,inDoubleQuotes,rbbrv);
 								
 							}
 							
@@ -320,7 +322,9 @@ namespace ProgrammingLanguageTutorialIdea {
 						
 					case ParsingStatus.READING_VALUE:
 						
-						if ((inDoubleQuotes&&c=='"')||(!inDoubleQuotes&&this.isFormOfBlankspace(c))) {
+						rbbrv=this.modRbbrv(c,inDoubleQuotes,rbbrv);
+						
+						if ((inDoubleQuotes&&c=='"')||(!inDoubleQuotes&&this.isFormOfBlankspace(c)&&rbbrv==0)) {
 							
 							if (inDoubleQuotes) nameReader.Append(c);
 							this.processValue(nameReader.ToString());
@@ -462,6 +466,9 @@ namespace ProgrammingLanguageTutorialIdea {
 							status=ParsingStatus.SEARCHING_NAME;
 						
 						break;
+						
+					case ParsingStatus.STOP_PARSING_IMMEDIATE:
+						return this.compile();
 						
 				}
 				
@@ -1260,7 +1267,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		}
 		
 		
-		internal Boolean isArrayIndexer (String str) { return str.Contains('[')&&str.Where(x=>this.beginsArrayIndexer(x)).Count()==str.Where(x=>this.endsArrayIndexer(x)).Count()&&!(str[0]=='('); }
+		internal Boolean isArrayIndexer (String str) { return str.Contains('[')&&str.Where(x=>this.beginsArrayIndexer(x)).Count()==str.Where(x=>this.endsArrayIndexer(x)).Count()&&!(str[0]=='(')&&!str.Substring(str.LastIndexOf(']')+1).Any(x=>this.isMathOperator(x));; }
 		internal Boolean isValidArrayIndexer (String str) { return isArrayIndexer(str)&&this.arrays.ContainsKey(str.Split('[')[0]); }
 		internal Boolean tryCheckIfValidArrayIndexer (String str) {
 			
@@ -1310,7 +1317,6 @@ namespace ProgrammingLanguageTutorialIdea {
 		private ParsingStatus indexArray (String arrName,String indexer,Boolean recursing=false) {
 			
 			Console.WriteLine("Indexing array: \""+arrName+"\", indexer: \""+indexer+'"');
-//			Console.ReadKey();
 			
 			Boolean containsMathOps=indexer.Any(x=>this.isMathOperator(x));
 			//push the mem addr..
@@ -1322,110 +1328,44 @@ namespace ProgrammingLanguageTutorialIdea {
 					
 					Console.WriteLine(" ====== containsMathOps =======");
 					
-					Char[]splitChars;
-					String[]innerValues=this.parseSplit(indexer,this.mathOperators,new Char[]{'[','('},new Char[]{']',')'},out splitChars);
-					UInt16 ctr=0;
-					String fi=innerValues.First();
-					Console.WriteLine("Pushing: "+fi);
-					if (this.isArrayIndexer(fi)) {
-						sub=fi.Substring(fi.IndexOf('[')+1);
-						arrName0=fi.Split('[')[0].Replace(" ","");
-						indexer0=(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub;
-						this.indexArray(arrName0,indexer0);
-						
-						this.addBytes(
-							(keywordMgr.getVarTypeByteSize(this.arrays[arrName0].Item2)==1) ?
-								 new Byte[]{
-									0x5F,      // POP EDI
-								 	0x31,0xDB, //XOR EBX,EBX   
-								 	0x8A,0x1F, //MOV BL,BYTE [EDI]
-									0x53 //PUSH EBX
-								 }
-							: (keywordMgr.getVarTypeByteSize(this.arrays[arrName0].Item2)==2) ?
-							   new Byte[] {
-							   		0x5F,          //POP EDI
-									0x66,0xFF,0x37 //PUSH WORD [EDI]
-							   }
-							:
-							new Byte[] { 
-								0x5F,     //POP EDI
-								0xFF,0x37 //PUSH DWORD [EDI]
-							}
-						);
-						
-					}
-					else this.pushValue(fi);
 					
-					foreach (String s in innerValues.Skip(1)) {
-					
-						Char op=splitChars[ctr];
-						++ctr;
-						String pushValue=s.Replace(" ","");
-						if (this.isArrayIndexer(pushValue)) { 
-							Int32 idx=pushValue.IndexOf('[')+1;
-							sub=pushValue.Substring(idx,(pushValue.LastIndexOf(']')+1)-idx);
-							arrName0=pushValue.Split('[')[0];
-							indexer0=(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub;
-							slack=pushValue.Substring(pushValue.LastIndexOf(']')+1);
-							Console.WriteLine("pushValue: \""+pushValue+'"');
-							Console.WriteLine("arrName0: \""+arrName0+'"');
-							Console.WriteLine("indexer0: \""+indexer0+'"');
-							Console.WriteLine("sub: \""+sub+'"');
-							Console.WriteLine("slack: \""+slack+'"');
-							this.indexArray(arrName0,indexer0);
-							
-							this.addBytes(
-								(keywordMgr.getVarTypeByteSize(this.arrays[arrName0].Item2)==1) ?
-									 new Byte[]{
-									 	0x31,0xDB, //XOR EBX,EBX   
-									 	0x88,0x1F, //MOV BYTE [EDI],BL
-										0x53 //PUSH EBX
-									 }
-								: (keywordMgr.getVarTypeByteSize(this.arrays[arrName0].Item2)==2) ?
-								   new Byte[] {
-								   		0x5F,          //POP EDI
-										0x66,0xFF,0x37 //PUSH WORD [EDI]
-								   }
-								:
-								new Byte[] { 
-									0x5F,     //POP EDI
-									0xFF,0x37 //PUSH DWORD [EDI]
-								}
-							);
-						}
-						else this.pushValue(pushValue);
-						
-						
-						if (!(String.IsNullOrEmpty(slack))) {
-							
-							if (slack.Any(x=>this.isMathOperator(x)))
-								this.pushValue(arrName+'['+sub+slack);
-							else
-								throw new ParsingError("Unexpected: \""+slack+'"');
-							
-						}
-						
-						this.addByte(0x58); //POP EAX
-						if (this.isAddition(op))
-							this.addBytes(new Byte[]{1,4,0x24}); //ADD [ESP],EAX
-						else if (this.isSubtraction(op))
-							this.addBytes(new Byte[]{0x29,4,0x24}); //SUB [ESP],EAX
-						else if (this.isMultiplication(op))
-							this.addBytes(new Byte[]{
-							              	0xF7,0x24,0x24, //MUL [ESP]
-							              	0x89,4,0x24     //MOV [ESP],EAX
-							              });
-						else if (this.isDivision(op)||this.isModulus(op))
-							this.addBytes(new Byte[]{
-							              	0x31,0xD2, // XOR EDX,EDX
-							              	0x87,4,0x24, //XCHG [ESP],EAX
-							              	0xF7,0x34,0x24, //DIV [ESP+4]
-							              	0x89,(Byte)((this.isDivision(op))?4:0x14),0x24 // MOV [ESP],EAX || MOV [ESP],EDX
-							              });
-						else
-							throw new ParsingError("Unexpected math operator \""+op+"\" (?!)");
-						
-					}
+					this.parseMath(indexer,delegate(String str) {
+					               	
+					               	if (this.isArrayIndexer(str)) { 
+										Int32 idx=str.IndexOf('[')+1;
+										sub=str.Substring(idx,(str.LastIndexOf(']')+1)-idx);
+										arrName0=str.Split('[')[0];
+										indexer0=(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub;
+										slack=str.Substring(str.LastIndexOf(']')+1);
+										Console.WriteLine("pushValue: \""+str+'"');
+										Console.WriteLine("arrName0: \""+arrName0+'"');
+										Console.WriteLine("indexer0: \""+indexer0+'"');
+										Console.WriteLine("sub: \""+sub+'"');
+										Console.WriteLine("slack: \""+slack+'"');
+										this.indexArray(arrName0,indexer0);
+										
+										this.addBytes(
+											(keywordMgr.getVarTypeByteSize(this.arrays[arrName0].Item2)==1) ?
+												 new Byte[]{
+												 	0x31,0xDB, //XOR EBX,EBX   
+												 	0x88,0x1F, //MOV BYTE [EDI],BL
+													0x53 //PUSH EBX
+												 }
+											: (keywordMgr.getVarTypeByteSize(this.arrays[arrName0].Item2)==2) ?
+											   new Byte[] {
+											   		0x5F,          //POP EDI
+													0x66,0xFF,0x37 //PUSH WORD [EDI]
+											   }
+											:
+											new Byte[] { 
+												0x5F,     //POP EDI
+												0xFF,0x37 //PUSH DWORD [EDI]
+											}
+										);
+									}
+									else this.pushValue(str);
+					               	
+					               },null);
 					
 					this.addBytes(new Byte[]{
 							              	
@@ -1535,7 +1475,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 				String rv;
 				
-				if (_value<=Byte.MaxValue) {
+				if (_value<=SByte.MaxValue) {
 					
 					this.addBytes(new Byte[]{0x6A,(Byte)(_value)});//PUSH BYTE _value
 					return new Tuple<String,VarType>(KWByte.constName,VarType.NATIVE_VARIABLE);
@@ -1599,7 +1539,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				return new Tuple<String,VarType>(KWBoolean.constName,VarType.NATIVE_VARIABLE);
 				
 			}
-			else if (value.Contains('(')&&functions.ContainsKey(value.Split('(')[0])&&!value.Any(x=>this.isMathOperator(x))) {
+			else if (value.Contains('(')&&functions.ContainsKey(value.Split('(')[0])&&value.Contains(')')&&!value.Substring(value.LastIndexOf(')')+1).Any(x=>this.isMathOperator(x))) {
 				
 				String funcName=value.Split('(')[0];
 				
@@ -1629,6 +1569,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					else if (!(c==','&&roundBracketBalance==1)) paramBuilder.Append(c);
 					
 				}
+				Console.WriteLine("unparsedParams: \""+unparsedParams+'"');
 				this.callFunction(funcName,@params.ToArray());
 				this.addByte(0x50); //PUSH EAX
 				return this.functions[funcName].Item2;
@@ -1687,123 +1628,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 				//NOTE:: math is also parsed & calculated at Parser#indexArray and Parser#pushArrValue
 				
-				//Add all this into a function:
-				Char[]splitChars;
-				String[]innerValues=this.parseSplit(value,this.mathOperators,new Char[]{'[','('},new Char[]{']',')'},out splitChars);
-				UInt16 ctr=0;//splitChars[ctr] should point to the math operator after the current iteration innerValue in the foreach loops
-				List<OrderItem>orderItems=new List<OrderItem>();
-				Order order=new Order();
-				String pushValue;
-				
-				foreach (String s in innerValues) {
-					
-					pushValue=s.Replace(" ","");
-					
-					if (this.isAddition(splitChars[ctr])||this.isSubtraction(splitChars[ctr])) {
-						
-						orderItems.Add(new OrderItem(){type=OrderItemType.UNPARSED,unparsedValue=pushValue});
-						if (orderItems.Count==2) order.addOperation(orderItems,(this.isAddition(splitChars[ctr-1]))?OrderMathType.ADDITION:OrderMathType.SUBTRACTION);
-						
-					}
-					else {
-						
-						if (orderItems.Count==1) { 
-							order.addOperation(orderItems[0],new OrderItem(){type=OrderItemType.PARSED,unparsedValue=pushValue},(this.isAddition(splitChars[ctr-1]))?OrderMathType.ADDITION:OrderMathType.SUBTRACTION);
-							orderItems.Clear();
-						}
-						
-						break;
-						
-					}
-					
-					++ctr;
-					
-				}
-				
-				innerValues=innerValues.Skip(ctr).ToArray();
-				
-				#region .
-				#if DEBUG
-				UInt16 dbg_storedCtr=ctr;
-				foreach (String s in innerValues) {
-					
-					//"6*4/2+3*6-4"
-					
-					if (ctr>=splitChars.Length) Console.WriteLine(s);
-					else {
-						Console.Write(s+splitChars[ctr]);
-						++ctr;
-					}
-					
-				}
-				Console.ReadKey();
-				order.dumpData(true);
-				ctr=dbg_storedCtr;
-				#endif
-				#endregion
-				pushValue=innerValues.First();
-				Tuple<String,VarType>retType=(this.isArrayIndexer(pushValue))?this.pushArrValue(pushValue):this.pushValue(pushValue);
-				OrderMathType nextMathType=default(OrderMathType);
-				
-				foreach (String s in innerValues.Skip(1)) {
-					
-//					Console.WriteLine("Looping innervalue: \""+s+'"');
-					
-					pushValue=s.Replace(" ","");
-					Char op=(Char)0;
-					if (splitChars.Length>ctr)
-						op=splitChars[ctr];
-					else
-						op=splitChars.Last();
-					++ctr;
-					
-					Console.WriteLine("Looping innervalue: \""+s+"\", op: '"+op+'\'');
-					
-					if (this.isSubtraction(op)||this.isAddition(op)) {
-						
-						Console.WriteLine("SUB/AD: \""+s+'"');
-						if (orderItems.Count==0) {
-							
-							orderItems.Add(new OrderItem(){type=OrderItemType.PARSED,unparsedValue=pushValue});
-							nextMathType=(this.isSubtraction(op))?OrderMathType.SUBTRACTION:OrderMathType.ADDITION;
-							this.pushValue(pushValue);
-							
-						}
-						else /*orderItems.Count==1*/ {
-							
-							orderItems.Add(new OrderItem(){type=OrderItemType.PARSED,unparsedValue=pushValue});
-							order.addOperation(orderItems,nextMathType);
-							this.pushValue(pushValue);
-							
-						}
-						continue;
-						
-					}
-					
-					Console.WriteLine("Pushing: "+pushValue);
-					if (this.isArrayIndexer(pushValue)) this.pushArrValue(pushValue);
-					else this.pushValue(pushValue);
-					this.addByte(0x58); //POP EAX
-					if (this.isMultiplication(op))
-						this.addBytes(new Byte[]{
-						              	0xF7,0x24,0x24, //MUL [ESP]
-						              	0x89,4,0x24     //MOV [ESP],EAX
-						              });
-					else if (this.isDivision(op)||this.isModulus(op))
-						this.addBytes(new Byte[]{
-						              	0x31,0xD2, // XOR EDX,EDX
-						              	0x87,4,0x24, //XCHG [ESP],EAX
-						              	0xF7,0x34,0x24, //DIV [ESP+4]
-						              	0x89,(Byte)((this.isDivision(op))?4:0x14),0x24 // MOV [ESP],EAX || MOV [ESP],EDX
-						              });
-					else
-						throw new ParsingError("Unexpected math operator \""+op+"\" (?!)");
-					
-				}
-				order.dumpData(true);
-				order.writeBytes(this);
-				
-				return retType;
+				return this.parseMath(value,delegate(String str){ if (this.isArrayIndexer(str))this.pushArrValue(str); else this.pushValue(str); },pushValue=>(this.isArrayIndexer(pushValue))?this.pushArrValue(pushValue):this.pushValue(pushValue));
 				
 			}
 			
@@ -2003,6 +1828,13 @@ namespace ProgrammingLanguageTutorialIdea {
 			foreach (String str in @params)
 				Console.WriteLine(str);
 			Console.WriteLine(" == total params: "+@params.Length.ToString()+ " == ");
+			
+			
+			foreach (String s in @params) {
+				
+				Console.WriteLine(" P- "+s);
+				
+			}
 			
 			if (this.functions[functionName].Item3!=@params.Length)
 				throw new ParsingError("Expected \""+this.functions[functionName].Item3.ToString()+"\" parameters for \""+functionName+"\", got \""+@params.Length+'"');
@@ -2257,6 +2089,27 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		
+		internal void writeStrOpcodes (String str) {
+			
+			return;
+			
+			#if DEBUG
+			
+			if (str.Length>=SByte.MaxValue)
+				str=str.Substring(0,SByte.MaxValue);
+			
+			UInt32 pos=(UInt32)this.opcodes.Count+1;
+			this.addBytes(new Byte[]{0xEB,0});//JMP SHORT (SByte)
+			this.addByte(0x90); //NOP
+			this.addBytes(Encoding.ASCII.GetBytes(str));
+			this.addByte(0); // STRING NULL TERMINATOR
+			this.addByte(0x90); //NOP
+			this.opcodes[(Int32)pos]=(Byte)(3+str.Length);
+			
+			#endif
+			
+		}
+		
 		private Boolean isFormOfBlankspace (Char c) {
 			
 			return c==' '||c=='\n'||c=='\r'||c=='\t';
@@ -2441,6 +2294,8 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		private Tuple<String,VarType> pushArrValue (String value) {
 			
+			this.writeStrOpcodes("PAV S");
+			
 			Console.WriteLine("------------------------------------------------------------");
 			Console.WriteLine("Value: "+value.ToString());
 				
@@ -2450,7 +2305,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			String sub=value.Substring(idx,(value.LastIndexOf(']')+1)-idx),
 			   arrName=value.Split('[')[0],
 			   slack=value.Substring(value.LastIndexOf(']')+1);
-			
+			   
 			Console.WriteLine("sub: "+sub+", arrName: "+arrName+", slack: "+slack);
 			Console.WriteLine("------------------------------------------------------------");
 			this.indexArray(arrName,(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub);
@@ -2469,10 +2324,14 @@ namespace ProgrammingLanguageTutorialIdea {
 			              			 0x52}           //PUSH EDX
 			             );
 			
+			
 			if (!(String.IsNullOrEmpty(slack))) {
 				
 				if (slack.Any(x=>this.isMathOperator(x))) {
 					
+					this.parseMath(value,delegate(String str){ if (this.isArrayIndexer(str))this.pushArrValue(str); else this.pushValue(str); },pushValue=>(this.isArrayIndexer(pushValue))?this.pushArrValue(pushValue):this.pushValue(pushValue),true);
+				
+					/*
 					Char[]splitChars;
 					String[]innerValues=this.parseSplit(slack,this.mathOperators,new Char[]{'[','('},new Char[]{']',')'},out splitChars);
 					UInt16 ctr=0;
@@ -2513,6 +2372,7 @@ namespace ProgrammingLanguageTutorialIdea {
 							throw new ParsingError("Unexpected math operator \""+op+"\" (?!)");
 						
 					}
+					*/
 					
 				}
 				else
@@ -2520,7 +2380,164 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 			}
 			
+			this.writeStrOpcodes("PAV E");
+			
 			return new Tuple<String,VarType>((varTypeByteSize==4)?KWInteger.constName:(varTypeByteSize==2)?KWShort.constName:KWByte.constName,VarType.NATIVE_ARRAY_INDEXER);
+			
+		}
+		
+		private Tuple<String,VarType> parseMath (String value,Action<String>processPushValue,Func<String,Tuple<String,VarType>>getRetTypeFromPushValue,Boolean skipFirstValue=false) {
+			
+			Char[]splitChars;
+			String[]innerValues=this.parseSplit(value,this.mathOperators,new Char[]{'[','('},new Char[]{']',')'},out splitChars);
+			UInt16 ctr=0;//splitChars[ctr] should point to the math operator after the current iteration innerValue in the foreach loops
+			List<OrderItem>orderItems=new List<OrderItem>();
+			Order order=new Order();
+			String pushValue;
+			
+			foreach (String s in innerValues) {
+				
+				pushValue=s.Replace(" ","");
+				
+				Char op;
+				if (splitChars.Length>ctr)
+					op=splitChars[ctr];
+				else {
+					try { op=splitChars.Last(); }
+					catch { op=(Char)0; }
+				}
+				
+				if (this.isAddition(op)||this.isSubtraction(op)) {
+					
+					processPushValue(s);//this.pushValue(s);
+					orderItems.Add(new OrderItem(){unparsedValue=pushValue});
+					if (orderItems.Count==2) order.addOperation(orderItems,(this.isAddition(splitChars[ctr-1]))?OrderMathType.ADDITION:OrderMathType.SUBTRACTION);
+					
+				}
+				else break;
+				
+				++ctr;
+				
+			}
+			
+			innerValues=innerValues.Skip(ctr).ToArray();
+			Tuple<String,VarType>retType=null;
+			
+			if (skipFirstValue)
+				goto afterFirstValue;
+			
+			#region .
+			#if DEBUG
+			UInt16 dbg_storedCtr=ctr;
+			foreach (String s in innerValues) {
+				
+				//"6*4/2+3*6-4"
+				
+				if (ctr>=splitChars.Length) Console.WriteLine(s);
+				else {
+					Console.Write(s+splitChars[ctr]);
+					++ctr;
+				}
+				
+			}
+			Console.WriteLine("Inner values:");
+			foreach (String s in innerValues)
+				Console.WriteLine(" - "+s);
+//				order.dumpData(true);
+			ctr=dbg_storedCtr;
+			#endif
+			#endregion
+			if (innerValues.Length==0)
+				goto writeOrder;
+			pushValue=innerValues.First();
+			if (getRetTypeFromPushValue==null) {
+				retType=null;
+				processPushValue(pushValue);
+			}
+			else retType=getRetTypeFromPushValue(pushValue);//(this.isArrayIndexer(pushValue))?this.pushArrValue(pushValue):this.pushValue(pushValue);
+			orderItems.Add(new OrderItem(){unparsedValue=pushValue});
+			if (orderItems.Count==2)
+				order.addOperation(orderItems,(this.isAddition(splitChars[ctr-1]))?OrderMathType.ADDITION:OrderMathType.SUBTRACTION);
+			
+			afterFirstValue:
+			
+			foreach (String s in innerValues.Skip(1)) {
+				
+//					Console.WriteLine("Looping innervalue: \""+s+'"');
+				
+				pushValue=s.Replace(" ","");
+				Char op=(Char)0;
+				if (splitChars.Length>ctr)
+					op=splitChars[ctr];
+				else
+					op=splitChars.Last();
+				++ctr;
+				
+				Console.WriteLine("Looping innervalue: \""+s+"\", op: '"+op+'\'');
+				
+				if (this.isSubtraction(op)||this.isAddition(op)) {
+					
+					Console.WriteLine("SUB/AD: \""+s+"\",orderItems: "+orderItems.Count.ToString()+", OrderMathType: "+((this.isSubtraction(op))?OrderMathType.SUBTRACTION:OrderMathType.ADDITION).ToString());
+					if (orderItems.Count==0) {
+						
+						orderItems.Add(new OrderItem(){unparsedValue=pushValue});
+						processPushValue(pushValue);//this.pushValue(pushValue);
+						
+					}
+					else /*orderItems.Count==1*/ {
+						
+						orderItems.Add(new OrderItem(){unparsedValue=pushValue});
+						order.addOperation(orderItems,(this.isSubtraction(op))?OrderMathType.SUBTRACTION:OrderMathType.ADDITION);
+						processPushValue(pushValue);//this.pushValue(pushValue);
+						
+					}
+					continue;
+					
+				}
+				
+				processPushValue(pushValue);
+				/*
+				Console.WriteLine("Pushing: "+pushValue);
+				if (this.isArrayIndexer(pushValue)) this.pushArrValue(pushValue);
+				else this.pushValue(pushValue);
+				*/
+				
+				this.addByte(0x58); //POP EAX
+				if (this.isMultiplication(op))
+					this.addBytes(new Byte[]{
+					              	0xF7,0x24,0x24, //MUL [ESP]
+					              	0x89,4,0x24     //MOV [ESP],EAX
+					              });
+				else if (this.isDivision(op)||this.isModulus(op))
+					this.addBytes(new Byte[]{
+					              	0x31,0xD2, // XOR EDX,EDX
+					              	0x87,4,0x24, //XCHG [ESP],EAX
+					              	0xF7,0x34,0x24, //DIV [ESP+4]
+					              	0x89,(Byte)((this.isDivision(op))?4:0x14),0x24 // MOV [ESP],EAX || MOV [ESP],EDX
+					              });
+				else
+					throw new ParsingError("Unexpected math operator \""+op+"\" (?!)");
+				
+			}
+//				order.dumpData(true);
+			writeOrder:
+			order.writeBytes(this);
+			
+			if (retType==null)
+				retType=new Tuple<String,VarType>(KWInteger.constName,VarType.NATIVE_VARIABLE);
+			
+			return retType;
+			
+		}
+		
+		private UInt16 modRbbrv (Char c,Boolean inDoubleQuotes,UInt16 rbbrv) {
+			
+			if (!inDoubleQuotes&&this.beginsParameters(c))
+				return ++rbbrv;
+			else if (!inDoubleQuotes&&this.endsParameters(c))
+				return --rbbrv;
+			else
+				return rbbrv;
 			
 		}
 		
