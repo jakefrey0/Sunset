@@ -226,7 +226,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			#region PE Code Section
 			
-			Marshal.Copy(".demo".toCodeSectNameBytes(),0,new IntPtr(hdr.name),8);
+			Marshal.Copy(".sunset".toCodeSectNameBytes(),0,new IntPtr(hdr.name),8);
 			hdr.virtualSize=(UInt32)(opcodes.Count+offset);
 			hdr.virtualAddress=alignment;
 			hdr.sizeOfRawData=(UInt32)mockOpcodes.Count;
@@ -247,7 +247,8 @@ namespace ProgrammingLanguageTutorialIdea {
 				hdr.dir[3]=(UInt32)importOpcodes.Count;
 				hdr.importTableBytes[0]=BitConverter.ToUInt64(Encoding.ASCII.GetBytes(".idata").Concat(new Byte[]{0,0}).ToArray(),0);
 				hdr.importTableBytes[1]=BitConverter.ToUInt64(BitConverter.GetBytes((UInt32)importOpcodes.Count).Concat(BitConverter.GetBytes(addr)).ToArray(),0);
-				hdr.importTableBytes[2]=BitConverter.ToUInt64(new Byte[]{0,2,0,0,0,(Byte)((((importOpcodes.Count+mockOpcodes.Count+Marshal.SizeOf(typeof(PEHeader)))/512)*2)-2),0,0},0);
+				//importTableBytes[2] - First UInt32: Size of Import Section Raw Data, Second UInt32: Pointer to Import Section Raw Data (The amount of bytes until the import section)
+				hdr.importTableBytes[2]=BitConverter.ToUInt64(BitConverter.GetBytes((UInt32)importOpcodes.Count).Concat(BitConverter.GetBytes((UInt32)Marshal.SizeOf(typeof(PEHeader))+mockOpcodes.Count)).ToArray(),0);
 				hdr.importTableBytes[4]=BitConverter.ToUInt64(new Byte[]{0,0,0,0,0x40,0,0,0xC0},0);
 				
 			}

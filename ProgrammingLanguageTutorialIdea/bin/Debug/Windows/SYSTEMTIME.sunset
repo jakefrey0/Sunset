@@ -1,0 +1,9 @@
+STRUCT
+shr wYear
+shr wMonth
+shr wDayOfWeek
+shr wDay
+shr wHour
+shr wMinute
+shr wSecond
+shr wMilliseconds

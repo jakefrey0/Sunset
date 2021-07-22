@@ -14,6 +14,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 	public class KeywordMgr {
 		
 		private List<Keyword> keywords;
+		public List<String> classWords;
 		
 		public KeywordMgr () {
 			
@@ -37,9 +38,17 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			                       	new KWWhile(),
 			                       	new KWBreak(),
 			                       	new KWContinue(),
-			                       	new KWFinishCompiling()
+			                       	new KWFinishCompiling(),
+			                       	new KWToggleGui(),
+			                       	new KWImport(),
+			                       	new KWStruct(),
+			                       	new KWNew(),
+			                       	new KWVoid(),
+			                       	new KWSetProcessHeapVar()
 			                       	
 			                       });
+			
+			this.classWords=new List<String>();
 			
 		}
 		
@@ -53,11 +62,11 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		public UInt32 getVarTypeByteSize (String varType) {
 			
 			//HACK:: check variable type
-			if (varType==KWByte.constName||varType==KWBoolean.constName)
+			if (varType==KWByte.constName||varType==KWBoolean.constName||varType==Parser.NULL_STR)
 				return 1;
 			else if (varType==KWShort.constName)
 				return 2;
-			else if (varType==KWInteger.constName||varType==KWString.constName)
+			else if (varType==KWInteger.constName||varType==KWString.constName||this.classWords.Contains(varType))
 				return 4;
 			else
 				throw new Exception("(DEV) Invalid var type \""+varType+'"');

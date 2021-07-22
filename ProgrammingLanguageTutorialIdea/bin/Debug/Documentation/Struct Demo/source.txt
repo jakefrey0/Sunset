@@ -1,0 +1,50 @@
+TOGGLEGUI
+
+import(WNDCLASSA)
+import(MSG)
+
+dllref(User32,WNDCLASSA) RegisterClassA int
+dllref(Kernel32,str) GetModuleHandleA int
+dllref(User32,int,str,str,int,int,int,int,int,int,int,int,int) CreateWindowExA int
+dllref(User32,MSG,int,int,int) GetMessageA bool
+dllref(User32,MSG) TranslateMessage void
+dllref(User32,MSG) DispatchMessageA void
+dllref(User32,int,str,str,int) MessageBoxA int
+dllref(User32,int,int,int,int) DefWindowProcA int
+dllref(User32,int) PostQuitMessage void
+
+int WM_DESTROY becomes 2
+int modh becomes GetModuleHandleA(null)
+int cHwnd
+int COLOR_WINDOW becomes 5
+
+func(str message) mbox { MessageBoxA(null,message,message,null) }
+func(int hwnd,int uMsg,int wParam,int lParam) wndProc int {
+	
+	if (uMsg,=,WM_DESTROY) {
+		
+		mbox("Goodbye")
+		PostQuitMessage(null)
+		retn(0)
+		
+	}
+	
+	retn(DefWindowProcA(hwnd,uMsg,wParam,lParam))
+	
+}
+
+WNDCLASSA wndClassA becomes new(WNDCLASSA)
+wndClassA.hInstance becomes modh
+wndClassA.lpfnWndProc becomes $wndProc
+wndClassA.lpszClassName becomes "SunsetClass"
+wndClassA.hbrBackground becomes COLOR_WINDOW+1
+RegisterClassA(wndClassA)
+cHwnd becomes CreateWindowExA(null,"SunsetClass","Sunset GUI",273154048,128,128,256,192,null,null,modh,null)
+
+MSG msg becomes new(MSG)
+while(GetMessageA(msg,null,null,null)) {
+	
+	TranslateMessage(msg)
+	DispatchMessageA(msg)
+	
+}

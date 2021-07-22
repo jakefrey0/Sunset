@@ -184,6 +184,7 @@ int brushHandle becomes GetSysColorBrush(COLOR_WINDOW)
 ; are defined with the function. These are passed through whenever the function is called, and again, are optional, so they may not exist.
 func(str message) mbox int {
 	
+	crash
 	; Functions are called by typing their name, and inputting the pre defined parameters in the parameters of the function.
         ; If the function has no parameters, no parentheses and therefore no parameters are needed to be input when calling at all.
         ; Dll referenced functions are called the same way that Sunset defined functions are called (in terms of Sunset code).
@@ -199,6 +200,7 @@ func(str message) mbox int {
 }
 func(int hwnd,int uMsg,int wParam,int lParam) wndProc int {
 	
+	crash
 	if (uMsg,=,WM_PAINT) {
 		
 		PAINTSTRUCT pstrc becomes new(PAINTSTRUCT)
@@ -256,7 +258,6 @@ func(int hwnd,int uMsg,int wParam,int lParam) wndProc int {
 	retn(DefWindowProcA(hwnd,uMsg,wParam,lParam))
 	
 }
-
 ; Similar to dll references, the "void" type may also be set as a return type for functions. This effectively has no difference to not setting a type at all.
 
 ; =================================================================
@@ -335,7 +336,6 @@ else {
 	; myBoolean is true
 	
 }
-
 ; The previous two if/else clauses have no effect and were written for only demonstrative purpose.
 ; The following statement is initializing a struct, similar to a class, except with different properties.
 ; Specifically, some general properties of a struct is they should be stripped from all constructor data,
@@ -361,6 +361,7 @@ wndClassA.lpszClassName becomes className ; Set the class name to "className", w
 ; In this case, it will be used by Microsoft to register the class struct that was just setup, in order to create a window.
 RegisterClassA(wndClassA)
 
+crash
 ; This is a call to the dll-referenced function CreateWindowExA, and stores the handle of the window in the "windowHandle" variable defined previously.
 ; The following line demonstrates that one can also get values from structs, as one of the paremeters are "wndClassA.hInstance", getting the value of
 ; that variable in the struct defined earlier. In order for this particular function to work, RegisterClassA needs to have been succesfully called as well.

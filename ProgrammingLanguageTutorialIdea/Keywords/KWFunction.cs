@@ -24,11 +24,23 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			if (sender.inFunction)
 				throw new ParsingError("Tried to make a function inside of a function");
 			
+			sender.tryCreateRestoreEsiFunc();
+			
 			UInt32 pos=sender.getOpcodesCount()+1;
 			sender.addBytes(new Byte[]{0xE9,0,0,0,0});
 //			Byte[]newOpcodes=new Byte[]{0xE9,0,0,0,0}; //JMP TO MEM ADDR
 			Byte[] newOpcodes=new Byte[0],endOpcodes=(@params.Length==0)?new Byte[]{0xC3}/*RET*/:new Byte[]{0xC2/*RET SHORT:(STACK RESTORATION AMOUNT)*/}.Concat(BitConverter.GetBytes((UInt16)(@params.Length*4))).ToArray();
 			Block functionBlock=new Block(delegate{sender.inFunction=false;},sender.memAddress,endOpcodes,true);
+			
+			//For information on this, see KWNew -> Extra esi dword var on classes information
+			if (sender.addEsiToLocalAddresses) {
+				sender.addByte(0x56);//PUSH ESI
+				if (sender.addEsiToLocalAddresses) 
+					endOpcodes=new Byte[]{0x5E/*POP ESI*/}.Concat(endOpcodes).ToArray();
+				sender.esiFuncReferences.Add(sender.getOpcodesCount()+1);
+				sender.addBytes(new Byte[]{0xE8}.Concat(BitConverter.GetBytes(sender.memAddress))); //CALL DWORD RELATIVE ADDRESS
+			}
+			
 			List<Tuple<String,VarType>>paramTypes=new List<Tuple<String,VarType>>();
 			UInt16 paramIndex=0;
 			foreach (String s in @params.Reverse())

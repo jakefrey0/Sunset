@@ -1,0 +1,10 @@
+dllref(Advapi32,str,int) GetUserNameA bool
+dllref(Kernel32) GetTickCount int
+
+int UNLEN becomes 256
+int nameLength becomes UNLEN
+str name becomes "                                                                                                                                                                                                                                                                                                        "
+
+func getTicksSinceLoggedOn int { retn(GetTickCount) }
+
+GetUserNameA(name,$nameLength)

@@ -1,0 +1,64 @@
+﻿/*
+ * Created by SharpDevelop.
+ * User: Elite
+ * Date: 7/11/2021
+ * Time: 2:50 AM
+ * 
+ * To change this template use Tools | Options | Coding | Edit Standard Headers.
+ */
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Text;
+using ProgrammingLanguageTutorialIdea.Keywords;
+
+namespace ProgrammingLanguageTutorialIdea {
+	
+	public class Class {
+		
+		public readonly String className;
+		public readonly UInt32 byteSize,opcodePortionByteSize,initialAppendAfterCount,classAppendAfterCount;
+		public readonly ClassType classType;
+		public UInt32 memAddr;
+		public Dictionary<String,Tuple<UInt32,String>>variables;
+		public Dictionary<String,Tuple<UInt32,String,Class>>classes;//Name,(Offset To Mem Address of Heap Handle,Class type name,Class type)
+		public Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>>functions;
+		private List<String>defineTimeOrder;
+		
+		public Class (String className,UInt32 byteSize,ClassType classType,UInt32 memAddr,Parser parserUsed,UInt32 opcodePortionByteSize,UInt32 initialAppendAfterCount,UInt32 classAppendAfterCount) {
+			
+			this.className=className;
+			this.byteSize=byteSize;
+			this.classType=classType;
+			this.memAddr=memAddr;
+			this.variables=new Dictionary<String,Tuple<UInt32,String>>();
+			this.classes=new Dictionary<String,Tuple<UInt32,String,Class>>();
+			this.functions=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>>();
+			this.defineTimeOrder=new List<String>(parserUsed.defineTimeOrder);
+			this.opcodePortionByteSize=opcodePortionByteSize;
+			this.initialAppendAfterCount=initialAppendAfterCount;
+			this.classAppendAfterCount=classAppendAfterCount;
+			foreach (KeyValuePair<String,Tuple<UInt32,String>>kvp in parserUsed.getVariables())
+				this.variables.Add(kvp.Key,new Tuple<UInt32,String>(kvp.Value.Item1-parserUsed.memAddress,kvp.Value.Item2));
+			foreach (KeyValuePair<String,Tuple<UInt32,String,Class>>kvp in parserUsed.getClasses())
+				this.classes.Add(kvp.Key,new Tuple<UInt32,String,Class>(kvp.Value.Item1-parserUsed.memAddress,kvp.Value.Item2,kvp.Value.Item3));
+			foreach (KeyValuePair<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>>kvp in parserUsed.getFunctions())
+				this.functions.Add(kvp.Key,new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>(kvp.Value.Item1,kvp.Value.Item2,kvp.Value.Item3,kvp.Value.Item4,kvp.Value.Item5));
+				
+		}
+		
+		public Tuple<String,VarType> getVarType (String name) {
+			
+			if (variables.ContainsKey(name))
+				return new Tuple<String,VarType>(this.variables[name].Item2,VarType.NATIVE_VARIABLE);
+			else if (classes.ContainsKey(name))
+				return new Tuple<String,VarType>(this.classes[name].Item2,VarType.CLASS);
+			else if (functions.ContainsKey(name))
+				return this.functions[name].Item2;
+			else throw new ParsingError("Variable \""+name+"\" does not exist in \""+className+"\" (?!)");
+			
+		}
+		
+	}
+	
+}

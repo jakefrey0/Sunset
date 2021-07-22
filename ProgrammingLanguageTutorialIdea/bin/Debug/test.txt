@@ -1,0 +1,8 @@
+import(Docs)
+import(Windows\RECT)
+
+;ADITIONALLY TEST IN CLASS: class arrays, int arrays, str arrays, shr arrays, byte arrays
+
+Docs docs becomes new(Docs)
+
+; ----------------------------------- ;

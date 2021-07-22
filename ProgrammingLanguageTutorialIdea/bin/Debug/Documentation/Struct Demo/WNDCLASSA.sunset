@@ -1,0 +1,11 @@
+STRUCT
+int       style
+int       lpfnWndProc
+int       cbClsExtra
+int       cbWndExtra
+int       hInstance
+int       hIcon
+int       hCursor
+int       hbrBackground
+str       lpszMenuName
+str       lpszClassName

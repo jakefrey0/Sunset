@@ -1,0 +1,9 @@
+STRUCT
+import(POINT)
+int hwnd
+int message
+int wParam
+int lParam
+int time
+POINT point
+int lPrivate

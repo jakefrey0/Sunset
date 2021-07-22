@@ -12,7 +12,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 	
 	public class KWFinishCompiling : Keyword {
 		
-		public const String constName="finishcmp";
+		public const String constName="FINISHCMP";
 		
 		public KWFinishCompiling () : base (constName,KeywordType.NATIVE_CALL) { }
 		

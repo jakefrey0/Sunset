@@ -15,6 +15,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		public readonly String name;
 		public readonly Boolean hasParameters;
 		public readonly KeywordType type;
+		internal Tuple<String,VarType>outputType;
 		
 		public Keyword (String name,KeywordType type,Boolean hasParameters=false) { 
 			

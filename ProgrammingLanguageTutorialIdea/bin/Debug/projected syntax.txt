@@ -94,3 +94,34 @@ Dll Referencing:
 dllref(User32,int,str,str,int) MessageBoxA int
 
 MessageBoxA(0,"","",0)
+
+
+--------------------------------------
+Timestamp: 11:14PM 7/10/2021
+--------------------------------------
+
+Classes/Structs:
+(To define a class/struct, just create a file and write functions/variables etc. in sunset)
+
+Importing a class:
+import(MyClassName.sunset)
+OR:
+import(C:\Fakepath\MyClass.sunset)
+OR:
+import(MyClass) ; if file doesn't exist, .sunset appended to end in compiler, if file still doesn't exist throw ParsingError as normal
+
+Defining a class:
+
+MyClass myClass becomes new(MyClass) ; The new keyword is what causes the heap to get copied and called
+; You can set it to a different instance of the same class
+; I.e
+; MyClass myClass0
+; MyClass myClass becomes myClass0
+
+Calling functions in a class:
+myClass.myClassFunction
+myClass.myClassFunctionWithParams(123,123)
+
+Getting/setting variables in a class:
+myClass.myClassVariable becomes 123
+int myInteger becomes myClass.myClassVariable

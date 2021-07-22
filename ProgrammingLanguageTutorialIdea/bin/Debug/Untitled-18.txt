@@ -1,0 +1,24 @@
+
+;dev { togglegui }
+
+	if (uMsg,=,WM_PAINT) {
+		
+		PAINTSTRUCT pstrc becomes new(PAINTSTRUCT)
+		int hdc becomes BeginPaint(cHwnd,pstrc)
+		FillRect(hdc,pstrc.rcPaint,vbButtonFace)
+		EndPaint(hdc,pstrc)
+		retn(0)
+		
+	}
+
+;Reminder: To find many instances where +ESI is required, run the completed sunset document through as a class
+
+; Test normal classes (non-structs)
+; Try accessing class item from class (myClass.myOtherClass.myItem)
+; Test accessing classes/structs as local variables with getting and setting
+; Try classes/structs as return types and bug test that a bit
+
+; Undone: Some getting/setting (pushValue/processValue/chkName) from class functions might need checkups (maybe missing some: function,array,variables,classes)
+; Make sure they all work when the addEsi flag is set
+
+; Remember to remove setpheapvar once fixed from the main resource, and clean up remainder if anything is not supposed to be there

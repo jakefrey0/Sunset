@@ -1,0 +1,29 @@
+STRUCT
+int genRandInt
+
+finishcmp
+
+dllref(Kernel32) GetTickCount int
+dllref(User32,str,str,int) cdecl:wsprintfA int
+dllref(User32,int,str,str,int) MessageBoxA int
+
+int tc becomes GetTickCount
+
+func genRandInt int {
+	
+	str string becomes "############"
+	wsprintfA(string,"%d",tc)
+	MessageBoxA(0,string,string,0)
+		
+	if (tc,<,10000) {
+		
+		
+		
+	}
+	else {
+		
+		
+		
+	}
+	
+}

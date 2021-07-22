@@ -15,6 +15,10 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		public Keyword kw;
 		public String func;
+		/// <summary>
+		/// Class,Func
+		/// </summary>
+		public Tuple<String,String>classFunc;
 		
 	}
 	
