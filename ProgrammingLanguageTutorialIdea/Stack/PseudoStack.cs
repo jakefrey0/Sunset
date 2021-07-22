@@ -44,6 +44,15 @@ namespace ProgrammingLanguageTutorialIdea.Stack {
 			
 		}
 		
+		public Byte getLatestEsiOffset () {
+			
+			Int32 topEbpIndex=items.FindLastIndex(x=>x.type==ItemType.PRESERVED_EBP)
+				 ,esiIndex=items.FindLastIndex(x=>x.type==ItemType.ESI_PTR);
+			
+			return unchecked((Byte)((SByte)((topEbpIndex-esiIndex)*4)));
+			
+		}
+		
 		public void printStackDump (Boolean readKey=false) {
 			
 			Console.Write("\n\n== Stack ==\nTotal # of items: "+this.items.Count.ToString()+"\n\n");
@@ -63,6 +72,9 @@ namespace ProgrammingLanguageTutorialIdea.Stack {
 						break;
 					case ItemType.RETURN_PTR:
 						Console.WriteLine("Item #"+i.ToString()+": Call return ptr, list index: "+this.items.IndexOf(stackItem).ToString());
+						break;
+					case ItemType.ESI_PTR:
+						Console.WriteLine("Item #"+i.ToString()+": Esi ptr, list index: "+this.items.IndexOf(stackItem).ToString());
 						break;
 				}
 				++i;

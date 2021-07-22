@@ -2604,6 +2604,8 @@ namespace ProgrammingLanguageTutorialIdea {
 			if (!(this.functions.ContainsKey(functionName)))
 				throw new ParsingError("Function does not exist: \""+functionName+'"');
 			
+			Boolean restoreEsiCondition=functions[functionName].Item4==FunctionType.DLL_REFERENCED&&addEsiToLocalAddresses&&inFunction;
+			
 			Console.WriteLine(" == callFunction: "+functionName+" == ");
 			foreach (String str in @params)
 				Console.WriteLine(str);
@@ -2619,6 +2621,11 @@ namespace ProgrammingLanguageTutorialIdea {
 			if (this.functions[functionName].Item3!=@params.Length)
 				throw new ParsingError("Expected \""+this.functions[functionName].Item3.ToString()+"\" parameters for \""+functionName+"\", got \""+@params.Length+'"');
 			
+			if (restoreEsiCondition) {
+				pseudoStack.push(new EsiPtr());
+				this.addByte(0x56);//PUSH ESI
+			}
+			
 			if (this.functionParamTypes[functionName].Count!=0) {
 				UInt16 i=(UInt16)(this.functionParamTypes[functionName].Count-1);
 				foreach (String str in @params.Reverse()) {
@@ -2629,6 +2636,12 @@ namespace ProgrammingLanguageTutorialIdea {
 					
 				}
 			}
+			
+			if (restoreEsiCondition) {
+				this.localVarEBPPositionsToOffset[this.getCurrentBlock()].Add((UInt32)(this.opcodes.Count+2));
+				this.addBytes(new Byte[]{0x8B,0x75,this.pseudoStack.getLatestEsiOffset()}); //MOV ESI,[EBP+-OFFSET]
+			}
+			
 			this.addBytes((this.functions[functionName].Item4==FunctionType.SUNSET)?new Byte[]{0xE8,0,0,0,0}:new Byte[]{0xFF,0x15,0,0,0,0}); //CALL Mem Addr
 			if (this.functions[functionName].Item4==FunctionType.SUNSET)
 				this.functionReferences[functionName].Add(new Tuple<UInt32,UInt32>((UInt32)opcodes.Count-4,this.memAddress));
@@ -2636,6 +2649,10 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.referencedFuncPositions[functionName].Add((UInt32)opcodes.Count-4);
 			if (this.functions[functionName].Item5==CallingConvention.Cdecl)
 				this.addBytes(new Byte[]{0x81,0xC4}.Concat(BitConverter.GetBytes((UInt32)this.functions[functionName].Item3*4)));
+			if (restoreEsiCondition) {
+				this.addByte(0x5E);//POP ESI
+				pseudoStack.pop();
+			}
 			status=ParsingStatus.SEARCHING_NAME;
 			
 		}

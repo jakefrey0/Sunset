@@ -103,6 +103,7 @@
     <Compile Include="PEHeader.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Stack\EsiPtr.cs" />
     <Compile Include="Stack\ItemType.cs" />
     <Compile Include="Stack\LocalVar.cs" />
     <Compile Include="Stack\PreservedEBP.cs" />

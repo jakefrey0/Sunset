@@ -130,9 +130,12 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				//  - Parser#fillEsiFuncReferences
 				//  - KWFunc -> Preservation of ESI (This can later be adjusted to only being created if the functions memory address was ever accessed via $funcName)
 				//  - KWFunc -> Calling the ESI restoration func (This can later be adjusted to only being created if the functions memory address was ever accessed via $funcName)
+				//  - Parser#callFunc -> restoreEsiCondition
 				sender.addByte(0x56);//PUSH ESI
+				sender.pseudoStack.push(new EsiPtr());
 				sender.addBytes(new Byte[]{0xFF,0xD0}); //CALL EAX
 				sender.addBytes(new Byte[]{0x83,0xC4,4});//ADD ESP,4
+				sender.pseudoStack.pop();
 				sender.addByte(0x58); //POP EAX
 				
 			}

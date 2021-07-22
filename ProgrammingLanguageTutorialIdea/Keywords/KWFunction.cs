@@ -30,13 +30,15 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			sender.addBytes(new Byte[]{0xE9,0,0,0,0});
 //			Byte[]newOpcodes=new Byte[]{0xE9,0,0,0,0}; //JMP TO MEM ADDR
 			Byte[] newOpcodes=new Byte[0],endOpcodes=(@params.Length==0)?new Byte[]{0xC3}/*RET*/:new Byte[]{0xC2/*RET SHORT:(STACK RESTORATION AMOUNT)*/}.Concat(BitConverter.GetBytes((UInt16)(@params.Length*4))).ToArray();
-			Block functionBlock=new Block(delegate{sender.inFunction=false;},sender.memAddress,endOpcodes,true);
+			
+			if (sender.addEsiToLocalAddresses)
+				endOpcodes=new Byte[]{0x5E/*POP ESI*/}.Concat(endOpcodes).ToArray();
+			
+			Block functionBlock=new Block(delegate{sender.inFunction=false;if(sender.addEsiToLocalAddresses)sender.pseudoStack.pop();},sender.memAddress,endOpcodes,true);
 			
 			//For information on this, see KWNew -> Extra esi dword var on classes information
 			if (sender.addEsiToLocalAddresses) {
 				sender.addByte(0x56);//PUSH ESI
-				if (sender.addEsiToLocalAddresses) 
-					endOpcodes=new Byte[]{0x5E/*POP ESI*/}.Concat(endOpcodes).ToArray();
 				sender.esiFuncReferences.Add(sender.getOpcodesCount()+1);
 				sender.addBytes(new Byte[]{0xE8}.Concat(BitConverter.GetBytes(sender.memAddress))); //CALL DWORD RELATIVE ADDRESS
 			}
@@ -61,6 +63,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				
 			}
 			sender.pseudoStack.push(new ReturnPtr());
+			if (sender.addEsiToLocalAddresses)
+				sender.pseudoStack.push(new EsiPtr());
 			sender.addBlock(functionBlock,0);
 			functionBlock.blockMemPositions.Add(pos);
 			sender.inFunction=true;
