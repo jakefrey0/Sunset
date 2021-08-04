@@ -46,56 +46,6 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			sender.referenceDll(KERNEL32,HL);
 			sender.referencedFuncPositions[HL].Add((UInt32)(sender.getOpcodesCount()+2));
 			sender.addBytes(new Byte[]{0xFF,0x15,0,0,0,0});//CALL FUNC HeapAlloc
-			if (sender.referencedVariable!=null) {
-				
-				if (sender.referencedVariableIsFromClass) {
-					
-					if (!(sender.lastReferencedVariableIsLocal)) {
-						
-						sender.moveClassInstanceIntoEax(sender.lastReferencedClassInstance);
-						//UNDONE:: idk what this is supposed to be
-						
-					}
-					else {
-						
-						Block localVarHomeBlock=sender.getLocalVarHomeBlock(sender.lastReferencedClassInstance);
-						if (localVarHomeBlock!=sender.getCurrentBlock())
-							sender.localVarEBPPositionsToOffset[sender.getCurrentBlock()].Add((UInt32)(sender.getOpcodesCount()+2));
-						sender.addBytes(new Byte[]{0x89,0x45,sender.pseudoStack.getVarEbpOffset(sender.lastReferencedClassInstance)}); //MOV [EBP+-OFFSET],EAX
-						
-					}
-					
-				}
-				else {
-				
-					if (!(sender.referencedVariableIsLocal)) {
-						
-						Console.WriteLine(sender.referencedVariable);
-						if (sender.addEsiToLocalAddresses) {
-							
-							sender.addBytes(new Byte[]{0x89,0x86,});
-							sender.addBytes(BitConverter.GetBytes(sender.appendAfterIndex[sender.referencedVariable]));
-							
-						}
-						else {
-							
-							sender.addByte(0xA3);//MOV DWORD[FOLLOWING PTR],EAX
-							sender.classReferences[sender.referencedVariable].Add(sender.getOpcodesCount());
-							sender.addBytes(new Byte[]{0,0,0,0});
-						}
-					}
-					else {
-						
-						Block localVarHomeBlock=sender.getLocalVarHomeBlock(sender.referencedVariable);
-						if (localVarHomeBlock!=sender.getCurrentBlock())
-							sender.localVarEBPPositionsToOffset[sender.getCurrentBlock()].Add((UInt32)(sender.getOpcodesCount()+2));
-						sender.addBytes(new Byte[]{0x89,0x45,sender.pseudoStack.getVarEbpOffset(sender.referencedVariable)}); //MOV [EBP+-OFFSET],EAX
-					 	
-					}
-					
-				}
-				
-			} 
 			
 			sender.addByte(0x56);//PUSH ESI
 			sender.addByte(0xB9);//MOV FOLLOWING DWORD INTO ECX

@@ -84,6 +84,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				}
 			}
 			
+			sender.keywordMgr.classWords.AddRange(childParser.keywordMgr.classWords);
+			
 			String className=@params[0].Split('.')[0].Split(new Char[]{'\\','/'}).Last();
 			className=className.Contains("\\")?className.Split('\\').Last():className;
 			if (sender.importedClasses.Select(x=>x.className).Contains(className))

@@ -1,8 +1,49 @@
-import(Docs)
-import(Windows\RECT)
+import(Other)
+dllref(User32,int,str,str,int) MessageBoxA int
+dllref(User32,str,str,int) cdecl:wsprintfA int
+setpheapvar
 
-;ADITIONALLY TEST IN CLASS: class arrays, int arrays, str arrays, shr arrays, byte arrays
+Other oth becomes new(Other)
 
-Docs docs becomes new(Docs)
+;Test all this in block
+;nofunct(3)
+oth.test
+;nofunct(3)
+oth.usr.UNLEN becomes 257
+oth.usr.userMbox("Test")
+oth.usr.userMbox("Te3st")
+oth.usr.userMbox("Te4st")
+str myStr becomes "000"
+wsprintfA(myStr,"%d",oth.usr.UNLEN)
+MessageBoxA(0,myStr,"",0)
 
-; ----------------------------------- ;
+;oth.usr.getTicksSinceLoggedOn
+;oth.usr.arr[3] becomes 123
+
+FINISHCMP
+
+--- pushValue ---
+D Array
+D Array indexer
+D Variable
+D Function
+D Function with params
+D Class
+D (Recursive) Class accessor
+
+--- chkName ---
+D Array
+D Array indexer
+D Variable
+D Function
+D Function with params
+D Class
+D (Recursive) Class accessor
+
+--- processValue ---
+TEST ALL
+D Array
+D Array indexer
+D Variable
+D Class
+D (Recursive) Class accessor

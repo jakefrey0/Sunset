@@ -110,7 +110,6 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		internal List<Class>importedClasses;
 		internal List<String> defineTimeOrder;
-		internal String lastReferencedClassInstance;
 		internal List<UInt32>esiFuncReferences=new List<UInt32>();
 		
 		internal Tuple<UInt32,List<UInt32>> processHeapVar;//Mem Addr, References
@@ -121,6 +120,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		/// </summary>
 		internal UInt32 esiOffsetFromStart=0;
 		internal Dictionary<String,UInt32> appendAfterIndex=new Dictionary<String,UInt32>();
+		internal List<String>lastReferencedClassInstance=new List<String>();
 		
 		private List<Byte> opcodes=new List<Byte>(),importOpcodes=null,finalBytes=new List<Byte>(),appendAfter=new List<Byte>();
 		private ParsingStatus status;
@@ -128,6 +128,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		private Dictionary<String,Tuple<UInt32,String,ArrayStyle>> arrays=new Dictionary<String,Tuple<UInt32,String,ArrayStyle>>();//Name,(Ptr To Mem Address of Heap Handle(Dynamic) or Mem Block(Static),Array Var Type,ArrayStyle(Dynamic or Static))
 		private Dictionary<String,Tuple<UInt32,String,Class>> classes=new Dictionary<String,Tuple<UInt32,String,Class>>();//Name,(Ptr To Mem Address of Heap Handle,Class type name,Class type)
 		private List<UInt32>int32sToSubtractByFinalOpcodesCount=new List<UInt32>();
+		private List<String>pvClassInstanceOrigin;
 		
 		private List<Tuple<UInt32,List<UInt32>>>stringsAndRefs; //(Mem Addr,List of References by Opcode Index),Note: Currently the Inner list of Opcode Indexes will only have a length of 1 (6/19/2021 5:19PM)
 		private Dictionary<String,UInt32> setArrayValueFuncPtrs;
@@ -195,12 +196,16 @@ namespace ProgrammingLanguageTutorialIdea {
 			classes=new Dictionary<String,Tuple<UInt32,String,Class>>();
 			staticClassReferences=new Dictionary<Class,List<UInt32>>();
 			defineTimeOrder=new List<String>();
+			pvClassInstanceOrigin=new List<String>();
 			
 			Console.WriteLine("Parser \""+parserName+"\" skipHdr:"+skipHdr.ToString());
 			
 		}
 		
 		public Byte[] parse (String data) {
+			
+			if (addEsiToLocalAddresses)
+				this.pseudoStack.push(new EsiPtr());
 			
 			status=ParsingStatus.SEARCHING_NAME;
 			StringBuilder nameReader=new StringBuilder();
@@ -216,7 +221,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			foreach (Char c in data) {
 				
-				Console.WriteLine(" - Checking:\""+c+"\",ParsingStatus:"+status.ToString()+",blockBracketBalance #no:"+blockBracketBalances.Count.ToString()+",rbbrv:"+rbbrv.ToString());
+				Console.WriteLine(" - Checking:\""+c+"\",ParsingStatus:"+status.ToString()+",blockBracketBalance #no:"+blockBracketBalances.Count.ToString()+",rbbrv:"+rbbrv.ToString()+",attemptingClassAccess:"+attemptingClassAccess.ToString()+",gettingClassItem:"+gettingClassItem.ToString()+",lastReferencedClassInstance:"+lastReferencedClassInstance+",LRV:"+lastReferencedVariable+",RV:"+referencedVariable);
 				
 				if (setExpectsElse>0) {
 					
@@ -414,13 +419,26 @@ namespace ProgrammingLanguageTutorialIdea {
 						
 						if (squareBracketBalance==0) {
 							
-							status=this.indexArray(arrName,nameReader.ToString());
+							if (gettingClassItem) {
+								
+								this.lastReferencedVariableIsLocal=this.isALocalVar(this.lastReferencedClassInstance.First());
+								gettingClassItem=false;
+								lastReferencedVariableIsFromClass=true;
+								this.moveClassOriginItemAddrIntoEax(this.lastReferencedClassInstance,arrName,VarType.NATIVE_ARRAY,this.lastReferencedVariableIsLocal);
+								this.addBytes(new Byte[]{0x8B,0});//MOV EAX,[EAX]
+								status=this.indexArray(null,nameReader.ToString(),0,true,this.keywordMgr.getVarTypeByteSize(this.getOriginFinalClass(this.lastReferencedClassInstance,this.lastReferencedVariableIsLocal).arrays[arrName].Item2));
+								
+							}
+							else {
+								this.lastReferencedVariableIsLocal=this.isALocalVar(arrName);
+								status=this.indexArray(arrName,nameReader.ToString());
+							}
 							nameReader.Clear();
 							this.lastReferencedVariable=arrName;
-							this.lastReferencedVariableIsLocal=this.isALocalVar(arrName);
 							arrName=null;
 							this.nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT,KeywordType.DECREMENT,KeywordType.INCREMENT};
 							this.lastReferencedVarType=VarType.NATIVE_ARRAY_INDEXER;
+							
 							
 						}
 						else nameReader.Append(c);
@@ -633,16 +651,12 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			Dictionary<String,Tuple<UInt32,String,ArrayStyle>> newDict0=new Dictionary<String,Tuple<UInt32,String,ArrayStyle>>(this.arrays.Count);
 			foreach (KeyValuePair<String,Tuple<UInt32,String,ArrayStyle>> kvp in this.arrays) {
-				
-				if (kvp.Value.Item1==0) newDict0.Add(kvp.Key,kvp.Value);
-				
-				else {
-				
+			
+			
 //					Console.WriteLine("For array: "+kvp.Key+", updating mem address to: "+(kvp.Value.Item1+1).ToString("X"));
-					
-					newDict0.Add(kvp.Key,new Tuple<UInt32,String,ArrayStyle>(kvp.Value.Item1+1,kvp.Value.Item2,kvp.Value.Item3));
 				
-				}
+				newDict0.Add(kvp.Key,new Tuple<UInt32,String,ArrayStyle>(kvp.Value.Item1+1,kvp.Value.Item2,kvp.Value.Item3));
+				
 			}
 			
 			this.arrays=new Dictionary<String,Tuple<UInt32,String,ArrayStyle>>(newDict0);
@@ -704,7 +718,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			Console.WriteLine("Got name: \""+name+'"');
 			
-			if (!pKTs.Contains(KeywordType.NONE)||attemptingClassAccess)
+			if (!pKTs.Contains(KeywordType.NONE)||attemptingClassAccess||gettingClassItem)
 				goto checkKeywords;
 			
 			if (this.variables.ContainsKey(name)) {
@@ -800,14 +814,28 @@ namespace ProgrammingLanguageTutorialIdea {
 			}
 			else if (attemptingClassAccess) {
 				
-				if (this.classes.ContainsKey(name)) {
+				this.attemptingClassAccess=false;
+				
+				if (lastReferencedClassInstance.Count!=0) {
+					
+					if (this.getOriginFinalClass(lastReferencedClassInstance,lastReferencedVariableIsLocal).classes.ContainsKey(name)) {
+						
+						this.lastReferencedClassInstance.Add(name);
+						gettingClassItem=true;
+						this.status=ParsingStatus.SEARCHING_NAME;
+						return;
+						
+					}
+					else throw new ParsingError("\""+name+"\" does not exist in \""+merge(lastReferencedClassInstance,".")+'"');
+					
+				}
+				else if (this.classes.ContainsKey(name)) {
 					
 					this.lastReferencedVariable=name;
 					this.status=ParsingStatus.SEARCHING_NAME;
 					this.gettingClassItem=true;
-					this.attemptingClassAccess=false;
 					lastReferencedVariableIsLocal=false;
-					this.lastReferencedClassInstance=name;
+					this.lastReferencedClassInstance=new []{name}.ToList();
 					return;
 					
 				}
@@ -817,8 +845,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					this.lastReferencedVariableIsLocal=true;
 					this.gettingClassItem=true;
 					this.status=ParsingStatus.SEARCHING_NAME;
-					this.attemptingClassAccess=false;
-					this.lastReferencedClassInstance=name;
+					this.lastReferencedClassInstance=new []{name}.ToList();
 					return;
 					
 				}
@@ -829,9 +856,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 				gettingClassItem=false;
 				lastReferencedVariableIsFromClass=true;
-				Class cl;
-				if (lastReferencedVariableIsLocal) cl=this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(this.lastReferencedClassInstance).localVariables[this.lastReferencedClassInstance].Item1.Item1).First();
-				else cl=this.classes[this.lastReferencedClassInstance].Item3;
+				Class cl=this.getOriginFinalClass(lastReferencedClassInstance,lastReferencedVariableIsLocal);
 				if (cl.variables.ContainsKey(name)) {
 					
 					this.lastReferencedVariable=name;
@@ -854,7 +879,6 @@ namespace ProgrammingLanguageTutorialIdea {
 				}
 				else if (cl.functions.ContainsKey(name)) {
 					
-					lastReferencedVariableIsLocal=false;
 					this.status=ParsingStatus.SEARCHING_NAME;
 					lastReferencedVariableIsFromClass=false;
 					
@@ -862,15 +886,27 @@ namespace ProgrammingLanguageTutorialIdea {
 						
 						status=(this.beginsParameters(this.nextChar))?ParsingStatus.READING_PARAMETERS:ParsingStatus.SEARCHING_PARAMETERS;
 						roundBracketBalance=1;
-						this.waitingToExecute=new Executor(){classFunc=new Tuple<String,String>(this.lastReferencedVariable,name)};
+						this.waitingToExecute=new Executor(){classFunc=new Tuple<IEnumerable<String>,String,Boolean>(lastReferencedClassInstance,name,lastReferencedVariableIsLocal)};
 						
 					}
 					else {
 						
-						this.callClassFunc(this.lastReferencedVariable,name,new String[0]);
+						this.callClassFunc(this.lastReferencedClassInstance,name,new String[0],lastReferencedVariableIsLocal);
+						this.lastReferencedClassInstance.Clear();
 						
 					}
+					lastReferencedVariableIsLocal=false;
 					return;
+					
+				}
+				else if (cl.arrays.ContainsKey(name)) {
+					
+					this.lastReferencedVariable=name;
+					Console.WriteLine("LRV:"+this.lastReferencedVariable);
+					this.status=ParsingStatus.SEARCHING_NAME;
+					this.nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT,KeywordType.INCREMENT,KeywordType.DECREMENT};
+					this.lastReferencedVarType=VarType.NATIVE_ARRAY;
+					return;	
 					
 				}
 				else throw new ParsingError("Invalid class item: \""+name+'"');
@@ -911,6 +947,8 @@ namespace ProgrammingLanguageTutorialIdea {
 						this.setExpectsBlock=1;
 					}
 					lastReferencedVariableIsLocal=false;
+					if (kw.type==KeywordType.INCREMENT||kw.type==KeywordType.DECREMENT)
+						this.lastReferencedClassInstance.Clear();
 					return;
 					
 				}
@@ -993,10 +1031,11 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		private void processValue (String value) {
 			
+			Console.WriteLine("------------ processValue ------------");
 			Console.WriteLine("is local: "+this.referencedVariableIsLocal.ToString()+", var name: "+this.referencedVariable+", referenced var type: "+this.referencedVarType.ToString());
 			String type;
 			if (this.referencedVariableIsFromClass)
-				type=getClassFromInstanceName(this.lastReferencedClassInstance).getVarType(this.referencedVariable).Item1;//Create function getClassFromInstanceName that works with local vars and non local vars
+				type=getOriginFinalClass(this.lastReferencedClassInstance,lastReferencedVariableIsLocal).getVarType(this.referencedVariable).Item1;
 			else if (!(this.referencedVariableIsLocal))
 				type=(this.referencedVarType==VarType.NATIVE_ARRAY||this.referencedVarType==VarType.NATIVE_ARRAY_INDEXER)?this.arrays[this.referencedVariable].Item2:(this.referencedVarType==VarType.CLASS?this.classes[this.referencedVariable].Item2:this.variables[this.referencedVariable].Item2);
 			else
@@ -1032,11 +1071,11 @@ namespace ProgrammingLanguageTutorialIdea {
 					this.referenceDll(Parser.KERNEL32,HL);
 					this.referencedFuncPositions[HL].Add((UInt32)(this.opcodes.Count+2));
 					this.addBytes(new Byte[]{0xFF,0x15,0,0,0,0});//CALL FUNC HeapAlloc
-	//				Console.WriteLine(this.referencedVariable);
-	//				Console.WriteLine("------------");
-	//				foreach (String s in this.arrays.Select(x=>x.Key))
-	//					Console.WriteLine(" - "+s);
-	//				Console.WriteLine("------------");
+//					Console.WriteLine(this.referencedVariable);
+//					Console.WriteLine("------------");
+//					foreach (String s in this.arrays.Select(x=>x.Key))
+//						Console.WriteLine(" - "+s);
+//					Console.WriteLine("------------");
 					if (this.referencedVariableIsLocal) {
 						
 						if (this.getLocalVarHomeBlock(this.referencedVariable)!=this.getCurrentBlock())
@@ -1046,12 +1085,23 @@ namespace ProgrammingLanguageTutorialIdea {
 					}
 					else {
 						
-						Tuple<UInt32,String,ArrayStyle>_refdVar=this.arrays[this.referencedVariable];
-						this.arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle>(this.memAddress+(UInt32)(appendAfter.Count),_refdVar.Item2,_refdVar.Item3);
-						this.appendAfterIndex.Add(referencedVariable,(UInt32)appendAfter.Count);
-						this.appendAfter.AddRange(new Byte[4]);
-						this.arrayReferences[this.referencedVariable].Add((UInt32)(opcodes.Count+1));
-						this.addBytes(new Byte[]{0xA3,0,0,0,0});//STORE ALLOCATED PTR TO VARIABLE
+						if (referencedVariableIsFromClass) {
+							
+							this.addByte(0x91);//XCHG EAX,ECX
+							this.moveClassOriginItemAddrIntoEax(this.lastReferencedClassInstance,this.referencedVariable,VarType.NATIVE_ARRAY,lastReferencedVariableIsFromClass);
+							this.addBytes(new Byte[]{0x89,8});//MOV [EAX],ECX
+							
+						}
+						else {
+							
+							if (addEsiToLocalAddresses)
+								this.addBytes(new Byte[]{0x89,0x86}.Concat(BitConverter.GetBytes(this.appendAfterIndex[referencedVariable])));
+							else {
+								this.arrayReferences[this.referencedVariable].Add((UInt32)(opcodes.Count+1));
+								this.addBytes(new Byte[]{0xA3,0,0,0,0});//STORE ALLOCATED PTR TO VARIABLE
+							}
+							
+						}
 					
 					}
 					this.addBytes(new Byte[]	{
@@ -1067,13 +1117,26 @@ namespace ProgrammingLanguageTutorialIdea {
 					              });
 					this.addByte((Byte)(keywordMgr.getVarTypeByteSize(type)));//THIS BYTE (array member byte size)
 					this.callSetArrayValue(this.referencedVariable);
-					status=ParsingStatus.SEARCHING_NAME;
-					return;
-				
+					
 				}
 				else if (this.arrays.ContainsKey(value)) {
 					
-					this.arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle>(this.arrays[value].Item1,this.arrays[value].Item2,this.arrays[value].Item3);
+					if (referencedVariableIsFromClass) {
+						this.pushValue(value);
+						this.moveClassOriginItemAddrIntoEax(this.lastReferencedClassInstance,this.referencedVariable,VarType.NATIVE_ARRAY,lastReferencedVariableIsFromClass);
+						this.addBytes(new Byte[]{0x8B,0x14,0x24}); //MOV EDX,[ESP]
+						this.addBytes(new Byte[]{0x89,0x10}); //MOV [EAX],EDX
+						this.addBytes(new Byte[]{0x83,0xC4,4}); //ADD ESP,4
+						//FIXME:: probable bug on next line, it may apply for all classes of that type
+						this.getOriginFinalClass(this.lastReferencedClassInstance,lastReferencedVariableIsLocal).arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle>(this.arrays[value].Item1,this.arrays[value].Item2,this.arrays[value].Item3);
+					}
+					else {
+						this.arrayReferences[value].Add((UInt32)this.opcodes.Count+1);
+						this.addBytes(new Byte[]{0xA1,0,0,0,0}); //MOV EAX,[PTR]
+						this.arrayReferences[this.referencedVariable].Add((UInt32)this.opcodes.Count+1);
+						this.addBytes(new Byte[]{0xA3,0,0,0,0}); //MOV [PTR],EAX
+					}
+					this.status=ParsingStatus.SEARCHING_NAME;
 					return;
 					
 				}
@@ -1095,24 +1158,29 @@ namespace ProgrammingLanguageTutorialIdea {
 						
 						Tuple<UInt32,String,ArrayStyle>_refdVar=this.arrays[this.referencedVariable];
 						this.arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle>(this.memAddress+(UInt32)(appendAfter.Count),_refdVar.Item2,_refdVar.Item3);
+						this.appendAfterIndex.Add(referencedVariable,(UInt32)appendAfter.Count);
 						this.appendAfter.AddRange(new Byte[4]);
 						
 					}
 					
 					this.pushValue(value);
-					this.arrayReferences[this.referencedVariable].Add((UInt32)(opcodes.Count+2));
-					this.addBytes(new Byte[]{0x8F,5,0,0,0,0}); // POP [PTR]
+					if (addEsiToLocalAddresses) {
+						this.addBytes(new Byte[]{0x8F,0x86}.Concat(BitConverter.GetBytes(this.appendAfterIndex[this.referencedVariable])));
+					}
+					else {
+						this.arrayReferences[this.referencedVariable].Add((UInt32)(opcodes.Count+2));
+						this.addBytes(new Byte[]{0x8F,5,0,0,0,0}); // POP [PTR]
+					}
 					
 				}
 				else throw new ParsingError("Invalid array assignment value: \""+value+'"');
 				
 			}
-			
 			else if (this.referencedVarType==VarType.NATIVE_ARRAY_INDEXER) {
 				
-				this.addByte(0x58);//POP EAX
 				this.pushValue(value);
 				this.addByte(0x5A);//POP EDX 
+				this.addByte(0x58);//POP EAX
 				UInt32 size=this.keywordMgr.getVarTypeByteSize(varType);
 				this.addBytes(size==1?new Byte[]{0x88,0x10}://MOV DWORD [EAX],EDX
 				              size==2?new Byte[]{0x66,0x89,0x10}:
@@ -1122,7 +1190,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			}
 			else if (this.referencedVarType==VarType.NATIVE_VARIABLE&&referencedVariableIsFromClass) {
 				
-				this.moveClassItemAddrIntoEax(this.lastReferencedClassInstance,this.referencedVariable,this.referencedVarType);
+				this.moveClassOriginItemAddrIntoEax(this.lastReferencedClassInstance,this.referencedVariable,this.referencedVarType,this.lastReferencedVariableIsLocal);
 				
 				UInt32 size=keywordMgr.getVarTypeByteSize(varType);
 				
@@ -1177,7 +1245,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			}
 			else if (this.referencedVarType==VarType.CLASS&&this.referencedVariableIsFromClass) {
 				
-				this.moveClassItemAddrIntoEax(this.lastReferencedClassInstance,this.referencedVariable,this.referencedVarType);
+				this.moveClassOriginItemAddrIntoEax(this.lastReferencedClassInstance,this.referencedVariable,this.referencedVarType,lastReferencedVariableIsLocal);
 				
 				this.addByte(0x50);//PUSH EAX
 				Tuple<String,VarType> tpl=this.pushValue(value);
@@ -1211,8 +1279,6 @@ namespace ProgrammingLanguageTutorialIdea {
 				}
 				
 			}
-			
-			
 			else {
 				
 //				Console.WriteLine("Did not make an array");
@@ -1223,7 +1289,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					throw new ParsingError("You can only apply \""+KWBoolean.constTrue+"\" and \""+KWBoolean.constFalse+"\" to boolean variables");
 				
 				if (type!=KWString.constName&&tpl.Item1==KWString.constName)
-					throw new ParsingError("Can't convert \""+tpl.Item1+"\" to a string (\""+KWString.constName+"\").");
+					throw new ParsingError("Can't convert \""+type+"\" to a string (\""+KWString.constName+"\").");
 				
 				if (type==KWString.constName&&tpl.Item1!=KWString.constName)
 					throw new ParsingError("Can't convert a string (\""+KWString.constName+"\") to \""+tpl.Item1+"\".");
@@ -1265,23 +1331,17 @@ namespace ProgrammingLanguageTutorialIdea {
 					else if (type==KWShort.constName) {
 					
 						if (this.addEsiToLocalAddresses) {
-							
-							this.addBytes(new Byte[]{
-						              	
-						              	0x66,0x8F,0x86 }.Concat(BitConverter.GetBytes((UInt32)(appendAfter.Count-2)))); //POP WORD [PTR+ESI]
-															   //NOTICE:: this fucks up the stack and should be changed
-						              	
-						             
-							
+							this.addBytes(new Byte[]{0x33,0xD2}); // XOR EDX,EDX
+							this.addByte(0x58); // POP EAX
+							this.addBytes(new Byte[]{0x66,0x8B,0xD0}); // MOV DX,AX
+							this.addBytes(new Byte[]{0x66,0x89,0x96}.Concat(BitConverter.GetBytes(appendAfterIndex[this.referencedVariable]))); // MOV [PTR+ESI],DX
 						}
 						else {
+							this.addBytes(new Byte[]{0x33,0xD2}); // XOR EDX,EDX
+							this.addByte(0x58); // POP EAX
+							this.addBytes(new Byte[]{0x66,0x8B,0xD0}); // MOV DX,AX
 							this.variableReferences[this.referencedVariable].Add((UInt32)this.opcodes.Count+3);
-							this.addBytes(new Byte[]{
-							              	
-							              	0x66,0x8F,5,0,0,0,0 //POP WORD [PTR]
-																//NOTICE:: this fucks up the stack and should be changed
-							              	
-							              });
+							this.addBytes(new Byte[]{0x66,0x89,0x15,0,0,0,0}); // MOV [PTR],DX
 						}
 						
 					}
@@ -1306,6 +1366,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			}
 			
 			status=ParsingStatus.SEARCHING_NAME;
+			this.lastReferencedClassInstance.Clear();
 			
 		}
 		
@@ -1413,7 +1474,10 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			if (this.blocks.Count==0) {
 				this.defineTimeOrder.Add(arrayName);
-				this.arrays.Add(arrayName,new Tuple<UInt32,String,ArrayStyle>(0,this.varType,this.style));
+				this.arrays.Add(arrayName,new Tuple<UInt32,String,ArrayStyle>(this.memAddress+(UInt32)(appendAfter.Count),this.varType,this.style));
+				this.appendAfterIndex.Add(arrayName,(UInt32)appendAfter.Count);
+//						this.debugLine(referencedVariable+','+appendAfter.Count.ToString());
+				this.appendAfter.AddRange(new Byte[4]);
 				this.arrayReferences.Add(arrayName,new List<UInt32>());
 	//			this.appendAfter.AddRange(new Byte[keywordMgr.getVarTypeByteSize(this.varType)]);
 			}
@@ -1631,11 +1695,14 @@ namespace ProgrammingLanguageTutorialIdea {
 		/// </summary>
 		private void callSetArrayValue (String arrayName) {
 			
+			Console.WriteLine(arrayName);
+			
 			if (!(this.setArrayValueFuncPtrs.ContainsKey(arrayName))) {
 				
-				this.setArrayValueFuncPtrs.Add(arrayName,memAddress+2);
 				
 				if (this.isALocalVar(arrayName)) {
+					
+					this.setArrayValueFuncPtrs.Add(arrayName,memAddress+2);
 					
 //					this.localVarEBPPositions[this.getLocalVarHomeBlock(arrayName)][arrayName].Add((UInt32)(this.opcodes.Count+8));
 					
@@ -1656,20 +1723,62 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 				else {
 				
-					this.arrayReferences[arrayName].Add((UInt32)(this.opcodes.Count+8));
 					
-					this.addBytes(new Byte[] {
+					if (addEsiToLocalAddresses) {
+						this.setArrayValueFuncPtrs.Add(arrayName,memAddress+2);
+						this.addBytes(new Byte[] {
 					              	
-						            0xEB,0x0D, // JMP 14 BYTES
-					              	0x5A, //POP EDX
-					              	0x5B, //POP EBX
-					              	0x58, //POP EAX
-					              	0x52, //PUSH EDX
-					              	3,5,0,0,0,0, //ADD VALUE AT PTR TO EAX
-					              	0x89,0x18, //MOV EBX TO [EAX]
-					              	0xC3 //RETN
-					              	
-					              });
+							            0xEB,0x0D, // JMP 14 BYTES
+						              	0x5A, //POP EDX
+						              	0x5B, //POP EBX
+						              	0x58, //POP EAX
+						              	0x52, //PUSH EDX
+						              	3,0x86}.Concat(BitConverter.GetBytes(this.appendAfterIndex[arrayName])).Concat(new Byte[]{ //ADD VALUE AT [PTR+ESI] TO EAX
+						              	0x89,0x18, //MOV EBX TO [EAX]
+						              	0xC3 //RETN
+						              	
+						              }));
+					}
+					else if (referencedVariableIsFromClass) {
+						//note: this assumes this function will only be called from processValue during array initialization
+						// ^ or more specifically, that this.lastReferencedClassInstance && referencedVariableIsFromClass are accurate
+						
+						UInt32 sMemAddr=this.memAddress,opcodesCtPtr=(UInt32)this.opcodes.Count+1;
+						this.addBytes(new Byte[]{0xE9,0,0,0,0});
+						this.setArrayValueFuncPtrs.Add(arrayName,memAddress);
+						this.moveClassOriginItemAddrIntoEax(this.lastReferencedClassInstance,arrayName,VarType.NATIVE_ARRAY,lastReferencedVariableIsFromClass);
+						this.addBytes(new Byte[]{0x8B,0}); //MOV EAX,[EAX]
+						this.addBytes(new Byte[]{3,0x44,0x24,8});//ADD EAX,[ESP+8]
+						this.addBytes(new Byte[]{0x8B,0x5C,0x24,4});//MOV EBX,[ESP+4]
+						this.addBytes(new Byte[]{0x89,0x18});//MOV [EAX],EBX
+						this.addBytes(new Byte[]{0xC2}.Concat(BitConverter.GetBytes((UInt16)8)));//RETN 8
+						Byte i=0;
+						Byte[]t=BitConverter.GetBytes(this.memAddress-sMemAddr-5);
+						while (i!=4) {
+							
+							this.opcodes[(Int32)opcodesCtPtr+i]=t[i];
+							++i;
+							
+						}
+						
+						
+					}
+					else {
+						this.setArrayValueFuncPtrs.Add(arrayName,memAddress+2);
+						this.arrayReferences[arrayName].Add((UInt32)(this.opcodes.Count+8));
+						this.addBytes(new Byte[] {
+						              	
+							            0xEB,0x0D, // JMP 14 BYTES
+						              	0x5A, //POP EDX
+						              	0x5B, //POP EBX
+						              	0x58, //POP EAX
+						              	0x52, //PUSH EDX
+						              	3,5,0,0,0,0, //ADD VALUE AT PTR TO EAX
+						              	0x89,0x18, //MOV EBX TO [EAX]
+						              	0xC3 //RETN
+						              	
+						              });
+					}
 					
 				}
 				
@@ -1737,8 +1846,17 @@ namespace ProgrammingLanguageTutorialIdea {
 		/// </summary>
 		/// <param name="arrName">name of array</param>
 		/// <param name="indexer">value inside first set of square brackets (not including first and last square brackets)</param>
+		/// <param name="noName">if this is true,array address should be in EAX</param>
 		/// <returns>new status to update</returns>
-		private ParsingStatus indexArray (String arrName,String indexer,Boolean recursing=false) {
+		private ParsingStatus indexArray (String arrName,String indexer,Byte recursionDepth=0,Boolean noName=false,UInt32 arrMemSize=0) {
+			
+			if (noName) {
+				if (recursionDepth==0) {
+					this.addByte(0x55);//PUSH EBP
+					this.addBytes(new Byte[]{0x8B,0xEC});//MOV EBP,ESP
+				}
+				this.addByte(0x50);//PUSH EAX
+			}
 			
 			Console.WriteLine("Indexing array: \""+arrName+"\", indexer: \""+indexer+'"');
 			
@@ -1766,7 +1884,7 @@ namespace ProgrammingLanguageTutorialIdea {
 										Console.WriteLine("indexer0: \""+indexer0+'"');
 										Console.WriteLine("sub: \""+sub+'"');
 										Console.WriteLine("slack: \""+slack+'"');
-										this.indexArray(arrName0,indexer0);
+										this.indexArray(arrName0,indexer0,0);
 										
 										this.addBytes(
 											(keywordMgr.getVarTypeByteSize(this.arrays[arrName0].Item2)==1) ?
@@ -1800,8 +1918,18 @@ namespace ProgrammingLanguageTutorialIdea {
 							                                                                                                                 	0x59,//POP ECX
 							                                                                                                                     }));
 					this.addBytes(new Byte[]{0x83,0xC0,8});//ADD EAX,8
-					this.arrayReferences[arrName].Add((UInt32)(this.opcodes.Count+2));
-					this.addBytes(new Byte[]{3,5,0,0,0,0});//ADD EAX,VALUE @ PTR
+					if (!noName) {
+						if (addEsiToLocalAddresses) 
+							this.addBytes(new Byte[]{3,0x86}.Concat(BitConverter.GetBytes(this.appendAfterIndex[arrName])));//ADD EAX,VALUE @ [ESI+PTR]
+						else {
+							this.arrayReferences[arrName].Add((UInt32)(this.opcodes.Count+2));
+							this.addBytes(new Byte[]{3,5,0,0,0,0});//ADD EAX,VALUE @ PTR
+						}
+					
+					}
+					else {
+						this.addBytes(new Byte[]{3,0x45,unchecked((Byte)(-(4+(4*recursionDepth))))});//ADD EAX,[EBP+-OFFSET]
+					}
 					
 					this.addByte(0x50);//PUSH EAX
 					
@@ -1814,8 +1942,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					arrName0=indexer.Split('[')[0].Replace(" ","");
 					indexer0=(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub;
 					
-					this.indexArray(arrName0,indexer0,true);
-					
+					this.indexArray(arrName0,indexer0,(Byte)(recursionDepth+1));
 					
 					this.addBytes(
 						(keywordMgr.getVarTypeByteSize(this.arrays[arrName0].Item2)==1) ?
@@ -1833,23 +1960,32 @@ namespace ProgrammingLanguageTutorialIdea {
 					);
 					
 					this.addByte(0x92);//XCHG EAX,EDX
-					this.addBytes(new Byte[]{0xB9}.Concat(BitConverter.GetBytes(keywordMgr.getVarTypeByteSize((this.isALocalVar(arrName)?this.getLocalVarHomeBlock(arrName).localVariables[arrName].Item1.Item1:this.arrays[arrName].Item2))))); // MOV ECX,BYTE SIZE OF ARR MEMBER
+					this.addBytes(new Byte[]{0xB9}.Concat(BitConverter.GetBytes(arrMemSize==0?keywordMgr.getVarTypeByteSize((this.isALocalVar(arrName)?this.getLocalVarHomeBlock(arrName).localVariables[arrName].Item1.Item1:this.arrays[arrName].Item2)):arrMemSize))); // MOV ECX,BYTE SIZE OF ARR MEMBER
 					this.addByte(0x52);//PUSH EDX
 					this.addBytes(new Byte[]{0xF7,0xE1});//MUL ECX
 					this.addByte(0x5A);//POP EDX
 					this.addByte(0x92);//XCHG EAX,EDX
 					
-					if (this.isALocalVar(arrName)) {
-						if (this.getCurrentBlock()!=this.getLocalVarHomeBlock(arrName))
-							this.localVarEBPPositionsToOffset[this.getCurrentBlock()].Add((UInt32)(this.opcodes.Count+2));
-						this.addBytes(new Byte[]{3,0x55,this.pseudoStack.getVarEbpOffset(arrName)});
+					if (!noName) {
+						if (this.isALocalVar(arrName)) {
+							if (this.getCurrentBlock()!=this.getLocalVarHomeBlock(arrName))
+								this.localVarEBPPositionsToOffset[this.getCurrentBlock()].Add((UInt32)(this.opcodes.Count+2));
+							this.addBytes(new Byte[]{3,0x55,this.pseudoStack.getVarEbpOffset(arrName)});
+						}
+						else {
+							if (addEsiToLocalAddresses)
+								this.addBytes(new Byte[]{3,0x96}.Concat(BitConverter.GetBytes(appendAfterIndex[arrName])));
+							else {
+								this.arrayReferences[arrName].Add((UInt32)(this.opcodes.Count+2));
+								this.addBytes(new Byte[]{3,0x15,0,0,0,0});//ADD EDX,VALUE @ PTR
+							}
+						}
 					}
 					else {
-						this.arrayReferences[arrName].Add((UInt32)(this.opcodes.Count+2));
-						this.addBytes(new Byte[]{3,0x15,0,0,0,0});//ADD EDX,VALUE @ PTR
+						this.addBytes(new Byte[]{3,0x55,unchecked((Byte)(-(4+(4*recursionDepth))))});//ADD EDX,[EBP+-OFFSET]
 					}
 					this.addBytes(new Byte[]{0x83,0xC2,8});//ADD EDX,8
-					if (recursing)
+					if (recursionDepth!=0)
 						this.addByte(0x92);//XCHG EAX,EDX
 					else
 						this.addByte(0x52);//PUSH EDX
@@ -1863,7 +1999,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				Console.WriteLine("Trying to pushValue: \""+indexer+'"');
 				this.pushValue(indexer);//PUSH ......
 				this.addByte(0x58);//POP EAX
-				Byte arrMemByteSize=(Byte)keywordMgr.getVarTypeByteSize((this.isALocalVar(arrName)?this.getLocalVarHomeBlock(arrName).localVariables[arrName].Item1.Item1:this.arrays[arrName].Item2));
+				Byte arrMemByteSize=(Byte)(arrMemSize==0?(Byte)keywordMgr.getVarTypeByteSize((this.isALocalVar(arrName)?this.getLocalVarHomeBlock(arrName).localVariables[arrName].Item1.Item1:this.arrays[arrName].Item2)):arrMemSize);
 				if (arrMemByteSize!=1)
 					this.addBytes(new Byte[]{0x6B,0xC0,arrMemByteSize});//IMUL EAX BY ARRAY MEMBER BYTE SIZE
 				this.addBytes(new Byte[]{0x83,0xC0,8}); //ADD 8 TO EAX
@@ -1874,12 +2010,30 @@ namespace ProgrammingLanguageTutorialIdea {
 					this.addBytes(new Byte[]{3,0x45,this.pseudoStack.getVarEbpOffset(arrName)});
 				}
 				else {
-					this.arrayReferences[arrName].Add((UInt32)(this.opcodes.Count+2));
-					this.addBytes(new Byte[]{3,5,0,0,0,0});//ADD EAX,VALUE @ PTR
+					if (!noName) {
+						if (addEsiToLocalAddresses)
+							this.addBytes(new Byte[]{3,0x86}.Concat(BitConverter.GetBytes(this.appendAfterIndex[arrName])));//ADD EAX,VALUE @ [ESI+PTR]
+						else {
+							this.arrayReferences[arrName].Add((UInt32)(this.opcodes.Count+2));
+							this.addBytes(new Byte[]{3,5,0,0,0,0});//ADD EAX,VALUE @ PTR
+						}
+					}
+					else {
+//						this.addBytes(new Byte[]{3,4,0x24});//ADD EAX,[ESP]
+						this.addBytes(new Byte[]{3,0x45,unchecked((Byte)(-(4+(4*recursionDepth))))});//ADD EAX,[EBP+-OFFSET]
+					}
+						
 				}
-				if (!recursing)
+				if (recursionDepth==0)
 					this.addByte(0x50);//PUSH EAX
 				
+			}
+			
+			if (noName&&recursionDepth==0) {
+				this.addByte(0x58);//POP EAX
+				this.addBytes(new Byte[]{0x8B,0xE5});//MOV ESP,EBP
+				this.addByte(0x5D);//POP EBP
+				this.addByte(0x50);//PUSH EAX
 			}
 			
 			return ParsingStatus.SEARCHING_NAME;
@@ -2012,8 +2166,15 @@ namespace ProgrammingLanguageTutorialIdea {
 				}
 				else if (byteSize==2) {
 					
-					this.variableReferences[value].Add((UInt32)this.opcodes.Count+3);
-					this.addBytes(new Byte[]{0x66,0xFF,0x35,0,0,0,0}); //PUSH WORD [PTR]
+					this.addBytes(new Byte[]{0x31,0xDB}); //XOR EBX,EBX
+					if (addEsiToLocalAddresses)
+						this.addBytes(new Byte[]{0x66,0x8B,0x9E}.Concat(BitConverter.GetBytes(this.appendAfterIndex[value]))); //MOV BX,[PTR+ESI]
+					else {
+						this.variableReferences[value].Add((UInt32)this.opcodes.Count+3);
+						this.addBytes(new Byte[]{0x66,0x8B,0x1D,0,0,0,0}); //MOV BX,[PTR]
+					}
+					this.addByte(0x53); //PUSH EBX
+					
 					return new Tuple<String,VarType>(KWShort.constName,VarType.NATIVE_VARIABLE);
 					
 				}
@@ -2041,8 +2202,12 @@ namespace ProgrammingLanguageTutorialIdea {
 					return new Tuple<String,VarType>(KWInteger.constName,VarType.NATIVE_VARIABLE);
 					
 				}
-				this.arrayReferences[value].Add((UInt32)this.opcodes.Count+2);
-				this.addBytes(new Byte[]{0xFF,0x35,0,0,0,0}); //PUSH DWORD [PTR]
+				if (addEsiToLocalAddresses)
+					this.addBytes(new Byte[]{0xFF,0xB6}.Concat(BitConverter.GetBytes(appendAfterIndex[value])));
+				else {
+					this.arrayReferences[value].Add((UInt32)this.opcodes.Count+2);
+					this.addBytes(new Byte[]{0xFF,0x35,0,0,0,0}); //PUSH DWORD [PTR]
+				}
 				return new Tuple<String,VarType>(this.arrays[value].Item2,VarType.NATIVE_ARRAY);
 				
 			}
@@ -2248,42 +2413,60 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 			}
 			
-			else if (this.tryCheckIfValidArrayIndexer(value)) { 
+			else if (value.Any(x=>this.accessingClass(x))&&(this.classes.ContainsKey(value.Split(Parser.accessorChar).First())||(this.isALocalVar(value.Split(Parser.accessorChar).First()))||this.pvClassInstanceOrigin.Contains(value.Split(Parser.accessorChar).First()))) {
 				
-				return this.pushArrValue(value,gettingAddr);
-				
-			}
-			
-			else if (value.Any(x=>this.accessingClass(x))&&(this.classes.ContainsKey(value.Split(Parser.accessorChar).First())||(this.isALocalVar(value.Split(Parser.accessorChar).First())))) {
-				
-				String[]accessors=value.Split(Parser.accessorChar);
+				//HACK:: sub parsing
+				List<String>accessors=new List<String>();
+				Boolean inQuotes=false;
+				UInt16 rbb=0,sbb=0;
+				StringBuilder sb=new StringBuilder();
+				foreach (Char c in value) {
+					
+					if (c=='"') inQuotes=!inQuotes;
+					else if (!inQuotes) {
+						
+						if (this.beginsParameters(c))++rbb;
+						else if (this.endsParameters(c))--rbb;
+						else if (c=='[')++sbb;
+						else if (c==']')--sbb;
+						
+					}
+					
+					if (c!='.') sb.Append(c);
+					else if (c=='.'&&inQuotes) sb.Append(c);
+					else if (c=='.'&&rbb!=0) sb.Append(c);
+					else if (c=='.'&&sbb!=0) sb.Append(c);
+					else if (rbb==0&&sbb==0) {
+						
+						accessors.Add(sb.ToString());
+						sb.Clear();
+						
+					}
+					
+				}
+				accessors.Add(sb.ToString());
 				String first=accessors.First();
 				Class initialClass;
 				this.writeStrOpcodes("Test");
 					
+				Boolean local=false;
 				if (this.isALocalVar(first)) {
 					
+					local=true;
 					if (this.getLocalVarHomeBlock(first).localVariables[first].Item1.Item2!=VarType.CLASS)
 						throw new ParsingError("Not a class, can't read member of: \""+first+'"');
 					
 					initialClass=this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(first).localVariables[first].Item1.Item1).First();
 					
 				}
+				else if (this.pvClassInstanceOrigin.Count>1) {
+					local=this.isALocalVar(pvClassInstanceOrigin.First());
+					initialClass=this.moveClassOriginIntoEax(pvClassInstanceOrigin,local);
+				}
 				else initialClass=this.classes[first].Item3;
 				
-				String pValue=value.Substring(first.Length+1);
-				UInt32 endChar=0;
-				Boolean inQuotes=false;
-				foreach (Char c in pValue) {
-					
-					if (c=='"')inQuotes=!inQuotes;
-					
-					if (!inQuotes&&this.accessingClass(c)) break;
-					
-					++endChar;
-					
-				}
-				pValue=pValue.Substring(0,(Int32)endChar);
+				String pValue=accessors[1];
+				Boolean classOriginRecursor=accessors.Count>2&&initialClass.classes.ContainsKey(pValue);
 				
 				if (this.isALocalVar(first)) {
 				
@@ -2292,22 +2475,27 @@ namespace ProgrammingLanguageTutorialIdea {
 					this.addBytes(new Byte[]{0x8B,0x45,this.pseudoStack.getVarEbpOffset(first)}); //MOV [EBP+-OFFSET],EAX
 					
 				}
-				else {
+				else if (this.pvClassInstanceOrigin.Count<2&&!classOriginRecursor) {
 					
 					if (addEsiToLocalAddresses)
 						this.addBytes(new Byte[]{0x8B,0x86}.Concat(BitConverter.GetBytes(this.appendAfterIndex[first])));//MOV EAX,DWORD[PTR+ESI]
 					else  {
-						this.addByte(0xA1);//MOV DWORD[FOLLOWING PTR],EAX
+						this.addByte(0xA1);//MOV EAX,DWORD[FOLLOWING PTR]
 						this.classReferences[first].Add(this.getOpcodesCount());
 						this.addBytes(new Byte[]{0,0,0,0});
 					}
 					
 				}
 				
-				if (/* TODO:: Accessing a class that is further accessing another class item, i.e myClass.otherClass.otherClassItem */false) {
+				if (classOriginRecursor) {
 					
-					//Can't use accessors because strings may contain '.', maybe substring from start index endChar to end of string and parse the result
-					throw new Exception("Unimplemented");
+					if (pvClassInstanceOrigin.Count==0)
+						this.pvClassInstanceOrigin.Add(first);
+					this.pvClassInstanceOrigin.Add(pValue);
+					Tuple<String,VarType>retVal=this.pushValue(value.Substring(first.Length+1));
+					if (pvClassInstanceOrigin.Count!=0)
+						this.pvClassInstanceOrigin.Clear();
+					return retVal;
 					
 				}
 				else if (initialClass.variables.ContainsKey(pValue)) {
@@ -2364,21 +2552,19 @@ namespace ProgrammingLanguageTutorialIdea {
 					if (retType==null)
 						throw new ParsingError("Function \""+pValue+"\" has no return value, therefore its return value can't be obtained");
 					
-					this.callClassFunc(first,pValue,new String[0],true);
+					this.callClassFunc(pvClassInstanceOrigin,pValue,new String[0],true);
 					this.addByte(0x50);//PUSH EAX
 					
 					return retType;
 					
 				}
-				else if (this.isFuncWithParams(pValue)) {
-				
-					this.throwIfAddr(gettingAddr,value);
+				else if (this.isFuncWithParams(pValue,initialClass)) {
 					
-					//UNDONE:: this whole block is undoned
+					this.throwIfAddr(gettingAddr,value);
 					
 					String funcName=pValue.Split('(')[0];
 					
-					if (functions[funcName].Item2==null)
+					if (initialClass.functions[funcName].Item2==null)
 						throw new ParsingError("Function \""+funcName+"\" has no return value, therefore its return value can't be obtained");
 					
 					String unparsedParams=pValue.Substring(pValue.IndexOf('(')+1);
@@ -2386,15 +2572,20 @@ namespace ProgrammingLanguageTutorialIdea {
 					List<String>@params=new List<String>();
 					StringBuilder paramBuilder=new StringBuilder();
 					//HACK:: sub parsing
+					inQuotes=false;
 					foreach (Char c in unparsedParams) {
 						
-						if (c=='(') ++roundBracketBalance;
-						else if (c==')') --roundBracketBalance;
-						else if (c==','&&roundBracketBalance==1) {
-							
-							@params.Add(paramBuilder.ToString());
-							paramBuilder.Clear();
-							
+						if (c=='"') inQuotes=!inQuotes;
+						
+						if (!inQuotes) {
+							if (c=='(') ++roundBracketBalance;
+							else if (c==')') --roundBracketBalance;
+							else if (c==','&&roundBracketBalance==1) {
+								
+								@params.Add(paramBuilder.ToString());
+								paramBuilder.Clear();
+								
+							}
 						}
 						
 						if (roundBracketBalance==0) {
@@ -2405,12 +2596,50 @@ namespace ProgrammingLanguageTutorialIdea {
 						
 					}
 					Console.WriteLine("unparsedParams: \""+unparsedParams+'"');
-					this.callFunction(funcName,@params.ToArray());
+					this.callClassFunc(pvClassInstanceOrigin,funcName,@params.ToArray(),local,true);
 					this.addByte(0x50); //PUSH EAX
-					return this.functions[funcName].Item2;
+					return initialClass.functions[funcName].Item2;
+					
+				}
+				else if (this.isArrayIndexer(pValue)) {
+					
+					String arrName=pValue.Split('[')[0];
+					if (!(initialClass.arrays.ContainsKey(arrName)))
+						throw new ParsingError("Array does not exist in \""+initialClass.className+"\": \""+arrName+'"');
+					this.addByte(5);//ADD EAX,FOLLOWING DWORD
+					this.addBytes(BitConverter.GetBytes(initialClass.arrays[arrName].Item1+initialClass.opcodePortionByteSize)); //DWORD HERE
+					if (gettingAddr) {
+						
+						this.addByte(0x50);//PUSH EAX
+						return new Tuple<String,VarType>(KWInteger.constName, VarType.NATIVE_VARIABLE);
+						
+						
+					}
+					this.addBytes(new Byte[]{0x8B,0}); //MOV EAX,[EAX]
+					return this.pushArrValue(value,gettingAddr,true,this.keywordMgr.getVarTypeByteSize(initialClass.arrays[arrName].Item2));
+					
+				}
+				else if (initialClass.arrays.ContainsKey(pValue)) {
+				
+					this.addByte(5);//ADD EAX,FOLLOWING DWORD
+					this.addBytes(BitConverter.GetBytes(initialClass.arrays[pValue].Item1+initialClass.opcodePortionByteSize)); //DWORD HERE
+					
+					if (gettingAddr)
+						this.addByte(0x50);//PUSH EAX
+					else
+						this.addBytes(new Byte[]{0xFF,0x30}); //PUSH [EAX]
+						
+					return new Tuple<String,VarType>(KWInteger.constName,VarType.NATIVE_VARIABLE);
+					
 					
 				}
 				else throw new ParsingError("Item \""+value+"\" is not accessible and may not exist from \""+initialClass.className+'"');
+				
+			}
+			
+			else if (this.tryCheckIfValidArrayIndexer(value)) { 
+				
+				return this.pushArrValue(value,gettingAddr);
 				
 			}
 			
@@ -2759,8 +2988,10 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.callFunction(executor.func,@params);
 			else if (executor.kw!=null)
 				this.execKeyword(executor.kw,@params);
-			else if (executor.classFunc!=null)
+			else if (executor.classFunc!=null) {
 				this.callClassFunc(executor.classFunc,@params);
+				this.lastReferencedClassInstance.Clear();
+			}
 			
 		}
 		
@@ -2773,7 +3004,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			}
 			else if (from.Item2==VarType.NATIVE_VARIABLE&&to.Item2==VarType.NATIVE_VARIABLE&&(from.Item1==KWString.constName||to.Item1==KWString.constName)&&from.Item1!=to.Item1)
 				throw new ParsingError("Can't convert \""+from.Item1+"\" to \""+to.Item1+'"');
-			else if (from.Item2!=to.Item2&&keywordMgr.getVarTypeByteSize(to.Item1)!=4) // TODO:: if there are ever any NON 4 byte variable types (ptrs), fix this, what this does is allow pointers of native arrays etc to be moved into native integers!
+			else if (from.Item2!=to.Item2&&keywordMgr.getVarTypeByteSize(to.Item1)!=4)// What this does is allow pointers of native arrays etc to be moved into native integers!
 				throw new ParsingError("Can't convert \""+to.Item2.ToString()+"\" of \""+to.Item1.ToString()+"\" to \""+from.Item2.ToString()+'"');
 				
 			
@@ -3116,7 +3347,8 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		
-		private Tuple<String,VarType> pushArrValue (String value,Boolean gettingAddr=false) {
+		/// <param name="noName">If true, the memory address to the array should be in EAX, and arrMemSize should be set</param>
+		private Tuple<String,VarType> pushArrValue (String value,Boolean gettingAddr=false,Boolean noName=false,UInt32 arrMemSize=0) {
 			
 			this.writeStrOpcodes("PAV S");
 			
@@ -3132,9 +3364,9 @@ namespace ProgrammingLanguageTutorialIdea {
 			   
 			Console.WriteLine("sub: "+sub+", arrName: "+arrName+", slack: "+slack);
 			Console.WriteLine("------------------------------------------------------------");
-			this.indexArray(arrName,(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub);
+			this.indexArray(arrName,(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub,0,noName,arrMemSize);
 			
-			UInt32 varTypeByteSize=(this.isALocalVar(arrName))?this.keywordMgr.getVarTypeByteSize(this.getLocalVarHomeBlock(arrName).localVariables[arrName].Item1.Item1):this.keywordMgr.getVarTypeByteSize(this.arrays[arrName].Item2);
+			UInt32 varTypeByteSize=(arrMemSize!=0?arrMemSize:(this.isALocalVar(arrName))?this.keywordMgr.getVarTypeByteSize(this.getLocalVarHomeBlock(arrName).localVariables[arrName].Item1.Item1):this.keywordMgr.getVarTypeByteSize(this.arrays[arrName].Item2));
 			if (!gettingAddr)
 				this.addBytes((varTypeByteSize==4)?
 				              new Byte[]{0x5B,           //POP EBX
@@ -3415,9 +3647,9 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		#endif
 		
-		internal Boolean isFuncWithParams (String value) {
+		internal Boolean isFuncWithParams (String value,Class sendingClass=null) {
 			
-			return value.Contains('(')&&functions.ContainsKey(value.Split('(')[0])&&value.Contains(')')&&!value.Substring(value.LastIndexOf(')')+1).Any(x=>this.isMathOperator(x))&&!this.hasClassAccessorOutsideParentheses(value);
+			return value.Contains('(')&&(sendingClass==null?functions.ContainsKey(value.Split('(')[0]):sendingClass.functions.ContainsKey(value.Split('(')[0]))&&value.Contains(')')&&!value.Substring(value.LastIndexOf(')')+1).Any(x=>this.isMathOperator(x))&&!this.hasClassAccessorOutsideParentheses(value);
 			
 		}
 		
@@ -3456,24 +3688,13 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		
-		/// <summary>
-		/// Does not throw exceptions
-		/// </summary>
-		private Class getClassFromInstanceName (String name) {
-			
-			if (this.isALocalVar(name))
-				return this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(name).localVariables[name].Item1.Item1).First();
-			else
-				return this.classes[name].Item3;
-			
-		}
-		
-		private void moveClassItemAddrIntoEax (String classInstance,String item,VarType vt,Boolean classInstanceAlreadyInEax=false) {
+		private void moveClassItemAddrIntoEax (String classInstance,String item,VarType vt,Boolean classInstanceAlreadyInEax=false,Class cl=null) {
 			
 			if (!classInstanceAlreadyInEax)
 				this.moveClassInstanceIntoEax(classInstance);
 			
-			Class cl=this.getClassFromInstanceName(classInstance);
+			if (cl==null)
+				cl=this.getClassFromInstanceName(classInstance);
 				
 			this.addByte(5);//ADD EAX,FOLLOWING DWORD
 			
@@ -3491,6 +3712,10 @@ namespace ProgrammingLanguageTutorialIdea {
 					this.addBytes(BitConverter.GetBytes(cl.functions[item].Item1)); //DWORD HERE
 					break;
 				
+				case VarType.NATIVE_ARRAY:
+					this.addBytes(BitConverter.GetBytes(cl.arrays[item].Item1+cl.opcodePortionByteSize)); // DWORD HERE
+					break;
+					
 				default:
 					throw new ParsingError("Invalid VarType (?!) ("+vt.ToString()+')');
 					
@@ -3505,7 +3730,21 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		
+		/// <summary>
+		/// Does not throw exceptions
+		/// </summary>
+		private Class getClassFromInstanceName (String name) {
+			
+			if (this.isALocalVar(name))
+				return this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(name).localVariables[name].Item1.Item1).First();
+			else
+				return this.classes[name].Item3;
+			
+		}
+		
 		internal void moveClassInstanceIntoEax (String classInstance) {
+			
+			Console.WriteLine("[classInstance: \""+classInstance+"\"]");
 			
 			if (!(this.isALocalVar(classInstance))) {
 				
@@ -3526,42 +3765,56 @@ namespace ProgrammingLanguageTutorialIdea {
 				Block localVarHomeBlock=this.getLocalVarHomeBlock(classInstance);
 				if (localVarHomeBlock!=this.getCurrentBlock())
 					this.localVarEBPPositionsToOffset[this.getCurrentBlock()].Add((UInt32)(this.opcodes.Count+2));
-				this.addBytes(new Byte[]{0x8B,0x45,this.pseudoStack.getVarEbpOffset(this.lastReferencedClassInstance)}); //MOV [EBP+-OFFSET],EAX
+				this.addBytes(new Byte[]{0x8B,0x45,this.pseudoStack.getVarEbpOffset(classInstance)}); //MOV [EBP+-OFFSET],EAX
 				
 			}
 			
 		}
 		
-		private void callClassFunc (String classInstance,String func,String[]parameters,Boolean classInstanceAlreadyInEax=false) {
+		private void callClassFunc (IEnumerable<String>classInstance,String func,String[]parameters,Boolean originLocal,Boolean classInstanceAlreadyInEax=false) {
 			
 			foreach (String s in parameters)
 				Console.WriteLine("Param - \""+s+'"');
 			
-			Class cl=this.getClassFromInstanceName(classInstance);
+			Class cl=this.getOriginFinalClass(classInstance,originLocal);
 			
 			if (cl.functions[func].Item3!=parameters.Length)
 				throw new ParsingError("Expected \""+cl.functions[func].Item3+"\" parameters for \""+func+"\", got \""+parameters.Length+'"');
 			
 			this.addByte(0x56);//PUSH ESI
+			if (classInstanceAlreadyInEax)
+				this.addByte(0x50);//PUSH EAX
 			
 			foreach (String s in parameters)
 				this.pushValue(s);
 			
+			if (classInstanceAlreadyInEax) {
+				
+				Int32 i=(parameters.Length*4);
+				if (i<SByte.MaxValue)
+					this.addBytes(new Byte[]{0x8B,0x44,0x24,(Byte)(i)}); //MOV EAX,[ESP+-OFFSET]
+				else
+					this.addBytes(new Byte[]{0x8B,0x84,0x24}.Concat(BitConverter.GetBytes(i))); //MOV EAX,[ESP+-DWORD OFFSET]
+			}
+				
+			
 			if (!classInstanceAlreadyInEax)
-				this.moveClassInstanceIntoEax(classInstance);
+				this.moveClassOriginIntoEax(classInstance,originLocal);
 			this.addBytes(new Byte[]{0x8B,0xF0}); //MOV ESI,EAX
-			this.moveClassItemAddrIntoEax(classInstance,func,VarType.FUNCTION,true);
+			this.moveClassOriginItemAddrIntoEax(classInstance.ToList(),func,VarType.FUNCTION,originLocal,true);
 			this.addBytes(new Byte[]{0x81,0xC6}.Concat(BitConverter.GetBytes(cl.opcodePortionByteSize)));
 			this.addBytes(new Byte[]{0xFF,0xD0}); //CALL EAX
+			if (classInstanceAlreadyInEax)
+				this.addBytes(new Byte[]{0x83,0xC4,4});//ADD ESP,4
 			this.addByte(0x5E);//POP ESI
 			
 			status=ParsingStatus.SEARCHING_NAME;
 			
 		}
 		
-		private void callClassFunc (Tuple<String,String>tpl,String[]parameters) {
+		private void callClassFunc (Tuple<IEnumerable<String>,String,Boolean>tpl,String[]parameters) {
 			
-			this.callClassFunc(tpl.Item1,tpl.Item2,parameters);
+			this.callClassFunc(tpl.Item1,tpl.Item2,parameters,tpl.Item3);
 			
 		}
 		
@@ -3585,12 +3838,13 @@ namespace ProgrammingLanguageTutorialIdea {
 			if (addEsiToLocalAddresses&&restoreEsiFuncAddr==0&&opcodes.Count!=0&&!@struct) {
 				
 				// Create restore esi function
-				this.addBytes(new Byte[]{0x8D,0x44,0x24,4});//LEA EAX,[ESP+4]
+				this.addBytes(new Byte[]{0x8B,0x44,0x24,4});//MOV EAX,[ESP+4]
+//				this.addBytes(new Byte[]{0x8D,0x44,0x24,4});//LEA EAX,[ESP+4]
 				esiFuncVarIndex=(UInt32)(this.opcodes.Count+2);
 				this.addBytes(new Byte[]{0x89,0x86,0,0,0,0});//MOV [ESI+-DWORD],EAX
 				this.addBytes(new Byte[]{0xEB,7});//JMP 7 BYTES
 				restoreEsiFuncAddr=memAddress;
-				this.addBytes(new Byte[]{0x8B,0x35,0,0,0,0});//MOV ESI,[PTR]
+				this.addBytes(new Byte[]{0x8D,0x35,0,0,0,0});//LEA ESI,[PTR]
 				this.addByte(0xC3);//RETN
 				
 			}
@@ -3627,6 +3881,78 @@ namespace ProgrammingLanguageTutorialIdea {
 				}
 				
 			}
+			
+		}
+		
+		public Dictionary<String,Tuple<UInt32,String,ArrayStyle>> getArrays () {
+			
+			return this.arrays;
+			
+		}
+		
+		/// <returns>The final class type</returns>
+		public Class moveClassOriginIntoEax (IEnumerable<String>origin,Boolean originLocal) {
+			
+			String fc=origin.First();
+			this.moveClassInstanceIntoEax(fc);
+			Console.WriteLine(originLocal.ToString());
+			Class pc=(originLocal)?this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(fc).localVariables[fc].Item1.Item1).First():this.classes[fc].Item3;
+			foreach (String s in origin.Skip(1)) {
+				
+				this.moveClassItemAddrIntoEax(null,s,VarType.CLASS,true,pc);
+				this.addBytes(new Byte[]{0x8B,0,}); //MOV EAX,[EAX]
+				pc=pc.classes[s].Item3;
+				
+			}
+			return pc;
+			
+		}
+		
+		/// <returns>The final class type</returns>
+		public Class getOriginFinalClass (IEnumerable<String>origin,Boolean originLocal) {
+			
+			String fc=origin.First();
+			Console.WriteLine("Fc: "+fc+", originLocal: "+originLocal.ToString()+", origin.Count(): "+origin.Count().ToString());
+			Class pc=(originLocal)?this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(fc).localVariables[fc].Item1.Item1).First():this.classes[fc].Item3;
+			foreach (String s in origin.Skip(1))
+				pc=pc.classes[s].Item3;
+			return pc;
+			
+		}
+		
+		/// <returns>The final class type</returns>
+		public Class moveClassOriginItemAddrIntoEax (List<String>origin,String item,VarType vt,Boolean originLocal,Boolean originAlreadyInEax=false) {
+			
+			String fc=origin.First();
+			Class pc;
+			if (!originAlreadyInEax) {
+				this.moveClassInstanceIntoEax(fc);
+				Console.WriteLine(originLocal.ToString());
+				pc=(originLocal)?this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(fc).localVariables[fc].Item1.Item1).First():this.classes[fc].Item3;
+				if (origin.Count!=1) {
+					foreach (String s in origin.Skip(1).Take(origin.Count-1)) {
+						
+						this.moveClassItemAddrIntoEax(null,s,VarType.CLASS,true,pc);
+						this.addBytes(new Byte[]{0x8B,0,}); //MOV EAX,[EAX]
+						pc=pc.classes[s].Item3;
+						
+					}
+				}
+			}
+			else pc=this.getOriginFinalClass(origin,originLocal);
+			this.moveClassItemAddrIntoEax(null,item,vt,true,pc);
+			return pc;
+			
+		}
+		
+		public static String merge (IEnumerable<String> strings,String append="") {
+			
+			StringBuilder sb=new StringBuilder();
+			
+			foreach (String s in strings)
+				sb.Append(s+append);
+			
+			return String.Concat(sb.ToString().Take(sb.Length-1));
 			
 		}
 		

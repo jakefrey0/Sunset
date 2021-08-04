@@ -1,5 +1,4 @@
-﻿#define NO_OUTPUT
-/*
+﻿/*
  * Created by SharpDevelop.
  * User: Elite
  * Date: 5/13/2021
@@ -12,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 namespace ProgrammingLanguageTutorialIdea {
 	
@@ -20,23 +20,35 @@ namespace ProgrammingLanguageTutorialIdea {
 		[DllImport("ImageHlp.dll")]
 		static extern private UInt32 MapFileAndCheckSum (String Filename,out UInt32 HeaderSum,out UInt32 CheckSum);
 		private static TextWriter tw=Console.Out;
+		private static Boolean silenced=false;
 		
 		public static void Main (String[] args) {
 			
-			#if NO_OUTPUT
-			Console.SetOut(TextWriter.Null);
-			Console.SetError(TextWriter.Null);
-			#endif
+			if (args.Length!=0&&args.First()=="help") {
+				
+				Console.WriteLine("\nTo compile, set the argument to the entry file.");
+				Console.WriteLine("An example would be \"C:\\fakepath\\MySourceFile.Sunset\"");
+				Console.WriteLine("\n-- Flags --\n");
+				Console.WriteLine("Flags are optional arguments that can be added when compiling");
+				Console.WriteLine("They can be added before or after the file path argument");
+				Console.WriteLine("The flags (don't actually print the double quotes):\n");
+				Console.WriteLine(" - \"-v\" ~ this stands for \"verbose\" and will print all compiler debug output\n");
+				Console.WriteLine(" - \"-s\" ~ this stands for \"silence\" and will disable error/compiling result output\n");
+				return;
+				
+			}
+			
+			Program.processFlags(args,out args);
 			
 			if (args.Length!=1)
-				Program.exitWithError("Expected 1 argument (path of file)",1);
+				Program.exitWithError("Expected 1 argument (path of file), with optional flags. Set argument to \"help\" to see flags.",1);
 			if (!(File.Exists(args[0])))
 				Program.exitWithError("Invalid filepath: \""+args[0]+'"',2);
 			
 			Parser psr=new Parser("Main parser");
 			
 			String outputFilename=args[0].Contains('.')?args[0].Split('\\').Last().Split('/').Last().Split('.').First()+".exe":"output.exe",sourceFilename=args[0];
-			
+
 			try {
 				File.WriteAllBytes(outputFilename,psr.parse(File.ReadAllText(sourceFilename)));
 				Program.enableOutput();
@@ -86,6 +98,11 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		private static void enableOutput () {
 			
+			if (Program.silenced) {
+				Program.disableOutput();
+				return;
+			}
+			
 			Console.SetOut(Program.tw);
 			Console.SetError(Program.tw);
 			
@@ -97,6 +114,22 @@ namespace ProgrammingLanguageTutorialIdea {
 			Console.WriteLine("\n\n[!] FATAL: "+str+'\n');
 			Console.ForegroundColor=ConsoleColor.Gray;
 			Environment.Exit(exitCode);
+			
+		}
+		
+		private static void processFlags (String[] args,out String[] newArgs) {
+			
+			if (!args.Contains("-v"))
+				Program.disableOutput();
+			Program.silenced=args.Contains("-s");
+			newArgs=args.Where(x=>x!="-s"&&x!="-v").ToArray();
+			
+		}
+		
+		private static void disableOutput () {
+			
+			Console.SetOut(TextWriter.Null);
+			Console.SetError(TextWriter.Null);
 			
 		}
 		

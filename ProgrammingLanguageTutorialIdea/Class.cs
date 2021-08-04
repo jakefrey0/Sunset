@@ -23,6 +23,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		public Dictionary<String,Tuple<UInt32,String>>variables;
 		public Dictionary<String,Tuple<UInt32,String,Class>>classes;//Name,(Offset To Mem Address of Heap Handle,Class type name,Class type)
 		public Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>>functions;
+		public Dictionary<String,Tuple<UInt32,String,ArrayStyle>> arrays=new Dictionary<String,Tuple<UInt32,String,ArrayStyle>>();//Name,(Ptr To Mem Address of Heap Handle(Dynamic) or Mem Block(Static),Array Var Type,ArrayStyle(Dynamic or Static))
 		private List<String>defineTimeOrder;
 		
 		public Class (String className,UInt32 byteSize,ClassType classType,UInt32 memAddr,Parser parserUsed,UInt32 opcodePortionByteSize,UInt32 initialAppendAfterCount,UInt32 classAppendAfterCount) {
@@ -44,7 +45,9 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.classes.Add(kvp.Key,new Tuple<UInt32,String,Class>(kvp.Value.Item1-parserUsed.memAddress,kvp.Value.Item2,kvp.Value.Item3));
 			foreach (KeyValuePair<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>>kvp in parserUsed.getFunctions())
 				this.functions.Add(kvp.Key,new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>(kvp.Value.Item1,kvp.Value.Item2,kvp.Value.Item3,kvp.Value.Item4,kvp.Value.Item5));
-				
+			foreach (KeyValuePair<String,Tuple<UInt32,String,ArrayStyle>>kvp in parserUsed.getArrays())
+				this.arrays.Add(kvp.Key,new Tuple<UInt32,String,ArrayStyle>(kvp.Value.Item1-parserUsed.memAddress,kvp.Value.Item2,kvp.Value.Item3));
+					
 		}
 		
 		public Tuple<String,VarType> getVarType (String name) {
@@ -55,6 +58,8 @@ namespace ProgrammingLanguageTutorialIdea {
 				return new Tuple<String,VarType>(this.classes[name].Item2,VarType.CLASS);
 			else if (functions.ContainsKey(name))
 				return this.functions[name].Item2;
+			else if (arrays.ContainsKey(name))
+				return new Tuple<String,VarType>(this.arrays[name].Item2,VarType.NATIVE_ARRAY_INDEXER);
 			else throw new ParsingError("Variable \""+name+"\" does not exist in \""+className+"\" (?!)");
 			
 		}

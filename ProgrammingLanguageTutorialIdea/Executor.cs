@@ -8,6 +8,7 @@
  */
 using System;
 using ProgrammingLanguageTutorialIdea.Keywords;
+using System.Collections.Generic;
 
 namespace ProgrammingLanguageTutorialIdea {
 	
@@ -16,9 +17,9 @@ namespace ProgrammingLanguageTutorialIdea {
 		public Keyword kw;
 		public String func;
 		/// <summary>
-		/// Class,Func
+		/// Class Origin,Func,Is origin local
 		/// </summary>
-		public Tuple<String,String>classFunc;
+		public Tuple<IEnumerable<String>,String,Boolean>classFunc;
 		
 	}
 	

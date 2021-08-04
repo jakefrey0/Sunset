@@ -1,0 +1,2 @@
+import(test2)
+test2 tc becomes new(test2)

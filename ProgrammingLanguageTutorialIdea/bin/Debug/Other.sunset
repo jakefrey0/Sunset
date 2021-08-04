@@ -1,0 +1,9 @@
+dllref(User32,int,str,str,int) MessageBoxA int
+import(Windows\User)
+TOGGLEGUI
+setpheapvar
+
+User usr becomes new(User)
+
+func test { usr.userMbox("Test") }
+func(User u) test0 str { retn("FUCK") }

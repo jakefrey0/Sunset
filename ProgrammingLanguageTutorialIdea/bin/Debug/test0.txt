@@ -1,0 +1,4 @@
+dllref(User32,int,str,str,int) MessageBoxA int
+import(test1)
+test1 myClass becomes new(test1)
+MessageBoxA(0,myClass.tc.tc.myStr,myClass.tc.tc.myStr,0)

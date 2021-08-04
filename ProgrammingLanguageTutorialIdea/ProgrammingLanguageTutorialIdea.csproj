@@ -119,5 +119,4 @@
     <Folder Include="Keywords" />
     <Folder Include="Stack" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-</Project>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" /></Project>
