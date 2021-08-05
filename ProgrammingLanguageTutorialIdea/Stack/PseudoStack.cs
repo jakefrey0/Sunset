@@ -76,6 +76,9 @@ namespace ProgrammingLanguageTutorialIdea.Stack {
 					case ItemType.ESI_PTR:
 						Console.WriteLine("Item #"+i.ToString()+": Esi ptr, list index: "+this.items.IndexOf(stackItem).ToString());
 						break;
+					case ItemType.PRESERVED_ECX:
+						Console.WriteLine("Item #"+i.ToString()+": Preserved ECX value, list index: "+this.items.IndexOf(stackItem).ToString());
+						break;
 				}
 				++i;
 				

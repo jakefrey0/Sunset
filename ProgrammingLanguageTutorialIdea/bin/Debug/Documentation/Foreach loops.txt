@@ -1,0 +1,24 @@
+dllref(User32,str,str,int) cdecl:wsprintfA int
+dllref(User32,int,str,str,int) MessageBoxA int
+
+str format becomes "%d"
+str buffer becomes "00"
+str empty  becomes ""
+
+int# arr becomes #4
+arr[0] becomes 12
+arr[1] becomes 22
+arr[2] becomes 32
+arr[3] becomes 42
+foreach (item,arr) {
+	
+	if (item,=/=,0) {
+		
+		if (item,=,32) { break }
+		
+		wsprintfA(buffer,format,item)
+		MessageBoxA(0,buffer,empty,0)
+		
+	}
+	
+}

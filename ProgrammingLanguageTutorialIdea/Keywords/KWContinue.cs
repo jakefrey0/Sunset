@@ -22,12 +22,11 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			
 			if (sender.blocks.Count==0)
 				throw new ParsingError("Can't continue outside of a block");
+			Block block=(sender.blocks.Keys.Where(x=>x.isLoopBlock).Count()==0)?sender.blocks.Keys.Last():sender.blocks.Keys.Where(x=>x.isLoopBlock).Last();
 			
-			List<Byte>newOpcodes=new List<Byte>(new Byte[]{0xC9,0xE9});
-			Block block;
-			if (sender.blocks.Keys.Where(x=>x.isLoopBlock).Count()==0)
-				block=sender.blocks.Keys.Last();
-			else {
+			sender.addByte(0xC9);
+			List<Byte>newOpcodes=new List<Byte>(new Byte[]{0xE9});
+			if (!(sender.blocks.Keys.Where(x=>x.isLoopBlock).Count()==0)) {
 				
 				block=sender.blocks.Keys.Where(x=>x.isLoopBlock).Last();
 				UInt32 bonusLeaves=(UInt32)(sender.blocks.Count-sender.blocks.Keys.Cast<Block>().ToList().IndexOf(block))-1;
@@ -39,12 +38,15 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 					++i;
 					
 				}
-				newOpcodes.InsertRange(0,leaves);
+				sender.addBytes(leaves);
 				
 			}
 			
 			if (block.continueAddress==0)
 				throw new ParsingError("Unexpected continue (its block does not support continue)");
+			
+			if (block.continueInstructions!=null)
+				newOpcodes.InsertRange(0,block.continueInstructions);
 			
 			return new KeywordResult(){newOpcodes=newOpcodes.Concat(BitConverter.GetBytes((Int32)block.continueAddress-(Int32)(sender.memAddress+newOpcodes.Count+4))).ToArray(),newStatus=ParsingStatus.SEARCHING_NAME};
 			

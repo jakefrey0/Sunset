@@ -23,9 +23,13 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			if (sender.blocks.Count==0)
 				throw new ParsingError("Can't break outside of a block");
 			
+			Block block=(sender.blocks.Keys.Where(x=>x.isLoopBlock).Count()==0)?sender.blocks.Keys.Last():sender.blocks.Keys.Where(x=>x.isLoopBlock).Last();
+			
 			List<Byte>newOpcodes=new List<Byte>(new Byte[]{0xC9,0xE9,0,0,0,0});
 			if (sender.blocks.Keys.Where(x=>x.isLoopBlock).Count()==0) {
-				sender.blocks.Keys.Last().blockRVAPositions.Add(new Tuple<UInt32,UInt32>(sender.getOpcodesCount()+2,sender.memAddress+6));
+				block.blockRVAPositions.Add(new Tuple<UInt32,UInt32>((UInt32)(sender.getOpcodesCount()+2+(block.breakInstructions==null?0:block.breakInstructions.Length)),(UInt32)(sender.memAddress+6+(block.breakInstructions==null?0:block.breakInstructions.Length))));
+				if (block.breakInstructions!=null)
+					newOpcodes.InsertRange(1,block.breakInstructions);
 			}
 			else {
 				
@@ -39,9 +43,13 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 					
 				}
 				newOpcodes.InsertRange(0,leaves);
-				sender.blocks.Keys.Where(x=>x.isLoopBlock).Last().blockRVAPositions.Add(new Tuple<UInt32,UInt32>(sender.getOpcodesCount()+2+bonusLeaves,sender.memAddress+6+bonusLeaves));
+				sender.blocks.Keys.Where(x=>x.isLoopBlock).Last().blockRVAPositions.Add(new Tuple<UInt32,UInt32>((UInt32)(sender.getOpcodesCount()+2+bonusLeaves+(block.breakInstructions==null?0:block.breakInstructions.Length)),(UInt32)(sender.memAddress+6+bonusLeaves+(block.breakInstructions==null?0:block.breakInstructions.Length))));
+				
+				if (block.breakInstructions!=null)
+					newOpcodes.InsertRange((Int32)bonusLeaves+1,block.breakInstructions);
 				
 			}
+			
 			return new KeywordResult(){newOpcodes=newOpcodes.ToArray(),newStatus=ParsingStatus.SEARCHING_NAME};
 		}
 		

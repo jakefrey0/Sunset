@@ -74,12 +74,14 @@
     <Compile Include="Keywords\KWBoolean.cs" />
     <Compile Include="Keywords\KWBreak.cs" />
     <Compile Include="Keywords\KWByte.cs" />
+    <Compile Include="Keywords\KWCallptr.cs" />
     <Compile Include="Keywords\KWContinue.cs" />
     <Compile Include="Keywords\KWCrash.cs" />
     <Compile Include="Keywords\KWDecrease.cs" />
     <Compile Include="Keywords\KWDllReference.cs" />
     <Compile Include="Keywords\KWElse.cs" />
     <Compile Include="Keywords\KWFinishCompiling.cs" />
+    <Compile Include="Keywords\KWForeach.cs" />
     <Compile Include="Keywords\KWFunction.cs" />
     <Compile Include="Keywords\KWIf.cs" />
     <Compile Include="Keywords\KWImport.cs" />
@@ -107,6 +109,7 @@
     <Compile Include="Stack\ItemType.cs" />
     <Compile Include="Stack\LocalVar.cs" />
     <Compile Include="Stack\PreservedEBP.cs" />
+    <Compile Include="Stack\PreservedECX.cs" />
     <Compile Include="Stack\PseudoStack.cs" />
     <Compile Include="Stack\IPseudoStackItem.cs" />
     <Compile Include="Stack\ReturnPtr.cs" />
@@ -119,4 +122,5 @@
     <Folder Include="Keywords" />
     <Folder Include="Stack" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" /></Project>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

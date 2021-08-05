@@ -6,7 +6,6 @@ setpheapvar
 int UNLEN becomes 256
 int nameLength becomes UNLEN
 str name becomes "                                                                                                                                                                                                                                                                                                        "
-int# arr becomes #4
 
 func getTicksSinceLoggedOn int { retn(GetTickCount) }
 func(str msg) userMbox int { retn(MessageBoxA(0,msg,name,0)) }

@@ -12,3 +12,8 @@ start:
     push    9090C3ECh
     push    08958166Ah
     jmp     esp
+    
+    ; Revision 8/5/2021 2:56AM:
+   	; This proved to be useful as instructions
+   	; were ran off the heap in classes. That was
+   	; earlier than the revision date

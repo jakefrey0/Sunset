@@ -44,7 +44,9 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			                       	new KWStruct(),
 			                       	new KWNew(),
 			                       	new KWVoid(),
-			                       	new KWSetProcessHeapVar()
+			                       	new KWSetProcessHeapVar(),
+			                       	new KWForeach(),
+			                       	new KWCallptr()
 			                       	
 			                       });
 			

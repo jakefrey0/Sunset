@@ -221,7 +221,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			foreach (Char c in data) {
 				
-				Console.WriteLine(" - Checking:\""+c+"\",ParsingStatus:"+status.ToString()+",blockBracketBalance #no:"+blockBracketBalances.Count.ToString()+",rbbrv:"+rbbrv.ToString()+",attemptingClassAccess:"+attemptingClassAccess.ToString()+",gettingClassItem:"+gettingClassItem.ToString()+",lastReferencedClassInstance:"+lastReferencedClassInstance+",LRV:"+lastReferencedVariable+",RV:"+referencedVariable);
+				Console.WriteLine(" - Checking:\""+c+"\",ParsingStatus:"+status.ToString()+",blockBracketBalance #no:"+blockBracketBalances.Count.ToString()+",rbbrv:"+rbbrv.ToString()+",attemptingClassAccess:"+attemptingClassAccess.ToString()+",gettingClassItem:"+gettingClassItem.ToString()+",lastReferencedClassInstance:"+merge(lastReferencedClassInstance,"#")+",LRV:"+lastReferencedVariable+",RV:"+referencedVariable);
 				
 				if (setExpectsElse>0) {
 					
@@ -2624,12 +2624,15 @@ namespace ProgrammingLanguageTutorialIdea {
 					this.addByte(5);//ADD EAX,FOLLOWING DWORD
 					this.addBytes(BitConverter.GetBytes(initialClass.arrays[pValue].Item1+initialClass.opcodePortionByteSize)); //DWORD HERE
 					
-					if (gettingAddr)
+					if (gettingAddr) {
 						this.addByte(0x50);//PUSH EAX
-					else
+						return new Tuple<String,VarType>(KWInteger.constName,VarType.NATIVE_VARIABLE);
+					}
+					else {
 						this.addBytes(new Byte[]{0xFF,0x30}); //PUSH [EAX]
+						return new Tuple<String,VarType>(initialClass.arrays[pValue].Item2,VarType.NATIVE_ARRAY);
+					}
 						
-					return new Tuple<String,VarType>(KWInteger.constName,VarType.NATIVE_VARIABLE);
 					
 					
 				}
@@ -3952,7 +3955,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			foreach (String s in strings)
 				sb.Append(s+append);
 			
-			return String.Concat(sb.ToString().Take(sb.Length-1));
+			return String.Concat(sb.ToString().Take(sb.Length-append.Length));
 			
 		}
 		

@@ -1,0 +1,14 @@
+;This is an unsafe keyword because it requires the parameters to be their expected values, 
+;though there are no restrictions (as the compiler doesn't know any)
+;It also returns an unsigned integer as the compiler also can't know the return value from a PTR,
+;however that can be converted/used as any 4 byte var types such as classes or arrays.
+func(int i) test int {
+	
+	retn(i)
+	
+}
+
+retn(callptr($test,123))
+
+; Result:
+; Exit code 7B (123.)

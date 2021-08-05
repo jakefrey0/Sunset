@@ -45,6 +45,8 @@ namespace ProgrammingLanguageTutorialIdea {
 						
 		}
 		
+		public Byte[] breakInstructions,continueInstructions;
+		
 		public Block (Action onBlockEnd,UInt32 startMemAddr,Byte[] opcodesToAddOnBlockEnd,Boolean xorEax=false,Boolean addEnterAutomatically=true) {
 			
 			this.startMemAddr=startMemAddr;

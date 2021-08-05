@@ -125,3 +125,18 @@ myClass.myClassFunctionWithParams(123,123)
 Getting/setting variables in a class:
 myClass.myClassVariable becomes 123
 int myInteger becomes myClass.myClassVariable
+
+
+--------------------------------------
+Timestamp: 12:52AM 8/5/2021
+--------------------------------------
+
+Foreach loop:
+int# arr becomes #3
+foreach (i,arr) {
+	
+	; New local var 'i' in block
+	; If it is set, the only thing that will change
+	; is the local variable until the end of the block
+	
+}

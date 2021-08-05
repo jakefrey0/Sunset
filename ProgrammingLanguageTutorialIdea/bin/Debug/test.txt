@@ -13,12 +13,8 @@ oth.usr.UNLEN becomes 257
 oth.usr.userMbox("Test")
 oth.usr.userMbox("Te3st")
 oth.usr.userMbox("Te4st")
-str myStr becomes "000"
-wsprintfA(myStr,"%d",oth.usr.UNLEN)
-MessageBoxA(0,myStr,"",0)
 
-;oth.usr.getTicksSinceLoggedOn
-;oth.usr.arr[3] becomes 123
+oth.usr.getTicksSinceLoggedOn
 
 FINISHCMP
 
