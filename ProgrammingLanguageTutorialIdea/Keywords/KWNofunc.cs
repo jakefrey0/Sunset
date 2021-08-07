@@ -39,6 +39,9 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 					case "DUMP_STACK_IMAGE_READKEY":
 						sender.pseudoStack.printStackDump(true);
 						break;
+					case "READKEY":
+						Console.ReadKey(true);
+						break;
 					default:
 						throw new ParsingError("Invalid compiler instruction for \""+constName+"\": \""+@params[0]+"\"");
 						

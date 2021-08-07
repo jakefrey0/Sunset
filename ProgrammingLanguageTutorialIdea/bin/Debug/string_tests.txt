@@ -1,0 +1,10 @@
+import(StringTool)
+dllref(User32,int,str,str,int) MessageBoxA int
+dllref(User32,str,str,int) cdecl:wsprintfA int
+StringTool tool becomes new(StringTool)
+str string becomes "yo yo yo"
+str format becomes ", Length: %d"
+str buffer becomes ", Length: -00"
+wsprintfA(buffer,format,tool.lengthOf(string))
+string becomes tool.concat(string,buffer)
+MessageBoxA(0,string,"",0)

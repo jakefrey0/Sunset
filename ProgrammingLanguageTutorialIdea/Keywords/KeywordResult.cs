@@ -14,6 +14,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		
 		public ParsingStatus newStatus;
 		public Byte[] newOpcodes;
+		public Action action;
 		
 	}
 	

@@ -22,31 +22,63 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				throw new ParsingError("Invalid use of \""+constName+"\", no referenced variable found");
 			
 			Byte[] newOpcodes=new Byte[0];
-			String varType=sender.getVariablesType(sender.lastReferencedVariable);
+			if (sender.lastReferencedVariableIsLocal) {
+				
+				String varType=sender.getLocalVarHomeBlock(sender.lastReferencedVariable).localVariables[sender.lastReferencedVariable].Item1.Item1;
+				
+				if (varType==KWByte.constName) {
+					
+					if (sender.getLocalVarHomeBlock(sender.lastReferencedVariable)!=sender.getCurrentBlock())
+						sender.localVarEBPPositionsToOffset[sender.getCurrentBlock()].Add(sender.getOpcodesCount()+2);
+					sender.addBytes(new Byte[]{0xFE,0x45,sender.pseudoStack.getVarEbpOffset(sender.lastReferencedVariable)}); //INC BYTE [EBP+-OFFSET]
+					
+				}
+				else if (varType==KWShort.constName) {
+					
+					if (sender.getLocalVarHomeBlock(sender.lastReferencedVariable)!=sender.getCurrentBlock())
+						sender.localVarEBPPositionsToOffset[sender.getCurrentBlock()].Add(sender.getOpcodesCount()+3);
+					sender.addBytes(new Byte[]{0x66,0xFE,0x45,sender.pseudoStack.getVarEbpOffset(sender.lastReferencedVariable)}); //INC WORD [EBP+-OFFSET]
+					
+					
+				}
+				else if (varType==KWInteger.constName) {
+					
+					if (sender.getLocalVarHomeBlock(sender.lastReferencedVariable)!=sender.getCurrentBlock())
+						sender.localVarEBPPositionsToOffset[sender.getCurrentBlock()].Add(sender.getOpcodesCount()+2);
+					sender.addBytes(new Byte[]{0xFF,0x45,sender.pseudoStack.getVarEbpOffset(sender.lastReferencedVariable)}); //INC DWORD [EBP+-OFFSET]
+					
+				}
+				
+			}
+			else {
+				
+				String varType=sender.getVariablesType(sender.lastReferencedVariable);
 			
-			//TODO:: make this work for more than native variables & local variables
-			//HACK:: check variable type
-			if (varType==KWByte.constName) {
-				
-				sender.variableReferences[sender.lastReferencedVariable].Add(sender.getOpcodesCount()+2);
-				newOpcodes=new Byte[]{0xFE,5,0,0,0,0};
+				//TODO:: make this work for more than native variables & local variables (in whole file, but even here it can be for more than these, it can work for classes etc.)
+				//HACK:: check variable type
+				if (varType==KWByte.constName) {
+					
+					sender.variableReferences[sender.lastReferencedVariable].Add(sender.getOpcodesCount()+2);
+					newOpcodes=new Byte[]{0xFE,5,0,0,0,0};
+					
+				}
+				else if (varType==KWShort.constName) {
+					
+					sender.variableReferences[sender.lastReferencedVariable].Add(sender.getOpcodesCount()+3);
+					newOpcodes=new Byte[]{0x66,0xFF,5,0,0,0,0};
+					
+					
+				}
+				else if (varType==KWInteger.constName) {
+					
+					sender.variableReferences[sender.lastReferencedVariable].Add(sender.getOpcodesCount()+2);
+					newOpcodes=new Byte[]{0xFF,5,0,0,0,0};
+					
+					
+				}
+				else throw new ParsingError("Can't increase variable type \""+varType+'"');
 				
 			}
-			else if (varType==KWShort.constName) {
-				
-				sender.variableReferences[sender.lastReferencedVariable].Add(sender.getOpcodesCount()+3);
-				newOpcodes=new Byte[]{0x66,0xFF,5,0,0,0,0};
-				
-				
-			}
-			else if (varType==KWInteger.constName) {
-				
-				sender.variableReferences[sender.lastReferencedVariable].Add(sender.getOpcodesCount()+2);
-				newOpcodes=new Byte[]{0xFF,5,0,0,0,0};
-				
-				
-			}
-			else throw new ParsingError("Can't increase variable type \""+varType+'"');
 			
 			return new KeywordResult(){newStatus=ParsingStatus.SEARCHING_NAME,newOpcodes=newOpcodes};
 			

@@ -53,6 +53,15 @@ namespace ProgrammingLanguageTutorialIdea.Stack {
 			
 		}
 		
+		public Byte getLatestSwitchVarOffset () {
+			
+			Int32 topEbpIndex=items.FindLastIndex(x=>x.type==ItemType.PRESERVED_EBP)
+				 ,svIndex=items.FindLastIndex(x=>x.type==ItemType.SWITCH_VAR);
+			
+			return unchecked((Byte)((SByte)((topEbpIndex-svIndex)*4)));
+			
+		}
+		
 		public void printStackDump (Boolean readKey=false) {
 			
 			Console.Write("\n\n== Stack ==\nTotal # of items: "+this.items.Count.ToString()+"\n\n");
@@ -79,6 +88,9 @@ namespace ProgrammingLanguageTutorialIdea.Stack {
 					case ItemType.PRESERVED_ECX:
 						Console.WriteLine("Item #"+i.ToString()+": Preserved ECX value, list index: "+this.items.IndexOf(stackItem).ToString());
 						break;
+					case ItemType.SWITCH_VAR:
+						Console.WriteLine("Item #"+i.ToString()+": Switch block var, list index: "+this.items.IndexOf(stackItem).ToString());
+						break;
 				}
 				++i;
 				
@@ -87,7 +99,7 @@ namespace ProgrammingLanguageTutorialIdea.Stack {
 			Console.Write("\n\n===========\n\n");
 			
 			if (readKey)
-				Console.ReadKey();
+				if (Console.ReadKey(true).Key==ConsoleKey.Escape)throw new Exception();
 			
 		}
 		

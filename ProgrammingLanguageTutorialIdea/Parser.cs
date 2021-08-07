@@ -121,6 +121,10 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal UInt32 esiOffsetFromStart=0;
 		internal Dictionary<String,UInt32> appendAfterIndex=new Dictionary<String,UInt32>();
 		internal List<String>lastReferencedClassInstance=new List<String>();
+		internal Char nextChar {
+			get;
+			private set;
+		}
 		
 		private List<Byte> opcodes=new List<Byte>(),importOpcodes=null,finalBytes=new List<Byte>(),appendAfter=new List<Byte>();
 		private ParsingStatus status;
@@ -133,7 +137,6 @@ namespace ProgrammingLanguageTutorialIdea {
 		private List<Tuple<UInt32,List<UInt32>>>stringsAndRefs; //(Mem Addr,List of References by Opcode Index),Note: Currently the Inner list of Opcode Indexes will only have a length of 1 (6/19/2021 5:19PM)
 		private Dictionary<String,UInt32> setArrayValueFuncPtrs;
 		private Executor waitingToExecute;
-		private Char nextChar;
 		private UInt16 squareBracketBalance=0,roundBracketBalance=0,nestedLevel=0;
 		private UInt32 freeHeapsMemAddr,esiFuncVarIndex=0;
 		private Boolean attemptingClassAccess=false,gettingClassItem=false;
@@ -549,6 +552,14 @@ namespace ProgrammingLanguageTutorialIdea {
 					case ParsingStatus.STOP_PARSING_IMMEDIATE:
 						return this.compile();
 						
+					case ParsingStatus.SEARCHING_COLON:
+						if (this.isFormOfBlankspace(c)) break;
+						if (this.isColon(c)) {
+							status=ParsingStatus.SEARCHING_NAME;
+							break;
+						}
+						throw new ParsingError("Expected colon, got \""+c+'"');
+						
 				}
 				
 				++currentChar;
@@ -712,13 +723,13 @@ namespace ProgrammingLanguageTutorialIdea {
 			//HACK:: check var type
 			
 			KeywordType[] pKTs=this.nextExpectedKeywordTypes;
-			Boolean wasSearchingFuncReturnType=searchingFunctionReturnType;
+			Boolean wasSearchingFuncReturnType=searchingFunctionReturnType,expectsCaseOrDefault=this.blocks.Count>0&&this.blocks.Last().Key.switchBlock;
 			this.nextExpectedKeywordTypes=new []{KeywordType.NONE};
 			searchingFunctionReturnType=false;
 			
 			Console.WriteLine("Got name: \""+name+'"');
 			
-			if (!pKTs.Contains(KeywordType.NONE)||attemptingClassAccess||gettingClassItem)
+			if (!pKTs.Contains(KeywordType.NONE)||attemptingClassAccess||gettingClassItem||expectsCaseOrDefault)
 				goto checkKeywords;
 			
 			if (this.variables.ContainsKey(name)) {
@@ -918,6 +929,10 @@ namespace ProgrammingLanguageTutorialIdea {
 				if (kw.name==name) {
 					
 					Console.WriteLine("Exec: "+kw.name);
+					Type kwt=kw.GetType();
+					
+					if (expectsCaseOrDefault&&kwt!=typeof(KWDefault)&&kwt!=typeof(KWCase))
+						throw new ParsingError("Expected only \""+KWCase.constName+"\" and \""+KWDefault.constName+"\" blocks in a \""+KWSwitch.constName+"\" block");
 					
 					if (!pKTs.Contains(KeywordType.NONE)&&!pKTs.Contains(kw.type)) {
 						if (pKTs.Length>1) {
@@ -988,6 +1003,11 @@ namespace ProgrammingLanguageTutorialIdea {
 					
 			}
 			
+			Console.WriteLine(variables.ContainsKey(name));
+			Console.WriteLine(!pKTs.Contains(KeywordType.NONE));
+			Console.WriteLine(attemptingClassAccess);
+			Console.WriteLine(gettingClassItem);
+			Console.WriteLine(expectsCaseOrDefault);
 			throw new ParsingError("Unexpected name: \""+name+'"');
 			
 		}
@@ -2468,6 +2488,9 @@ namespace ProgrammingLanguageTutorialIdea {
 				String pValue=accessors[1];
 				Boolean classOriginRecursor=accessors.Count>2&&initialClass.classes.ContainsKey(pValue);
 				
+				if (!classOriginRecursor&&pvClassInstanceOrigin.Count==0)
+					pvClassInstanceOrigin=new List<String>(new String[]{first});
+				
 				if (this.isALocalVar(first)) {
 				
 					if (this.getLocalVarHomeBlock(first)!=this.getCurrentBlock())
@@ -2688,6 +2711,8 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			this.status=res.newStatus;
 			this.addBytes(res.newOpcodes);
+			if (res.action!=null)
+				res.action();
 			
 			if (kw.type==KeywordType.ASSIGNMENT||kw.type==KeywordType.DECREMENT||kw.type==KeywordType.INCREMENT)
 				this.resetLastReferencedVar();
@@ -2803,7 +2828,11 @@ namespace ProgrammingLanguageTutorialIdea {
 			Console.WriteLine("New Block No.: "+blockBracketBalances.Count.ToString());
 			--this.nestedLevel;
 			
-			Console.WriteLine("Mem addr @ end of onBlockClosed: "+this.memAddress.ToString());
+			if (block.afterBlockClosedOpcodes!=null)
+				this.addBytes(block.afterBlockClosedOpcodes);
+			
+			Console.WriteLine("Mem addr @ end of onBlockClosed: "+this.memAddress.ToString("X"));
+//			this.debugLine("block start addr:"+block.startMemAddr.ToString("X"));
 			
 		}
 		
@@ -2813,6 +2842,9 @@ namespace ProgrammingLanguageTutorialIdea {
 			Dictionary<Block,UInt16>newDict=new Dictionary<Block,UInt16>(this.blockBracketBalances.Count);
 			Block toClose=null;
 			foreach (KeyValuePair<Block,UInt16> kvp in this.blockBracketBalances) {
+				
+				if (!kvp.Key.hasParentheses)
+					continue;
 				
 				Console.WriteLine("Block Mem Addr: "+kvp.Key.startMemAddr.ToString("X"));
 				Console.WriteLine("Old: "+kvp.Value.ToString());
@@ -3959,7 +3991,16 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		
+		internal void closeBlock (Block b) {
+			
+			this.onBlockClosed(b);
+			
+		}
+		
+		internal void setByte (UInt32 index,Byte newByte) { this.opcodes[(Int32)index]=newByte; }
+		
 		#region Character parsing helpers
+		//TODO:: make all this static
 		
 		private Boolean isMultiplication (Char c) {
 			
@@ -3994,6 +4035,12 @@ namespace ProgrammingLanguageTutorialIdea {
 		private Boolean accessingClass (Char c) {
 			
 			return c=='.';
+			
+		}
+		
+		internal Boolean isColon (Char c) {
+			
+			return c==':';
 			
 		}
 		

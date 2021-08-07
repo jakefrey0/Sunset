@@ -140,3 +140,29 @@ foreach (i,arr) {
 	; is the local variable until the end of the block
 	
 }
+
+--------------------------------------
+Timestamp 5:48AM 8/6/2021
+--------------------------------------
+
+Switch block:
+int i becomes 4
+switch (i) {
+	
+	case(0):
+		
+		break ; On break, end of switch statement is reached
+		      ; If no break and/or case is false, then go to
+		      ; next case.
+	
+	case(1):
+		break
+	
+	case(4):
+		i becomes 6
+	default:
+		++i
+	
+	
+}
+retn(i)

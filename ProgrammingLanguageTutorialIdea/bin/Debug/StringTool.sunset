@@ -1,0 +1,35 @@
+setpheapvar
+func(str string) lengthOf int {
+	
+	crash
+	int i
+	foreach (b,string) { ++i }
+	retn(i)
+	
+}
+func(byte# bytes) stringFromBytes str { retn(bytes+8) }
+func(str prefix,str suffix) concat str {
+	
+	crash
+	byte# arr becomes #lengthOf(prefix)+lengthOf(suffix)
+	int i
+	foreach (b,prefix) {
+		
+		arr[i] becomes b
+		++i
+ 		
+	}
+	foreach (b,suffix) {
+		
+		arr[i] becomes b
+		++i
+		
+	}
+	retn(stringFromBytes(arr))
+	
+}
+func(str string,str replace,str with) replace str {
+	
+	
+	
+}

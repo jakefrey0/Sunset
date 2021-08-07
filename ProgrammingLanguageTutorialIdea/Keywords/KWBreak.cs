@@ -23,17 +23,27 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			if (sender.blocks.Count==0)
 				throw new ParsingError("Can't break outside of a block");
 			
-			Block block=(sender.blocks.Keys.Where(x=>x.isLoopBlock).Count()==0)?sender.blocks.Keys.Last():sender.blocks.Keys.Where(x=>x.isLoopBlock).Last();
+			Action ac=null;
+			Block block=(sender.blocks.Keys.Where(x=>x.isLoopOrSwitchBlock).Count()==0)?sender.blocks.Keys.Last():sender.blocks.Keys.Where(x=>x.isLoopOrSwitchBlock).Last();
 			
 			List<Byte>newOpcodes=new List<Byte>(new Byte[]{0xC9,0xE9,0,0,0,0});
-			if (sender.blocks.Keys.Where(x=>x.isLoopBlock).Count()==0) {
+			if (sender.blocks.Keys.Where(x=>x.isLoopOrSwitchBlock).Count()==0) {
 				block.blockRVAPositions.Add(new Tuple<UInt32,UInt32>((UInt32)(sender.getOpcodesCount()+2+(block.breakInstructions==null?0:block.breakInstructions.Length)),(UInt32)(sender.memAddress+6+(block.breakInstructions==null?0:block.breakInstructions.Length))));
 				if (block.breakInstructions!=null)
 					newOpcodes.InsertRange(1,block.breakInstructions);
 			}
 			else {
 				
-				UInt32 bonusLeaves=(UInt32)(sender.blocks.Count-sender.blocks.Keys.Cast<Block>().ToList().IndexOf(sender.blocks.Keys.Where(x=>x.isLoopBlock).Last()))-1;
+				UInt32 bonusLeaves=(UInt32)(sender.blocks.Count-sender.blocks.Keys.Cast<Block>().ToList().IndexOf(sender.blocks.Keys.Where(x=>x.isLoopOrSwitchBlock).Last()))-1;
+				ac=delegate {
+					Block block0=sender.blocks.Keys.Last();
+					if (block0.caseOrDefaultBlock) {
+						
+						--bonusLeaves;
+						sender.closeBlock(block0);
+						
+					}
+				};
 				Byte[]leaves=new Byte[bonusLeaves];
 				UInt32 i=0;
 				while (i!=leaves.Length) {
@@ -43,14 +53,14 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 					
 				}
 				newOpcodes.InsertRange(0,leaves);
-				sender.blocks.Keys.Where(x=>x.isLoopBlock).Last().blockRVAPositions.Add(new Tuple<UInt32,UInt32>((UInt32)(sender.getOpcodesCount()+2+bonusLeaves+(block.breakInstructions==null?0:block.breakInstructions.Length)),(UInt32)(sender.memAddress+6+bonusLeaves+(block.breakInstructions==null?0:block.breakInstructions.Length))));
+				sender.blocks.Keys.Where(x=>x.isLoopOrSwitchBlock).Last().blockRVAPositions.Add(new Tuple<UInt32,UInt32>((UInt32)(sender.getOpcodesCount()+2+bonusLeaves+(block.breakInstructions==null?0:block.breakInstructions.Length)),(UInt32)(sender.memAddress+6+bonusLeaves+(block.breakInstructions==null?0:block.breakInstructions.Length))));
 				
 				if (block.breakInstructions!=null)
 					newOpcodes.InsertRange((Int32)bonusLeaves+1,block.breakInstructions);
 				
 			}
 			
-			return new KeywordResult(){newOpcodes=newOpcodes.ToArray(),newStatus=ParsingStatus.SEARCHING_NAME};
+			return new KeywordResult(){newOpcodes=newOpcodes.ToArray(),newStatus=ParsingStatus.SEARCHING_NAME,action=ac};
 		}
 		
 	}

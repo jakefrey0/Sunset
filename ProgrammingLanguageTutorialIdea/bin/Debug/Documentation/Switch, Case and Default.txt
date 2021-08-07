@@ -1,0 +1,42 @@
+int i becomes 4
+int j becomes 1
+switch (i) {
+	
+	; The following line would throw a ParsingError because only 
+	; case and default blocks can be run from within a switch block:
+	; int num becomes 123
+	
+	case(0):
+		break ; On break, the end of the switch block is jumped to. If
+		      ; no break and/or case is false, then the next case is tested.
+	
+	case(j): ; Non-constant values can be used as parameters for case
+		i becomes 3
+		break
+	
+	; With multiple parameters, the block will be run if 
+	; any of the cases are calculated as true
+	case(3,4): ; This case will fall through to the default case because 
+		   ; it has no 'break' word, so they will both be run.
+		i becomes 6
+	default: ; Default block is executed in the order it is written
+		 ; in from within the switch block. Multiple default
+		 ; blocks are permitted.
+		++i
+		break ; <-- Remember to ultimately close all cases with a break word
+	
+	
+}
+retn(i)
+; -----------------------
+; - FOR VARIABLE 'i'    -
+; - OUTPUT: EXIT CODE   -
+; -----------------------
+; -INPUT-EXPECTED-OUTPUT-
+; -----------------------
+; - 0   - 0      - 0    -
+; - 1   - 3      - 3    -
+; - 2   - 3      - 3    -
+; - 3   - 7      - 7    -
+; - 4   - 7      - 7    -
+; -----------------------

@@ -37,7 +37,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 					i+=4;
 				}
 			}
-			
+
 			sender.addBytes(new Byte[]{0xFF,0x54,0x24,i}); //CALL [ESP+-OFFSET]
 			sender.addBytes(new Byte[]{0x83,0xC4,4}); //ADD ESP,4
 			

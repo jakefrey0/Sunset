@@ -32,7 +32,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		public List<UInt32>blockMemPositions;
 		public List<Tuple<UInt32,UInt32>>blockRVAPositions;
 		
-		public Boolean isLoopBlock=false;
+		public Boolean isLoopOrSwitchBlock=false,switchBlock=false,caseOrDefaultBlock=false,hasParentheses=true;
 		public UInt32 continueAddress=0;
 		
 		/// <summary>
@@ -46,6 +46,12 @@ namespace ProgrammingLanguageTutorialIdea {
 		}
 		
 		public Byte[] breakInstructions,continueInstructions;
+		/// <summary>
+		/// For after the block is fully closed (i.e all leave statements)
+		/// These will be appended last on the block closing process
+		/// (Optional as are all non-constructor items)
+		/// </summary>
+		public Byte[] afterBlockClosedOpcodes;
 		
 		public Block (Action onBlockEnd,UInt32 startMemAddr,Byte[] opcodesToAddOnBlockEnd,Boolean xorEax=false,Boolean addEnterAutomatically=true) {
 			

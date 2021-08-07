@@ -22,13 +22,13 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			
 			if (sender.blocks.Count==0)
 				throw new ParsingError("Can't continue outside of a block");
-			Block block=(sender.blocks.Keys.Where(x=>x.isLoopBlock).Count()==0)?sender.blocks.Keys.Last():sender.blocks.Keys.Where(x=>x.isLoopBlock).Last();
+			Block block=(sender.blocks.Keys.Where(x=>x.isLoopOrSwitchBlock).Count()==0)?sender.blocks.Keys.Last():sender.blocks.Keys.Where(x=>x.isLoopOrSwitchBlock).Last();
 			
 			sender.addByte(0xC9);
 			List<Byte>newOpcodes=new List<Byte>(new Byte[]{0xE9});
-			if (!(sender.blocks.Keys.Where(x=>x.isLoopBlock).Count()==0)) {
+			if (!(sender.blocks.Keys.Where(x=>x.isLoopOrSwitchBlock).Count()==0)) {
 				
-				block=sender.blocks.Keys.Where(x=>x.isLoopBlock).Last();
+				block=sender.blocks.Keys.Where(x=>x.isLoopOrSwitchBlock).Last();
 				UInt32 bonusLeaves=(UInt32)(sender.blocks.Count-sender.blocks.Keys.Cast<Block>().ToList().IndexOf(block))-1;
 				Byte[]leaves=new Byte[bonusLeaves];
 				UInt32 i=0;

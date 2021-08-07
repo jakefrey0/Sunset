@@ -75,9 +75,11 @@
     <Compile Include="Keywords\KWBreak.cs" />
     <Compile Include="Keywords\KWByte.cs" />
     <Compile Include="Keywords\KWCallptr.cs" />
+    <Compile Include="Keywords\KWCase.cs" />
     <Compile Include="Keywords\KWContinue.cs" />
     <Compile Include="Keywords\KWCrash.cs" />
     <Compile Include="Keywords\KWDecrease.cs" />
+    <Compile Include="Keywords\KWDefault.cs" />
     <Compile Include="Keywords\KWDllReference.cs" />
     <Compile Include="Keywords\KWElse.cs" />
     <Compile Include="Keywords\KWFinishCompiling.cs" />
@@ -94,6 +96,7 @@
     <Compile Include="Keywords\KWShort.cs" />
     <Compile Include="Keywords\KWString.cs" />
     <Compile Include="Keywords\KWStruct.cs" />
+    <Compile Include="Keywords\KWSwitch.cs" />
     <Compile Include="Keywords\KWToggleGui.cs" />
     <Compile Include="Keywords\KWVoid.cs" />
     <Compile Include="Keywords\KWWhile.cs" />
@@ -113,6 +116,7 @@
     <Compile Include="Stack\PseudoStack.cs" />
     <Compile Include="Stack\IPseudoStackItem.cs" />
     <Compile Include="Stack\ReturnPtr.cs" />
+    <Compile Include="Stack\SwitchVar.cs" />
     <Compile Include="VarType.cs" />
   </ItemGroup>
   <ItemGroup>

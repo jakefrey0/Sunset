@@ -34,7 +34,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			if (sender.addEsiToLocalAddresses)
 				endOpcodes=new Byte[]{0x5E/*POP ESI*/}.Concat(endOpcodes).ToArray();
 			
-			Block functionBlock=new Block(delegate{sender.inFunction=false;if(sender.addEsiToLocalAddresses)sender.pseudoStack.pop();},sender.memAddress,endOpcodes,true);
+			Block functionBlock=new Block(delegate{sender.inFunction=false;if(sender.addEsiToLocalAddresses)sender.pseudoStack.pop();sender.pseudoStack.pop();},sender.memAddress,endOpcodes,true);
 			
 			//For information on this, see KWNew -> Extra esi dword var on classes information
 			if (sender.addEsiToLocalAddresses) {
