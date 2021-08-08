@@ -115,7 +115,8 @@ dllref(Gdi32,int,int,int,str,int) TextOutA bool
 ; This section of course does not apply to local variables.
 
 int num ; A type of variable, Integer, that stores a number. Its byte size is 4, and the name of this variable is "num".
-        ; Variables have a default value of zero (null).
+        ; Variables have a default value of zero (null). This does not apply for local variables, they should be set to zero
+	; or whichever value immediately, as their value will be whatever happens to be on the stack when they are allocated.
 
 User user becomes new(User)  ; A class, that stores a pointer to a particular class structure (in this case, "User"). 
                              ; Its byte size is 4. The byte size is 4 regardless of the type of class that is being declared.

@@ -1,19 +1,31 @@
 setpheapvar
 func(str string) lengthOf int {
 	
-	crash
-	int i
+	int i becomes 0
 	foreach (b,string) { ++i }
 	retn(i)
 	
 }
+;stringFromBytes -> Parameter bytes should contain a null terminator byte
 func(byte# bytes) stringFromBytes str { retn(bytes+8) }
+func(str string) stringToBytes byte# {
+	
+	byte# arr becomes #lengthOf(string)+1
+	int i becomes 0
+	foreach (b,string) {
+		
+		arr[i] becomes b
+		++i
+		
+	}
+	retn(arr)
+	
+}
 func(str prefix,str suffix) concat str {
 	
-	crash
-	byte# arr becomes #lengthOf(prefix)+lengthOf(suffix)
-	int i
-	foreach (b,prefix) {
+	byte# arr becomes #lengthOf(prefix)+lengthOf(suffix)+1
+	int i becomes 0
+	foreach (b,prefix) { 
 		
 		arr[i] becomes b
 		++i
@@ -28,8 +40,74 @@ func(str prefix,str suffix) concat str {
 	retn(stringFromBytes(arr))
 	
 }
-func(str string,str replace,str with) replace str {
+func(str string,int startIndex,int endIndex) substring str {
 	
+	if (startIndex,>,endIndex) { retn("") }
 	
+	byte# arr becomes #(endIndex-startIndex)+1
+	byte# arr0 becomes stringToBytes(string)
+	int i becomes 0
+	while (startIndex,=/=,endIndex) {
+		
+		arr[i] becomes arr0[startIndex]
+		
+		++i
+		++startIndex
+		
+	}
+	retn(stringFromBytes(arr))
 	
 }
+func(byte b) byteToCorrespondingASCII str {
+	
+	byte# arr becomes #2
+	arr[0] becomes b
+	retn(stringFromBytes(arr))
+	
+}
+func(str string) quote str {
+	
+	str quotation becomes byteToCorrespondingASCII(34)
+	string becomes concat(quotation,string)
+	string becomes concat(string,quotation)
+	retn(string)
+	
+}
+; ----> when the Block keyword is added, the 'int func' logic should be replaced by it :P
+func (str string,int func) where str {
+	
+	byte# arr becomes #lengthOf(string)+1
+	int i becomes 0
+	foreach (b,string) {
+		
+		if (callptr(func,b),=/=,0) {
+			
+			arr[i] becomes b
+			++i
+			
+		}
+		
+	}
+	retn(stringFromBytes(arr))
+	
+}
+;do after KWCast is done
+;func(str string) toUpper str {
+;	
+;	byte# arr becomes #lengthOf(string)+1
+;	int i becomes 0
+;	foreach (b,string) {
+;		
+;		if (b,>,96) {
+;			if (b,<,123) {
+;				b becomes b-32
+;				
+;			}
+;		}
+;		arr[i] becomes b
+;		++i
+;		
+;	}
+;	retn(stringFromBytes(arr))
+;	
+;}

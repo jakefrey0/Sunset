@@ -1,3 +1,4 @@
+TOGGLEGUI
 import(StringTool)
 dllref(User32,int,str,str,int) MessageBoxA int
 dllref(User32,str,str,int) cdecl:wsprintfA int
@@ -7,4 +8,18 @@ str format becomes ", Length: %d"
 str buffer becomes ", Length: -00"
 wsprintfA(buffer,format,tool.lengthOf(string))
 string becomes tool.concat(string,buffer)
+MessageBoxA(0,string,"",0)
+string becomes tool.substring(string,3,9)
+MessageBoxA(0,string,"",0)
+string becomes tool.quote(string)
+MessageBoxA(0,string,"",0)
+func(byte b) test bool {
+	
+	if (b,=,121) { retn(false) }
+	retn(true)
+	
+}
+string becomes tool.where(string,$test)
+MessageBoxA(0,string,"",0)
+string becomes tool.toUpper("Test One")
 MessageBoxA(0,string,"",0)

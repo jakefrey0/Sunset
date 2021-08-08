@@ -139,7 +139,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		private Executor waitingToExecute;
 		private UInt16 squareBracketBalance=0,roundBracketBalance=0,nestedLevel=0;
 		private UInt32 freeHeapsMemAddr,esiFuncVarIndex=0;
-		private Boolean attemptingClassAccess=false,gettingClassItem=false;
+		private Boolean attemptingClassAccess=false,gettingClassItem=false,clearNextPvOrigin=false;
 		
 		private const String KERNEL32="KERNEL32.DLL";
 		private readonly Char[] mathOperators=new []{'+','-','*','/','%'};
@@ -1162,36 +1162,45 @@ namespace ProgrammingLanguageTutorialIdea {
 				}
 				else if (this.isValidFunction(value)) {
 					
-					if (this.arrays[this.referencedVariable].Item1!=0) {
+					if (referencedVariableIsLocal) {
 						
-						const String HF="HeapFree";
-						this.referenceDll(Parser.KERNEL32,HF);
-						this.arrayReferences[this.referencedVariable].Add((UInt32)(opcodes.Count+2));
-						this.addBytes(new Byte[]{0xFF,0x35,0,0,0,0});//push pMemory
-						this.addBytes(new Byte[]{0x6A,0});//push Flags
-						this.pushProcessHeapVar();//push hHeap
-						this.referencedFuncPositions[HF].Add((UInt32)this.opcodes.Count+2);
-						this.addBytes(new Byte[]{0xFF,0x15,0,0,0,0});//call HeapFree
+						this.pushValue(value);
+						if (this.getLocalVarHomeBlock(this.referencedVariable)!=this.getCurrentBlock())
+							this.localVarEBPPositionsToOffset[this.getCurrentBlock()].Add((UInt32)(this.opcodes.Count+2));
+						this.addBytes(new Byte[]{0x8F,0x45,this.pseudoStack.getVarEbpOffset(this.referencedVariable)}); //POP [EBP+-OFFSET]
 						
 					}
 					else {
+						if (this.arrays[this.referencedVariable].Item1!=0) {
+							
+							const String HF="HeapFree";
+							this.referenceDll(Parser.KERNEL32,HF);
+							this.arrayReferences[this.referencedVariable].Add((UInt32)(opcodes.Count+2));
+							this.addBytes(new Byte[]{0xFF,0x35,0,0,0,0});//push pMemory
+							this.addBytes(new Byte[]{0x6A,0});//push Flags
+							this.pushProcessHeapVar();//push hHeap
+							this.referencedFuncPositions[HF].Add((UInt32)this.opcodes.Count+2);
+							this.addBytes(new Byte[]{0xFF,0x15,0,0,0,0});//call HeapFree
+							
+						}
+						else {
+							
+							Tuple<UInt32,String,ArrayStyle>_refdVar=this.arrays[this.referencedVariable];
+							this.arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle>(this.memAddress+(UInt32)(appendAfter.Count),_refdVar.Item2,_refdVar.Item3);
+							this.appendAfterIndex.Add(referencedVariable,(UInt32)appendAfter.Count);
+							this.appendAfter.AddRange(new Byte[4]);
+							
+						}
 						
-						Tuple<UInt32,String,ArrayStyle>_refdVar=this.arrays[this.referencedVariable];
-						this.arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle>(this.memAddress+(UInt32)(appendAfter.Count),_refdVar.Item2,_refdVar.Item3);
-						this.appendAfterIndex.Add(referencedVariable,(UInt32)appendAfter.Count);
-						this.appendAfter.AddRange(new Byte[4]);
-						
+						this.pushValue(value);
+						if (addEsiToLocalAddresses) {
+							this.addBytes(new Byte[]{0x8F,0x86}.Concat(BitConverter.GetBytes(this.appendAfterIndex[this.referencedVariable])));
+						}
+						else {
+							this.arrayReferences[this.referencedVariable].Add((UInt32)(opcodes.Count+2));
+							this.addBytes(new Byte[]{0x8F,5,0,0,0,0}); // POP [PTR]
+						}
 					}
-					
-					this.pushValue(value);
-					if (addEsiToLocalAddresses) {
-						this.addBytes(new Byte[]{0x8F,0x86}.Concat(BitConverter.GetBytes(this.appendAfterIndex[this.referencedVariable])));
-					}
-					else {
-						this.arrayReferences[this.referencedVariable].Add((UInt32)(opcodes.Count+2));
-						this.addBytes(new Byte[]{0x8F,5,0,0,0,0}); // POP [PTR]
-					}
-					
 				}
 				else throw new ParsingError("Invalid array assignment value: \""+value+'"');
 				
@@ -2231,6 +2240,17 @@ namespace ProgrammingLanguageTutorialIdea {
 				return new Tuple<String,VarType>(this.arrays[value].Item2,VarType.NATIVE_ARRAY);
 				
 			}
+			else if (this.indicatesMathOperation(value)) {
+				
+				Console.WriteLine(" ! value: "+value);
+				//NOTE:: math is also parsed & calculated at Parser#indexArray and Parser#pushArrValue
+				
+				if (gettingAddr)
+					value='$'+value;
+				
+				return this.parseMath(value,delegate(String str){ if (this.isArrayIndexer(str))this.pushArrValue(str); else this.pushValue(str); },pushValue=>(this.isArrayIndexer(pushValue))?this.pushArrValue(pushValue):this.pushValue(pushValue));
+				
+			}
 			else if (this.isFuncWithParams(value)) {
 				
 				this.throwIfAddr(gettingAddr,value);
@@ -2420,25 +2440,14 @@ namespace ProgrammingLanguageTutorialIdea {
 				return new Tuple<String,VarType>(KWString.constName,VarType.NATIVE_VARIABLE);
 				
 			}
-			else if (value.Any(x=>this.isMathOperator(x))) {
-				
-				Console.WriteLine(" ! value: "+value);
-				
-				//NOTE:: math is also parsed & calculated at Parser#indexArray and Parser#pushArrValue
-				
-				if (gettingAddr)
-					value='$'+value;
-				
-				return this.parseMath(value,delegate(String str){ if (this.isArrayIndexer(str))this.pushArrValue(str); else this.pushValue(str); },pushValue=>(this.isArrayIndexer(pushValue))?this.pushArrValue(pushValue):this.pushValue(pushValue));
-				
-			}
-			
 			else if (value.Any(x=>this.accessingClass(x))&&(this.classes.ContainsKey(value.Split(Parser.accessorChar).First())||(this.isALocalVar(value.Split(Parser.accessorChar).First()))||this.pvClassInstanceOrigin.Contains(value.Split(Parser.accessorChar).First()))) {
+				
+				if (clearNextPvOrigin) pvClassInstanceOrigin.Clear();
 				
 				//HACK:: sub parsing
 				List<String>accessors=new List<String>();
 				Boolean inQuotes=false;
-				UInt16 rbb=0,sbb=0;
+				Int16 rbb=0,sbb=0;
 				StringBuilder sb=new StringBuilder();
 				foreach (Char c in value) {
 					
@@ -2449,6 +2458,8 @@ namespace ProgrammingLanguageTutorialIdea {
 						else if (this.endsParameters(c))--rbb;
 						else if (c=='[')++sbb;
 						else if (c==']')--sbb;
+						
+						if (rbb<0||sbb<0) Console.WriteLine("Unbalanced "+(sbb<0?"square parentheses":"parentheses")+" in \""+value+'"');
 						
 					}
 					
@@ -2468,7 +2479,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				String first=accessors.First();
 				Class initialClass;
 				this.writeStrOpcodes("Test");
-					
+				
 				Boolean local=false;
 				if (this.isALocalVar(first)) {
 					
@@ -2487,10 +2498,10 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 				String pValue=accessors[1];
 				Boolean classOriginRecursor=accessors.Count>2&&initialClass.classes.ContainsKey(pValue);
+				clearNextPvOrigin=!classOriginRecursor&&pvClassInstanceOrigin.Count==0;
 				
-				if (!classOriginRecursor&&pvClassInstanceOrigin.Count==0)
+				if (clearNextPvOrigin)
 					pvClassInstanceOrigin=new List<String>(new String[]{first});
-				
 				if (this.isALocalVar(first)) {
 				
 					if (this.getLocalVarHomeBlock(first)!=this.getCurrentBlock())
@@ -2574,8 +2585,9 @@ namespace ProgrammingLanguageTutorialIdea {
 					Tuple<String,VarType>retType=initialClass.functions[pValue].Item2;
 					if (retType==null)
 						throw new ParsingError("Function \""+pValue+"\" has no return value, therefore its return value can't be obtained");
+					Console.WriteLine("ORIGIN: "+merge(pvClassInstanceOrigin,"."));
 					
-					this.callClassFunc(pvClassInstanceOrigin,pValue,new String[0],true);
+					this.callClassFunc(pvClassInstanceOrigin,pValue,new String[0],local);
 					this.addByte(0x50);//PUSH EAX
 					
 					return retType;
@@ -3813,6 +3825,8 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			Class cl=this.getOriginFinalClass(classInstance,originLocal);
 			
+			if(!cl.functions.ContainsKey(func)) throw new Exception("Func:"+func+", origin: "+merge(classInstance,"."));
+			
 			if (cl.functions[func].Item3!=parameters.Length)
 				throw new ParsingError("Expected \""+cl.functions[func].Item3+"\" parameters for \""+func+"\", got \""+parameters.Length+'"');
 			
@@ -3820,7 +3834,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			if (classInstanceAlreadyInEax)
 				this.addByte(0x50);//PUSH EAX
 			
-			foreach (String s in parameters)
+			foreach (String s in parameters.Reverse())
 				this.pushValue(s);
 			
 			if (classInstanceAlreadyInEax) {
@@ -3998,6 +4012,37 @@ namespace ProgrammingLanguageTutorialIdea {
 		}
 		
 		internal void setByte (UInt32 index,Byte newByte) { this.opcodes[(Int32)index]=newByte; }
+		
+		private Boolean indicatesMathOperation (String value) {
+			
+			if (value.Any(x=>this.isMathOperator(x))) {
+			
+				//HACK:: sub parsing
+				Int16 rbb=0,sbb=0;
+				Boolean inQuotes=false;
+				foreach (Char c in value) {
+					
+					if (c=='"') inQuotes=!inQuotes;
+					else if (!inQuotes) {
+						
+						if (this.beginsParameters(c))++rbb;
+						else if (this.endsParameters(c))--rbb;
+						else if (c=='[')++sbb;
+						else if (c==']')--sbb;
+						
+						if (rbb<0||sbb<0) Console.WriteLine("Unbalanced "+(sbb<0?"square parentheses":"parentheses")+" in \""+value+'"');
+						
+						if (this.isMathOperator(c)&&rbb==0&&sbb==0) return true;
+						
+					}
+					
+				}
+			
+			}
+			
+			return false;
+			
+		}
 		
 		#region Character parsing helpers
 		//TODO:: make all this static
