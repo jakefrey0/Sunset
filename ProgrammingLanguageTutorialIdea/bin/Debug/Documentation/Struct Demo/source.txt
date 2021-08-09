@@ -1,4 +1,4 @@
-TOGGLEGUI
+TOGGLE_GUI
 
 import(WNDCLASSA)
 import(MSG)

@@ -20,8 +20,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		
 		public override KeywordResult execute (Parser sender,String[] @params) {
 			
-			if (@params.Length!=1)
-				throw new ParsingError("Expected 1 parameter for native call \""+constName+'"');
+			if (@params.Length==0)
+				throw new ParsingError("Expected at least 1 parameter for native call \""+constName+'"');
 			
 			Boolean setProcessHeapVar=false;
 			if (sender.processHeapVar==null) {
@@ -86,6 +86,23 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				sender.addBytes(new Byte[]{0xFF,0xD0}); //CALL EAX
 				sender.addBytes(new Byte[]{0x83,0xC4,4});//ADD ESP,4
 				sender.pseudoStack.pop();
+				if (cl.constructor!=null) {
+					
+					if (@params.Length-1!=cl.constructor.Item2.Count)
+						throw new ParsingError("Expected "+cl.constructor.Item2.Count.ToString()+" parameters for the constructor of \""+cl.className+"\", but got "+(@params.Length-1).ToString());
+					Byte i=0;
+					if (@params.Length!=1) {
+						foreach (String s in @params.Skip(1)) {
+							sender.pushValue(s);
+							i+=4;
+						}
+					}
+					sender.addBytes(new Byte[]{0x8B,0x44,0x24,i});//MOV EAX,[ESP+-OFFSET]
+					sender.addBytes(new Byte[]{5}.Concat(BitConverter.GetBytes(cl.constructor.Item1))); //ADD EAX,DWORD
+					sender.addBytes(new Byte[]{0xFF,0xD0}); //CALL EAX
+					
+				}
+				else if (@params.Length!=1) throw new ParsingError("\""+cl.className+"\" has no constructors parameters, but got parameters in \""+KWNew.constName+'"');
 				sender.addByte(0x58); //POP EAX
 				
 			}

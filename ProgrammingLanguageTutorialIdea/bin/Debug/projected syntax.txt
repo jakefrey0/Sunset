@@ -166,3 +166,54 @@ switch (i) {
 	
 }
 retn(i)
+
+--------------------------------------
+Timestamp 5:10PM 8/8/2021
+--------------------------------------
+
+Constructor:
+
+; No params:
+constructor {
+	
+	
+	
+}
+; With params:
+constructor(int x,int y) {
+	
+	
+	
+}
+
+--------------------------------------
+Timestamp 5:28PM 8/8/2021
+--------------------------------------
+
+Gonna have to make a List<String,Tuple<String,VarType>>typeWords; // Type word (i.e "T1"), actual var type
+and update all Check Var Type Here's
+Might need to update KWImport#execute#childParser#keywordMgr#classWords to include the class for "T1" if it is of VarType.CLASS
+
+Types (Only can set in import):
+import(List<int>) ; <--- single type
+import(List<str>) ; <--- single type
+import(Tuple<int,str>) ; <--- many types
+
+List<int> numList becomes new(List<int>)
+List<str> wordList becomes new(List<str>)
+Tuple<int,str> tpl becomes new(Tuple<int,str>)
+
+---> In List.sunset:
+
+; -- in header --
+EXPECTED_TYPES(T1)
+; --           --
+
+;examples:
+T1 varWithType becomes 123
+T1# arrayOfType becomes #3
+func(int index) get T1 {
+	
+	retn(arrayOfType[index])
+	
+}

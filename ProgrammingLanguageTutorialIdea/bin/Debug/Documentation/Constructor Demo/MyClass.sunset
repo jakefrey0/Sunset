@@ -1,0 +1,12 @@
+int i
+func getResult int {
+	
+	retn(i)
+	
+}
+constructor(int j,int k) {
+	
+	nofunct(20)
+	i becomes j*k
+	
+}

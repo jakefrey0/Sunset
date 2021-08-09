@@ -76,6 +76,7 @@
     <Compile Include="Keywords\KWByte.cs" />
     <Compile Include="Keywords\KWCallptr.cs" />
     <Compile Include="Keywords\KWCase.cs" />
+    <Compile Include="Keywords\KWConstructor.cs" />
     <Compile Include="Keywords\KWContinue.cs" />
     <Compile Include="Keywords\KWCrash.cs" />
     <Compile Include="Keywords\KWDecrease.cs" />

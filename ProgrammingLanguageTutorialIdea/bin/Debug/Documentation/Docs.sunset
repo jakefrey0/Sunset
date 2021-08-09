@@ -23,11 +23,11 @@
 ; rather limited (7/14/2021 8:06AM), so this section is generally empty
 ; or small. Examples of compiler instructions are 'TOGGLEGUI' and 'STRUCT'.
 
-TOGGLEGUI ; The gui flag is false by default. If 
-          ; the gui flag is false, it will cause 
-          ; your program to launch a console window.
-          ; Libraries that create a GUI should set
-          ; the gui to true, so you won't have to.
+TOGGLE_GUI ; The gui flag is false by default. If 
+           ; the gui flag is false, it will cause 
+           ; your program to launch a console window.
+           ; Libraries that create a GUI should set
+           ; the gui to true, so you won't have to.
 
 setpheapvar ; Temporary
 

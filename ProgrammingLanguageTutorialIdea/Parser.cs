@@ -73,6 +73,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal Byte setExpectsElse=0,setExpectsBlock=0;
 		
 		internal Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>> functions;//Function Name,(Memory Address,(Return Type, Return Var Type),No. of expected parameters,Function Type,Calling Convention)
+		internal Tuple<UInt32,List<Tuple<String,VarType>>> constructor;//Memory Address,Func Param Types
 		internal Dictionary<String,List<Tuple<UInt32,UInt32>>> functionReferences;//Function Name,(Indexes in Opcodes of the reference,Memory Address at time of Reference)
 		internal UInt16 nextFunctionParamsCount;
 		internal Dictionary<String,List<Tuple<String,VarType>>> functionParamTypes;//Function Name,Var Type
@@ -324,7 +325,7 @@ namespace ProgrammingLanguageTutorialIdea {
 							
 							
 						}
-						else if (Char.IsLetterOrDigit(c)||this.refersToIncrementOrDecrement(c)) nameReader.Append(c);
+						else if (this.isValidNameChar(c)||this.refersToIncrementOrDecrement(c)) nameReader.Append(c);
 						else {
 							
 							String prevLastReferencedVariable=lastReferencedVariable;
@@ -377,7 +378,7 @@ namespace ProgrammingLanguageTutorialIdea {
 						
 					case ParsingStatus.READING_VARIABLE_NAME:
 						
-						if (Char.IsLetterOrDigit(c)||this.isUnderscore(c)) nameReader.Append(c);
+						if (this.isValidNameChar(c)) nameReader.Append(c);
 						else {
 							
 							this.registerVariable(nameReader.ToString());
@@ -406,7 +407,7 @@ namespace ProgrammingLanguageTutorialIdea {
 						break;
 						
 					case ParsingStatus.READING_ARRAY_NAME:
-						if (Char.IsLetterOrDigit(c)) nameReader.Append(c);
+						if (this.isValidNameChar(c)) nameReader.Append(c);
 						else {
 							
 							this.registerArray(nameReader.ToString());
@@ -490,7 +491,7 @@ namespace ProgrammingLanguageTutorialIdea {
 						
 					case ParsingStatus.READING_FUNCTION_NAME:
 						
-						if (Char.IsLetterOrDigit(c)||this.isCallingConventionIdentifier(c)) nameReader.Append(c);
+						if (this.isValidNameChar(c)||this.isCallingConventionIdentifier(c)) nameReader.Append(c);
 						else {
 							
 							this.setExpectsBlock=1;
@@ -3357,7 +3358,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				if (c!='('&&c!=')')
 					sb.Append(c);
 				else if (c=='(') {
-					if (!incBalanceChars.Contains(previousCharacter)&&!this.isMathOperator(previousCharacter)&&(Char.IsLetter(previousCharacter)||Char.IsDigit(previousCharacter))) {
+					if (!incBalanceChars.Contains(previousCharacter)&&!this.isMathOperator(previousCharacter)&&(this.isValidNameChar(previousCharacter))) {
 						
 						sb.Append(c);
 						doAppendBalances.Add(balance);
@@ -4086,6 +4087,12 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal Boolean isColon (Char c) {
 			
 			return c==':';
+			
+		}
+		
+		internal Boolean isValidNameChar (Char c) {
+			
+			return Char.IsLetterOrDigit(c)||this.isUnderscore(c);
 			
 		}
 		

@@ -12,7 +12,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 	
 	public class KWToggleGui : Keyword {
 		
-		public const String constName="TOGGLEGUI";
+		public const String constName="TOGGLE_GUI";
 		
 		public KWToggleGui () : base (constName,KeywordType.NATIVE_CALL) { }
 		

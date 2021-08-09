@@ -49,7 +49,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			                       	new KWCallptr(),
 			                       	new KWSwitch(),
 			                       	new KWCase(),
-			                       	new KWDefault()
+			                       	new KWDefault(),
+			                       	new KWConstructor()
 			                       	
 			                       });
 			

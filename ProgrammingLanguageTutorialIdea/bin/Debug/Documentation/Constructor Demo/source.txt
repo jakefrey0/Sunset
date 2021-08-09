@@ -1,0 +1,7 @@
+import(Documentation\Constructor Demo\MyClass)
+dllref(User32,int,str,str,int) MessageBoxA int
+dllref(User32,str,str,int) cdecl:wsprintfA int
+MyClass mc becomes new(MyClass,3,4)
+str buffer becomes "##"
+wsprintfA(buffer,"%d",mc.getResult)
+MessageBoxA(0,buffer,"",0)
