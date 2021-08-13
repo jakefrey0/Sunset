@@ -1127,7 +1127,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					const String HL="HeapAlloc";
 					this.referenceDll(Parser.KERNEL32,HL);
 					
-					if (!this.beginsParameters(adjustedValue[0])) {
+					if (!this.splitsParameters(adjustedValue[0])) {
 						
 						this.addByte(0x51); //PUSH ECX
 						
@@ -1195,7 +1195,9 @@ namespace ProgrammingLanguageTutorialIdea {
 					}
 					else {
 						
-						List<String>@params=parseParameters(adjustedValue.Substring(1));
+						if (adjustedValue.Length<=2||!this.beginsParameters(adjustedValue[1])) throw new ParsingError("Invalid syntax for initializing array by set of values: expected format \"#,(value,value0,value1,...)\"");
+						
+						List<String>@params=parseParameters(adjustedValue.Substring(2));
 						Int32 bytesToReserve=(Int32)((@params.Count*keywordMgr.getVarTypeByteSize(type))+8),stackSpace=(Int32)(@params.Count*4);
 						if (bytesToReserve>SByte.MaxValue)
 							this.addBytes(new Byte[]{0x68}.Concat(BitConverter.GetBytes(bytesToReserve))); //PUSH DWORD

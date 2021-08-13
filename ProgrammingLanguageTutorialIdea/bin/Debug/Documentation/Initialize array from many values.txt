@@ -4,7 +4,7 @@ dllref(User32,int,str,str,int) MessageBoxA int
 func(int i) feedback int { retn(i) }
 
 int myVar becomes 123
-int# myArr becomes #(1,2,3,4,myVar,myVar,123,feedback(22),21)
+int# myArr becomes #,(1,2,3,4,myVar,myVar,123,feedback(22),21)
 str buffer becomes "Num: ###"
 str format becomes "Num: %d"
 

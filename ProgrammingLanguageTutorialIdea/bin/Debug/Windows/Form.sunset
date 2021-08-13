@@ -8,6 +8,7 @@ import(Windows/WNDCLASSA)
 import(Windows/SimpleLabel)
 import(List<SimpleLabel>)
 import(StringTool)
+import(Event<Form>)
 
 dllref(Kernel32,str) GetModuleHandleA int
 dllref(User32,WNDCLASSA) RegisterClassA int

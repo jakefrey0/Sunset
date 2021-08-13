@@ -1,0 +1,16 @@
+EXPECTED_TYPES(EvtArgs)
+import(List<int>)
+
+List<int> pointers becomes new(List<int>)
+
+func(int ptr) addFunction { pointers.add(ptr) }
+
+func(EvtArgs args) raise { 
+	
+	foreach(ptr,pointers) {
+		
+		callptr(ptr,args)
+		
+	}
+	
+}
