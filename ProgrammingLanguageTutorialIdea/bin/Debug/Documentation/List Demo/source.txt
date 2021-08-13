@@ -1,0 +1,27 @@
+import(List<int>)
+import(Windows\ErrorHandler)
+dllref(User32,int,str,str,int) MessageBoxA int
+dllref(User32,str,str,int) cdecl:wsprintfA int
+
+List<int> myList becomes new(List<int>)
+myList.add(123)
+MessageBoxA(0,"Test","Hello",0)
+str buffer becomes "###"
+wsprintfA(buffer,"%d",myList.get(0))
+MessageBoxA(0,buffer,"",0)
+
+myList.add(126)
+buffer becomes "###"
+wsprintfA(buffer,"%d",myList.get(1))
+MessageBoxA(0,buffer,"",0)
+
+foreach (i,myList.toArray) {
+	
+	wsprintfA(buffer,"%d",i+100)
+	MessageBoxA(0,buffer,"",0)
+	
+}
+
+ErrorHandler eh becomes new(ErrorHandler)
+myList.get(2) ; Out of bounds (Only added 2 items to list, this would be 3rd in zero-based index)
+eh.mboxLastError

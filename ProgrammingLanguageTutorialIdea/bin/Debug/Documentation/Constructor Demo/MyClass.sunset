@@ -6,7 +6,6 @@ func getResult int {
 }
 constructor(int j,int k) {
 	
-	nofunct(20)
 	i becomes j*k
 	
 }

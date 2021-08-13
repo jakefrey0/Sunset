@@ -53,6 +53,8 @@ namespace ProgrammingLanguageTutorialIdea {
 		/// </summary>
 		public Byte[] afterBlockClosedOpcodes;
 		
+		public List<String>restoreArraySetValueFuncs;
+		
 		public Block (Action onBlockEnd,UInt32 startMemAddr,Byte[] opcodesToAddOnBlockEnd,Boolean xorEax=false,Boolean addEnterAutomatically=true) {
 			
 			this.startMemAddr=startMemAddr;
@@ -63,6 +65,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			this.addEnterAutomatically=addEnterAutomatically;
 			this.blockMemPositions=new List<UInt32>();
 			this.blockRVAPositions=new List<Tuple<UInt32,UInt32>>();
+			this.restoreArraySetValueFuncs=new List<String>();
 			
 		}
 		

@@ -1,0 +1,3 @@
+EXPECTED_TYPES(TYPE)
+
+func test int { retn(Tsizeof(TYPE)) }

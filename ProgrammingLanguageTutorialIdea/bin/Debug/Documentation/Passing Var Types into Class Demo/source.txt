@@ -1,0 +1,13 @@
+import(Documentation\Passing Var Types into Class Demo\OtherClass)
+import(Documentation\Passing Var Types into Class Demo\MyClass<OtherClass,int>)
+
+dllref(User32,int,str,str,int) MessageBoxA int
+dllref(User32,str,str,int) cdecl:wsprintfA int
+
+MyClass<OtherClass,int> mc becomes new(MyClass<OtherClass,int>)
+str buffer becomes "#"
+wsprintfA(buffer,"%d",mc.nums[1])
+MessageBoxA(0,buffer,"",0)
+OtherClass oc becomes mc.test
+OtherClass oc0 becomes mc.oc
+oc0.test

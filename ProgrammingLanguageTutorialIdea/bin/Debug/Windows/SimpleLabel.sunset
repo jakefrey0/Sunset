@@ -1,0 +1,4 @@
+STRUCT
+str text
+int x
+int y

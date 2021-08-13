@@ -1,0 +1,117 @@
+TOGGLE_GUI
+
+import(Windows/MSG)
+import(Windows/PAINTSTRUCT) 
+import(Windows/POINT)
+import(Windows/RECT)
+import(Windows/WNDCLASSA)
+import(Windows/SimpleLabel)
+import(List<SimpleLabel>)
+import(StringTool)
+
+dllref(Kernel32,str) GetModuleHandleA int
+dllref(User32,WNDCLASSA) RegisterClassA int
+dllref(User32,int,int,int,int) DefWindowProcA int
+dllref(User32,int,str,str,int,int,int,int,int,int,int,int,int) CreateWindowExA int
+dllref(User32,MSG,int,int,int) GetMessageA bool
+dllref(User32,MSG) TranslateMessage void
+dllref(User32,MSG) DispatchMessageA void
+dllref(User32,int,PAINTSTRUCT) BeginPaint int
+dllref(User32,int,RECT,int) FillRect int
+dllref(User32,int,PAINTSTRUCT) EndPaint int
+dllref(User32,int) GetSysColorBrush int
+dllref(User32,int,RECT) GetClientRect bool
+dllref(Gdi32,int,int,int,str,int) TextOutA bool
+dllref(User32,int) PostQuitMessage void
+
+WNDCLASSA wndClassA
+MSG msg
+str className becomes "SunsetClass"
+int WM_DESTROY becomes 2
+int COLOR_WINDOW becomes 5
+int WM_PAINT becomes 15
+int WM_NCCREATE becomes 129
+int ETO_CLIPPED becomes 4
+int windowHandle
+int brushHandle becomes GetSysColorBrush(COLOR_WINDOW)
+StringTool st becomes new(StringTool)
+List<SimpleLabel> simpleLabels becomes new(List<SimpleLabel>)
+int w ;Width
+int h ;Height
+int x ;X
+int y ;Y
+str title ;Form title
+func(int hwnd,int uMsg,int wParam,int lParam) wndProc int {
+	
+	if (uMsg,=,WM_NCCREATE) {
+; On Initialize
+;		if (initPtr,=/=,0) {
+;			callptr(initPtr,this)
+;			initPtr becomes 0
+;		}
+	}
+	
+	if (uMsg,=,WM_PAINT) {
+; On Paint
+		
+		PAINTSTRUCT pstrc becomes new(PAINTSTRUCT)
+		RECT rc becomes new(RECT)
+		int hdc becomes BeginPaint(hwnd,pstrc)
+		GetClientRect(hwnd,rc)
+		int maxBottom becomes rc.bottom
+		FillRect(hdc,rc,brushHandle)
+		foreach (lbl,simpleLabels.toArray) {
+			
+			TextOutA(hdc,lbl.x,lbl.y,lbl.text,st.lengthOf(lbl.text))
+			
+		}
+		EndPaint(hwnd,pstrc)
+		retn(null)
+		
+	}
+	
+	if (uMsg,=,WM_DESTROY) {
+; On Closed
+		
+		PostQuitMessage(null)
+		retn(null)
+		
+	}
+	
+	retn(DefWindowProcA(hwnd,uMsg,wParam,lParam))
+	
+}
+
+func(SimpleLabel lbl) addComponent {
+	
+	simpleLabels.add(lbl)
+	
+}
+
+constructor(str formTitle,int X,int Y,int width,int height) {
+	
+	wndClassA becomes new(WNDCLASSA)
+	wndClassA.hInstance becomes GetModuleHandleA(null)
+	wndClassA.lpfnWndProc becomes $wndProc
+	wndClassA.lpszClassName becomes className
+	RegisterClassA(wndClassA)
+	x becomes X
+	y becomes Y
+	w becomes width
+	h becomes height
+	title becomes formTitle
+	
+}
+
+func show {
+	
+	windowHandle becomes CreateWindowExA(null,className,title,273154048,x,y,w,h,null,null,wndClassA.hInstance,null)
+	msg becomes new(MSG)
+	while (GetMessageA(msg,null,null,null)) {
+		
+		TranslateMessage(msg)
+		DispatchMessageA(msg)
+		
+	}
+
+}

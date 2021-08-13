@@ -18,6 +18,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		
 		public override KeywordResult execute (Parser sender,String[]@params) {
 			
+			Keyword.throwIfShouldBeHeader(sender,constName);
+			
 			sender.gui=!sender.gui;
 			sender.toggledGui=true;
 			return base.execute(sender,@params);

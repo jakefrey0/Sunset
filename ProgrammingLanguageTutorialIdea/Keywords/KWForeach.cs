@@ -32,9 +32,11 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				throw new ParsingError("Invalid foreach iteration variable name \""+varName+"\" (should be alphanumeric)");
 			// EBX can be preserved throughout the whole loop so it doesn't have to constantly run pushValue instructions
 			// (but it doesn't happen here, it is an optimization idea)
+			sender.addByte(0x51);//PUSH ECX
 			Tuple<String,VarType>vt=sender.pushValue(arrName);
+			sender.addByte(0x5B);//POP EBX
+			sender.addByte(0x59);//POP ECX
 			if (vt.Item2==VarType.NATIVE_ARRAY) {
-				sender.addByte(0x5B);//POP EBX
 				sender.addBytes(new Byte[]{0x3B,0x0B}); //CMP ECX,[EBX]
 				foreachBlock.blockMemPositions.Add(sender.getOpcodesCount()+2);
 				sender.addBytes(new Byte[]{0x0F,0x84,0,0,0,0});//JZ
@@ -72,7 +74,6 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				return base.execute(sender,@params);
 			}
 			if (vt.Item2==VarType.NATIVE_VARIABLE&&vt.Item1==KWString.constName) {
-				sender.addByte(0x5B);//POP EBX
 				sender.addBytes(new Byte[]{0x80,0x3C,0x19,0}); //CMP BYTE [ECX+EBX],0
 				foreachBlock.blockMemPositions.Add(sender.getOpcodesCount()+2);
 				sender.addBytes(new Byte[]{0x0F,0x84,0,0,0,0});//JZ
@@ -91,7 +92,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				return base.execute(sender,@params);
 			}
 			else
-				throw new ParsingError("Expected var of type array or string, got \""+arrName+'"');
+				throw new ParsingError("Expected var of type array or string, got \""+arrName+"\" of type \""+vt.Item1+" (\""+vt.Item2.ToString()+"\")");
 			
 		}		
 				

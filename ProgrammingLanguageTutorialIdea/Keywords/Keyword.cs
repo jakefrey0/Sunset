@@ -31,6 +31,13 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			
 		}
 		
+		public static void throwIfShouldBeHeader (Parser sender,String kwName) {
+			
+			if (sender.getOpcodesCount()!=0||sender.getAppendAfterCount()!=0)
+				throw new ParsingError("The \""+kwName+"\" keyword was expected at the header (top, beginning) of your source file");
+			
+		}
+		
 	}
 	
 }

@@ -1,0 +1,48 @@
+dllref(User32,int,str,str,int) MessageBoxA int
+dllref(User32,str,str,int) cdecl:wsprintfA int
+
+int i
+shr s
+byte b
+str buffer becomes "######"
+str format becomes "%d"
+
+int# arr becomes #3
+shr# arr0 becomes #7
+byte# arr1 becomes #65536
+
+func(int num) mboxNum {
+	wsprintfA(buffer,format,num)
+ 	MessageBoxA(0,buffer,"",0) 
+}
+
+; --- lengthof --- ;
+; lengthof: Get the length of an array
+; (For length of Strings, use StringTool.lengthOf)
+; (Alternative way to get length of Strings is to iterate all bytes of string in a foreach. The # of bytes is the length of the string)
+mboxNum(lengthof(arr)) ;3
+mboxNum(lengthof(arr0)) ;7
+mboxNum(lengthof(arr1)) ;65536
+
+; --- sizeof --- ;
+; sizeof: Get the byte size of a variable
+; sizeof: When used on an array, gets the byte size of the array type
+; i.e: sizeof on int arrays will return the byte size of ints (4), sizeof on short arrays will return the byte size of shorts (2)
+mboxNum(sizeof(i)) ;4
+mboxNum(sizeof(s)) ;2
+mboxNum(sizeof(b)) ;1
+mboxNum(sizeof(buffer)) ;4
+mboxNum(sizeof(format)) ;4
+
+mboxNum(sizeof(arr)) ;4
+mboxNum(sizeof(arr0)) ;2
+mboxNum(sizeof(arr1)) ;1
+
+; --- Tsizeof --- ;
+; Tsizeof: Get the byte size of a type of variable
+; Tsizeof: Works for EXPECTED_TYPES var types
+mboxNum(Tsizeof(int)) ;4
+mboxNum(Tsizeof(str)) ;4
+mboxNum(Tsizeof(shr)) ;2
+mboxNum(Tsizeof(byte)) ;1
+mboxNum(Tsizeof(bool)) ;1

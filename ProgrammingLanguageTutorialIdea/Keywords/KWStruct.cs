@@ -18,8 +18,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		
 		public override KeywordResult execute(Parser sender,String[]@params) {
 			
-			if (sender.getOpcodesCount()!=0||sender.getAppendAfterCount()!=0)
-				throw new ParsingError("The \""+constName+"\" keyword was expected at the header (top, beginning) of your source file");
+			Keyword.throwIfShouldBeHeader(sender,constName);
 			
 			sender.@struct=true;
 			sender.style=ArrayStyle.STATIC_MEMORY_BLOCK;

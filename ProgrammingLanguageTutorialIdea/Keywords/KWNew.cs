@@ -91,9 +91,10 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 					if (@params.Length-1!=cl.constructor.Item2.Count)
 						throw new ParsingError("Expected "+cl.constructor.Item2.Count.ToString()+" parameters for the constructor of \""+cl.className+"\", but got "+(@params.Length-1).ToString());
 					Byte i=0;
+					cl.constructor.Item2.Reverse();
 					if (@params.Length!=1) {
-						foreach (String s in @params.Skip(1)) {
-							sender.pushValue(s);
+						foreach (String s in @params.Skip(1).Reverse()) {
+							sender.tryConvertVars(cl.constructor.Item2[i/4],sender.pushValue(s));
 							i+=4;
 						}
 					}

@@ -24,18 +24,42 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			if (@params.Length!=1)
 				throw new ParsingError("Invalid param count for native call \""+KWImport.constName+"\" (expected 1)");
 			
-			if (!(File.Exists(@params[0]))) {
+			String fp=@params[0];
+			List<Tuple<String,Tuple<String,VarType>>>passedTypes=null;
+			String passingTypesUnparsed=null;
+			Int32 startsPassingTypesNo=fp.Where(x=>sender.startsPassingTypes(x)).Count();
+			List<String>classWords=new List<String>();
+			if (startsPassingTypesNo!=0&&startsPassingTypesNo==fp.Where(x=>sender.endsPassingTypes(x)).Count()) {
 				
-				@params[0]+=".sunset";
-				if (!(File.Exists(@params[0])))
-					throw new ParsingError("Invalid param for \""+constName+"\", should be a valid filepath!");
+				Int32 sptIndex=fp.IndexOf('<')+1;
+				passingTypesUnparsed=fp.Substring(sptIndex,fp.LastIndexOf('>')-sptIndex);
+				fp=fp.Split('<')[0];
+				passedTypes=new List<Tuple<String,Tuple<String,VarType>>>();
+				foreach (String s in passingTypesUnparsed.Split(',')) {
+					Tuple<String,VarType>vt=sender.getVarType(s);
+					passedTypes.Add(new Tuple<String,Tuple<String,VarType>>(null,vt));
+					if (vt.Item2==VarType.CLASS)
+						classWords.Add(vt.Item1);
+				}
 				
 			}
 			
+			if (!(File.Exists(fp))) {
+				
+				fp+=".sunset";
+				if (!(File.Exists(fp)))
+					throw new ParsingError("Invalid param for \""+constName+"\", should be a valid filepath! (Got \""+fp+"\")");
+				
+			}
+			
+			String className=fp.Split('.')[0].Split(new Char[]{'\\','/'}).Last();
 			Int32 initialAppendAfterCount=sender.getAppendAfterCount();
 			UInt32 startMemAddr=(UInt32)(sender.memAddress+initialAppendAfterCount);
-			Parser childParser=new Parser("Child parser",false,true,true,false,false){addEsiToLocalAddresses=true,gui=sender.gui};
-			Byte[]data=childParser.parse(File.ReadAllText(@params[0]));
+			Parser childParser=new Parser("Child parser",false,true,true,false,false){addEsiToLocalAddresses=true,gui=sender.gui,className=className};
+			childParser.keywordMgr.classWords=classWords;
+			if (passedTypes!=null)
+				childParser.passedVarTypes=passedTypes;
+			Byte[]data=childParser.parse(File.ReadAllText(fp));
 			if (childParser.toggledGui)
 				sender.gui=childParser.gui;
 			if (!sender.@struct)
@@ -47,7 +71,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 					sender.winApp=true;
 				
 				else
-					throw new ParsingError("An import referenced a DLL, which are compatible with only Windows apps ("+@params[0]+")");
+					throw new ParsingError("An import referenced a DLL, which are compatible with only Windows apps ("+fp+")");
 				
 			}
 			
@@ -86,7 +110,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			
 			sender.keywordMgr.classWords.AddRange(childParser.keywordMgr.classWords);
 			
-			String className=@params[0].Split('.')[0].Split(new Char[]{'\\','/'}).Last();
+			if (!String.IsNullOrEmpty(passingTypesUnparsed))
+				className+='<'+passingTypesUnparsed+'>';
 			className=className.Contains("\\")?className.Split('\\').Last():className;
 			if (sender.importedClasses.Select(x=>x.className).Contains(className))
 				throw new ParsingError("Class (with same name) already imported: \""+className+'"');

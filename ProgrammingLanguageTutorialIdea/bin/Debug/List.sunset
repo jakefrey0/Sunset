@@ -1,0 +1,34 @@
+EXPECTED_TYPES(T)
+dllref(Kernel32,int,int,T#) HeapFree bool
+dllref(Kernel32,int) SetLastError void
+
+T# innerList becomes #0
+int length becomes 0
+
+func(T item) add {
+	
+	T# newArr becomes #length+1
+	int i becomes 0
+	while (i,=/=,length) { 
+		newArr[i] becomes innerList[i] 
+		++i 
+	}
+	newArr[length] becomes item
+	; Note, GetProcessHeap stores the process heap after it is retrieved for the first time (so re calling it isn't detrimental)
+	HeapFree(getProcessHeap,null,innerList)
+	innerList becomes newArr
+	
+	++length
+	
+}
+
+func(int index) get T {	
+	
+	; ERROR_NO_MATCH
+	if (index,>=,length) { SetLastError(1169) }
+	retn(innerList[index]) 
+	
+}
+
+; Note: this will be referenced to the List (any updates on the array will update the list)
+func toArray T# { retn(innerList) }

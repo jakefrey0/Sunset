@@ -7,6 +7,7 @@
  * To change this template use Tools | Options | Coding | Edit Standard Headers.
  */
 using System;
+using System.Linq;
 
 namespace ProgrammingLanguageTutorialIdea.Keywords {
 	
@@ -57,22 +58,41 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				//TODO:: make this work for more than native variables & local variables (in whole file, but even here it can be for more than these, it can work for classes etc.)
 				//HACK:: check variable type
 				if (varType==KWByte.constName) {
-					
+					if (sender.addEsiToLocalAddresses) {
+						
+						newOpcodes=new Byte[]{0xFE,0x86}.Concat(BitConverter.GetBytes(sender.appendAfterIndex[sender.lastReferencedVariable])).ToArray();//INC BYTE[PTR+ESI]
+						
+					}
 					sender.variableReferences[sender.lastReferencedVariable].Add(sender.getOpcodesCount()+2);
 					newOpcodes=new Byte[]{0xFE,5,0,0,0,0};
 					
 				}
 				else if (varType==KWShort.constName) {
-					
-					sender.variableReferences[sender.lastReferencedVariable].Add(sender.getOpcodesCount()+3);
-					newOpcodes=new Byte[]{0x66,0xFF,5,0,0,0,0};
+					if (sender.addEsiToLocalAddresses) {
+						
+						newOpcodes=new Byte[]{0x66,0xFF,0x86}.Concat(BitConverter.GetBytes(sender.appendAfterIndex[sender.lastReferencedVariable])).ToArray();//INC WORD[PTR+ESI]
+						
+					}
+					else {
+						sender.variableReferences[sender.lastReferencedVariable].Add(sender.getOpcodesCount()+3);
+						newOpcodes=new Byte[]{0x66,0xFF,5,0,0,0,0};
+					}
 					
 					
 				}
 				else if (varType==KWInteger.constName) {
 					
-					sender.variableReferences[sender.lastReferencedVariable].Add(sender.getOpcodesCount()+2);
-					newOpcodes=new Byte[]{0xFF,5,0,0,0,0};
+					if (sender.addEsiToLocalAddresses) {
+						
+						newOpcodes=new Byte[]{0xFF,0x86}.Concat(BitConverter.GetBytes(sender.appendAfterIndex[sender.lastReferencedVariable])).ToArray();//INC DWORD[PTR+ESI]
+						
+					}
+					else {
+						
+						sender.variableReferences[sender.lastReferencedVariable].Add(sender.getOpcodesCount()+2);
+						newOpcodes=new Byte[]{0xFF,5,0,0,0,0}; //INC DWORD [PTR]
+						
+					}
 					
 					
 				}

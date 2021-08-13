@@ -61,7 +61,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				if (sender.functions.Last().Value.Item2==null)
 					throw new ParsingError("Did not expect return value");
 				
-				if (sender.functions.Last().Value.Item2.Item2==VarType.NATIVE_VARIABLE&&retType.Item1!=KWString.constName&&sender.keywordMgr.getVarTypeByteSize(sender.functions.Last().Value.Item2.Item1)>=sender.keywordMgr.getVarTypeByteSize(retType.Item1))
+				if ((sender.functions.Last().Value.Item2.Item2==VarType.NATIVE_VARIABLE&&retType.Item1!=KWString.constName)||sender.keywordMgr.getVarTypeByteSize(sender.functions.Last().Value.Item2.Item1)>=sender.keywordMgr.getVarTypeByteSize(retType.Item1))
 					goto skipCheck;
 				
 				if (!sender.functions.Last().Value.Item2.Equals(retType))

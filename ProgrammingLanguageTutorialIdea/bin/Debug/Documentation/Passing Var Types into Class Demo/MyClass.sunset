@@ -1,0 +1,23 @@
+EXPECTED_TYPES(T,T0)
+import(Documentation\Passing Var Types into Class Demo\OtherClass)
+
+T oc becomes new(OtherClass) ; T == OtherClass in this example (See ./source.txt)
+T0# nums becomes #3 ; T0 == int in this example (See ./source.txt)
+
+nums[0] becomes 1
+nums[1] becomes 2
+nums[2] becomes 3
+
+func test T {
+	
+	OtherClass oc0 becomes new(OtherClass)
+	retn(oc0)
+	
+}
+
+func test0 OtherClass {
+	
+	T oc0 becomes new(OtherClass)
+	retn(oc0)
+	
+}

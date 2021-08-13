@@ -1,0 +1,4 @@
+dllref(User32,int,str,str,int) MessageBoxA int
+MessageBoxA(0,"Hello (OtherClass reached)","",0)
+
+func test { MessageBoxA(0,"Test","From OtherClass",0) }

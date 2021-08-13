@@ -45,7 +45,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			if (!(File.Exists(args[0])))
 				Program.exitWithError("Invalid filepath: \""+args[0]+'"',2);
 			
-			Parser psr=new Parser("Main parser");
+			Parser psr=new Parser("Main parser"){className=args[0].Split('.')[0].Split(new Char[]{'\\','/'}).Last()};
 			
 			String outputFilename=args[0].Contains('.')?args[0].Split('\\').Last().Split('/').Last().Split('.').First()+".exe":"output.exe",sourceFilename=args[0];
 

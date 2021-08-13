@@ -1,0 +1,14 @@
+import(Windows\Form)
+import(Windows\SimpleLabel)
+Form form becomes new(Form,"My Form",100,100,400,360)
+SimpleLabel lbl becomes new(SimpleLabel)
+lbl.text becomes "Yo"
+lbl.x becomes 10
+lbl.y becomes 10
+form.addComponent(lbl)
+SimpleLabel lbl0 becomes new(SimpleLabel)
+lbl0.text becomes "My name joe"
+lbl0.x becomes 10
+lbl0.y becomes 200
+form.addComponent(lbl0)
+form.show
