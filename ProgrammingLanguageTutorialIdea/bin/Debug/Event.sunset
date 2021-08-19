@@ -7,7 +7,7 @@ func(int ptr) addFunction { pointers.add(ptr) }
 
 func(EvtArgs args) raise { 
 	
-	foreach(ptr,pointers) {
+	foreach(ptr,pointers.toArray) {
 		
 		callptr(ptr,args)
 		

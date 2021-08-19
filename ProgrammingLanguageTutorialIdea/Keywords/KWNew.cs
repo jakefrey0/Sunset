@@ -36,7 +36,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			
 			Class cl=sender.importedClasses.Where(x=>x.className==@params[0]).First();
 			
-			sender.pushValue((cl.byteSize).ToString());
+			sender.pushValue((cl.bytesToReserve+cl.classAppendAfterCount).ToString());
 			sender.addBytes(new Byte[]{0x6A,8}); //PUSH 8
 			if (setProcessHeapVar)
 				sender.addByte(0x50); //PUSH EAX
@@ -87,6 +87,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				sender.addBytes(new Byte[]{0x83,0xC4,4});//ADD ESP,4
 				sender.pseudoStack.pop();
 				if (cl.constructor!=null) {
+					
+					sender.addBytes(new Byte[]{0x8B,0x74,0x24,4});//MOV ESI,[ESP+4] (restore ESI to original class value)
 					
 					if (@params.Length-1!=cl.constructor.Item2.Count)
 						throw new ParsingError("Expected "+cl.constructor.Item2.Count.ToString()+" parameters for the constructor of \""+cl.className+"\", but got "+(@params.Length-1).ToString());

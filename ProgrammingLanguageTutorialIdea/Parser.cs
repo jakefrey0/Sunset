@@ -51,6 +51,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal Dictionary<Block,UInt32> blocks;//block,end of block mem address
 		internal Dictionary<Block,UInt16> blockBracketBalances;//block,bracket balance
 		internal Dictionary<Block,UInt16> blockVariablesCount;//Block,# Of Variables Defined
+		internal Dictionary<Block,List<Block>> blocksClosed;//Block,Blocks that were closed inside that block
 		internal Dictionary<Block,List<Tuple<UInt32,Int16>>> blockAddrBeforeAppendingReferences;//Block,(Opcode index to place the mem address of end of block before extra opcodes are appended,Mem Addr Offset)
 		internal Dictionary<Block,UInt32> enterPositions; //Block,Position in opcodes of the parameters (total 3 bytes) for ENTER 0,0
 		//Any references of a local var outside of its home block should have its EBP increased by +4 per new local variable created afterwards in a lower nested block
@@ -118,7 +119,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		/// Only set if addEsiToLocalAddresses is true
 		/// LEA [ESI-esiOffsetFromStart] = Start of Opcodes Mem Address
 		/// </summary>
-		internal UInt32 esiOffsetFromStart=0;
+		internal UInt32 esiOffsetFromStart=0,compiledBytesFinalNo;
 		internal Dictionary<String,UInt32> appendAfterIndex=new Dictionary<String,UInt32>();
 		internal List<String>lastReferencedClassInstance=new List<String>();
 		internal Char nextChar {
@@ -204,6 +205,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			staticClassReferences=new Dictionary<Class,List<UInt32>>();
 			defineTimeOrder=new List<String>();
 			pvClassInstanceOrigin=new List<String>();
+			blocksClosed=new Dictionary<Block,List<Block>>();
 			
 			Console.WriteLine("Parser \""+parserName+"\" skipHdr:"+skipHdr.ToString());
 			
@@ -642,17 +644,19 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 				if (!(skipHdr)) {
 					
+					UInt32 importSectVirtualSize=0;
+					
 					if (writeImportSection) {
 					
 						if (this.toImport.Count>0)
-							importOpcodes=this.getImportSection(out funcMemAddrs);
+							importOpcodes=this.getImportSection(out funcMemAddrs,out importSectVirtualSize);
 						
 						if (funcMemAddrs!=null)
 							this.fillFuncMemAddrs(funcMemAddrs);
 					
 					}
 					
-					PEHeader hdr=PEHeaderFactory.newHdr(opcodes,importOpcodes,memAddress,-this.appendAfter.Count,this.gui);
+					PEHeader hdr=PEHeaderFactory.newHdr(opcodes,importOpcodes,memAddress,-this.appendAfter.Count,importSectVirtualSize,this.gui);
 					
 					finalBytes.AddRange(hdr.toBytes());
 					
@@ -673,6 +677,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				finalBytes.AddRange(importOpcodes);
 			}
 			
+			compiledBytesFinalNo=(UInt32)finalBytes.Count;
 			return finalBytes.ToArray();
 			
 		}
@@ -1094,8 +1099,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.pseudoStack.push(new LocalVar(varName));
 				this.getCurrentBlock().localVariables.Add(varName,new Tuple<Tuple<String,VarType>>(new Tuple<String,VarType>(this.varType,VarType.NATIVE_VARIABLE)));
 				this.lastReferencedVariableIsLocal=true;
-				foreach (UInt32 index in this.localVarEBPPositionsToOffset.Where(x=>x.Key.nestedLevel>this.getCurrentBlock().nestedLevel).SelectMany(x=>x.Value))
-					this.offsetEBP(4,index);
+				this.offsetEBPs(4);
 			}
 			this.lastReferencedVariable=varName;
 			status=ParsingStatus.SEARCHING_NAME;
@@ -1472,7 +1476,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			}
 			else if (this.referencedVarType==VarType.CLASS&&this.referencedVariableIsFromClass) {
 				
-				this.moveClassOriginItemAddrIntoEax(this.lastReferencedClassInstance,this.referencedVariable,this.referencedVarType,lastReferencedVariableIsLocal);
+				this.moveClassOriginItemAddrIntoEax(this.lastReferencedClassInstance,this.referencedVariable,this.referencedVarType,referencedVariableIsLocal);
 				
 				this.addByte(0x50);//PUSH EAX
 				Tuple<String,VarType> tpl=this.pushValue(value);
@@ -1712,8 +1716,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.pseudoStack.push(new LocalVar(arrayName));
 				this.getCurrentBlock().localVariables.Add(arrayName,new Tuple<Tuple<String,VarType>>(new Tuple<String,VarType>(this.varType,VarType.NATIVE_ARRAY)));
 				this.lastReferencedVariableIsLocal=true;
-				foreach (UInt32 index in this.localVarEBPPositionsToOffset.Where(x=>x.Key.nestedLevel>this.getCurrentBlock().nestedLevel).SelectMany(x=>x.Value))
-					this.offsetEBP(4,index);
+				this.offsetEBPs(4);
 			}
 			
 			this.lastReferencedVariable=arrayName;
@@ -1722,7 +1725,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		
-		private List<Byte> getImportSection (out List<Tuple<String,UInt32>>funcMemAddrs) {
+		private List<Byte> getImportSection (out List<Tuple<String,UInt32>>funcMemAddrs,out UInt32 virtualSize) {
 			
 			List<Tuple<String,UInt32>> RVAnames    =new List<Tuple<String,UInt32>>(),//dll,pos
 									   RVAtables   =new List<Tuple<String,UInt32>>(),//dll,pos
@@ -1801,6 +1804,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 			}
 			
+			virtualSize=(UInt32)(opcodes.Count);
 			while (opcodes.Count%512!=0)
 				opcodes.Add(0x00);
 			
@@ -1823,7 +1827,8 @@ namespace ProgrammingLanguageTutorialIdea {
 					while (i!=4) {
 						
 						Console.WriteLine("Total opcodes: "+this.opcodes.Count.ToString()+", Writing at: "+(pos+i).ToString());
-						this.opcodes[(Int32)(pos+i)]=memAdd[i];
+						try { this.opcodes[(Int32)(pos+i)]=memAdd[i]; }
+						catch (Exception) { /* this.debugLine(funcMemAddr.Item1); */ }
 						
 						++i;
 						
@@ -2540,8 +2545,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 				Block localVarHomeBlock=this.getLocalVarHomeBlock(value);
 				
-				if (localVarHomeBlock!=this.getCurrentBlock())
-					this.localVarEBPPositionsToOffset[this.getCurrentBlock()].Add((UInt32)(this.opcodes.Count+2));
+				this.refEbp(localVarHomeBlock,2);
 				if (gettingAddr) {
 					this.addBytes(new Byte[]{0x8D,0x45,pseudoStack.getVarEbpOffset(value)}); //LEA EAX,[EBP+-OFFSET]
 					this.addByte(0x50); //PUSH EAX
@@ -2675,7 +2679,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				if (this.isALocalVar(first)) {
 				
 					if (this.getLocalVarHomeBlock(first)!=this.getCurrentBlock())
-						this.localVarEBPPositionsToOffset[this.getCurrentBlock()].Add((UInt32)(this.opcodes.Count+2));
+						this.refEbp(this.getLocalVarHomeBlock(first),2);
 					this.addBytes(new Byte[]{0x8B,0x45,this.pseudoStack.getVarEbpOffset(first)}); //MOV [EBP+-OFFSET],EAX
 					
 				}
@@ -2906,10 +2910,13 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal void addBlock (Block block,Byte setExpectsBlock=1) {
 			
 			block.nestedLevel=this.nestedLevel;
+			if (this.blocks.Count!=0)
+				this.blocks.Keys.Last().addChild(block);
 			this.blocks.Add(block,0);
 			this.blockBracketBalances.Add(block,0);
 			this.blockVariablesCount.Add(block,0);
 			this.blockAddrBeforeAppendingReferences.Add(block,new List<Tuple<UInt32,Int16>>());
+			this.blocksClosed.Add(block,new List<Block>());
 			this.localVarEBPPositionsToOffset.Add(block,new List<UInt32>());
 			this.setExpectsBlock=setExpectsBlock;
 			//NOTE:: first param to ENTER is a word(short), second one is a byte
@@ -2994,12 +3001,18 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			Console.WriteLine("blockBracketBalances ct: "+blockBracketBalances.Count.ToString());
 			this.blocks.Remove(block);
+			if (this.blocks.Count!=0) {
+				Block parentBlock=this.blocks.Last().Key;
+				this.blocksClosed[parentBlock].Add(block);
+				this.blocksClosed[parentBlock].AddRange(this.blocksClosed[block]);
+			}
 			this.blockBracketBalances.Remove(block);
 			Byte[]varCt=BitConverter.GetBytes((UInt16)(this.blockVariablesCount[block]*4));
 			this.opcodes[(Int32)this.enterPositions[block]]=varCt[0];
 			this.opcodes[(Int32)this.enterPositions[block]+1]=varCt[1];
 			this.blockVariablesCount.Remove(block);
 			this.enterPositions.Remove(block);
+			this.blocksClosed.Remove(block);
 			foreach (String str in this.setArrayValueFuncPtrs.Keys.ToArray().Where(x=>block.restoreArraySetValueFuncs.Contains(x)))
 				this.setArrayValueFuncPtrs.Remove(str);
 			if (this.blocks.Count==0)
@@ -3316,8 +3329,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.pseudoStack.push(new LocalVar(varName));
 				this.getCurrentBlock().localVariables.Add(varName,new Tuple<Tuple<String,VarType>>(new Tuple<String,VarType>(this.varType,VarType.CLASS)));
 				this.lastReferencedVariableIsLocal=true;
-				foreach (UInt32 index in this.localVarEBPPositionsToOffset.Where(x=>x.Key.nestedLevel>this.getCurrentBlock().nestedLevel).SelectMany(x=>x.Value))
-					this.offsetEBP(4,index);
+				this.offsetEBPs(4);
 			}
 			this.lastReferencedVariable=varName;
 			status=ParsingStatus.SEARCHING_NAME;
@@ -4003,8 +4015,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			else {
 				
 				Block localVarHomeBlock=this.getLocalVarHomeBlock(classInstance);
-				if (localVarHomeBlock!=this.getCurrentBlock())
-					this.localVarEBPPositionsToOffset[this.getCurrentBlock()].Add((UInt32)(this.opcodes.Count+2));
+				this.refEbp(localVarHomeBlock,2);
 				this.addBytes(new Byte[]{0x8B,0x45,this.pseudoStack.getVarEbpOffset(classInstance)}); //MOV [EBP+-OFFSET],EAX
 				
 			}
@@ -4091,7 +4102,6 @@ namespace ProgrammingLanguageTutorialIdea {
 				restoreEsiFuncAddr=memAddress;
 				this.addBytes(new Byte[]{0x8D,0x35,0,0,0,0});//LEA ESI,[PTR]
 				this.addByte(0xC3);//RETN
-				
 			}
 			
 		}
@@ -4292,6 +4302,20 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 			}
 			return @params;
+			
+		}
+		
+		private void refEbp (Block localVarHomeBlock,UInt32 offset) {
+			
+			if (localVarHomeBlock!=this.getCurrentBlock())
+				this.localVarEBPPositionsToOffset[this.getCurrentBlock()].Add((UInt32)(this.opcodes.Count+offset));
+			
+		}
+		
+		private void offsetEBPs (SByte offset) {
+			
+			foreach (UInt32 index in this.localVarEBPPositionsToOffset.Where(x=>this.getCurrentBlock().hasChild(x.Key)).SelectMany(x=>x.Value))
+					this.offsetEBP(4,index);
 			
 		}
 		

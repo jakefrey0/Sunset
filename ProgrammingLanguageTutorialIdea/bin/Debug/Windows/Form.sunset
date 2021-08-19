@@ -6,9 +6,17 @@ import(Windows/POINT)
 import(Windows/RECT)
 import(Windows/WNDCLASSA)
 import(Windows/SimpleLabel)
+import(Windows/FormEventArgs)
 import(List<SimpleLabel>)
 import(StringTool)
-import(Event<Form>)
+import(Event<FormEventArgs>)
+import(Windows/TimerEventArgs)
+import(Event<TimerEventArgs>)
+import(Windows/FormTimer)
+import(List<FormTimer>)
+import(List<RECT>)
+import(Windows/KeyEventArgs)
+import(Event<KeyEventArgs>)
 
 dllref(Kernel32,str) GetModuleHandleA int
 dllref(User32,WNDCLASSA) RegisterClassA int
@@ -24,6 +32,9 @@ dllref(User32,int) GetSysColorBrush int
 dllref(User32,int,RECT) GetClientRect bool
 dllref(Gdi32,int,int,int,str,int) TextOutA bool
 dllref(User32,int) PostQuitMessage void
+dllref(User32,int,str,str,int) MessageBoxA int
+dllref(User32,int,int,int,int) SetTimer int
+dllref(User32,int,RECT,int,int) RedrawWindow bool
 
 WNDCLASSA wndClassA
 MSG msg
@@ -33,23 +44,36 @@ int COLOR_WINDOW becomes 5
 int WM_PAINT becomes 15
 int WM_NCCREATE becomes 129
 int ETO_CLIPPED becomes 4
+int WM_TIMER becomes 275
+int COLOR_WINDOWTEXT becomes 8
+int RDW_INVALIDATE becomes 1
+int WM_KEYDOWN becomes 256
+int WM_KEYUP becomes 257
 int windowHandle
 int brushHandle becomes GetSysColorBrush(COLOR_WINDOW)
+int contentsHandle becomes GetSysColorBrush(COLOR_WINDOWTEXT)
 StringTool st becomes new(StringTool)
 List<SimpleLabel> simpleLabels becomes new(List<SimpleLabel>)
+List<FormTimer> timers becomes new(List<FormTimer>)
+List<RECT> rectangles becomes new(List<RECT>)
 int w ;Width
 int h ;Height
 int x ;X
 int y ;Y
 str title ;Form title
+Event<FormEventArgs> onFormClosing becomes new(Event<FormEventArgs>)
+Event<FormEventArgs> onFormCreation becomes new(Event<FormEventArgs>)
+Event<TimerEventArgs> onTimerTick becomes new(Event<TimerEventArgs>)
+Event<KeyEventArgs> onKeyDown becomes new(Event<KeyEventArgs>)
+Event<KeyEventArgs> onKeyUp becomes new(Event<KeyEventArgs>)
+int cTimerId becomes 1
 func(int hwnd,int uMsg,int wParam,int lParam) wndProc int {
 	
 	if (uMsg,=,WM_NCCREATE) {
-; On Initialize
-;		if (initPtr,=/=,0) {
-;			callptr(initPtr,this)
-;			initPtr becomes 0
-;		}
+		if (windowHandle,=,0) { windowHandle becomes hwnd }
+		FormEventArgs args becomes new(FormEventArgs)
+		args.info becomes "The form is being created"
+		onFormCreation.raise(args)
 	}
 	
 	if (uMsg,=,WM_PAINT) {
@@ -62,9 +86,12 @@ func(int hwnd,int uMsg,int wParam,int lParam) wndProc int {
 		int maxBottom becomes rc.bottom
 		FillRect(hdc,rc,brushHandle)
 		foreach (lbl,simpleLabels.toArray) {
-			
 			TextOutA(hdc,lbl.x,lbl.y,lbl.text,st.lengthOf(lbl.text))
-			
+		}
+		foreach (rct,rectangles.toArray) {
+			; Update this to a new class maybe
+			; FormRectangle, STRUCT with RECT bounds and int brush
+			FillRect(hdc,rct,contentsHandle)
 		}
 		EndPaint(hwnd,pstrc)
 		retn(null)
@@ -73,9 +100,43 @@ func(int hwnd,int uMsg,int wParam,int lParam) wndProc int {
 	
 	if (uMsg,=,WM_DESTROY) {
 ; On Closed
-		
+		FormEventArgs args becomes new(FormEventArgs)
+		args.info becomes "The form is about to be destroyed"
+		onFormClosing.raise(args)
 		PostQuitMessage(null)
 		retn(null)
+		
+	}
+	
+	if (uMsg,=,WM_TIMER) {
+		
+		TimerEventArgs args becomes new(TimerEventArgs)
+		args.formHandle becomes hwnd
+		foreach (timer,timers.toArray) {
+			if (timer.id,=,wParam) {
+				args.sendingTimer becomes timer
+				break
+			}
+		}
+		onTimerTick.raise(args)
+		
+	}
+	
+	if (uMsg,=,WM_KEYDOWN) {
+		
+		KeyEventArgs args becomes new(KeyEventArgs)
+		args.keyCode becomes wParam
+		args.flags becomes lParam
+		onKeyDown.raise(args)
+		
+	}
+	
+	if (uMsg,=,WM_KEYUP) {
+		
+		KeyEventArgs args becomes new(KeyEventArgs)
+		args.keyCode becomes wParam
+		args.flags becomes lParam
+		onKeyUp.raise(args)
 		
 	}
 	
@@ -106,7 +167,7 @@ constructor(str formTitle,int X,int Y,int width,int height) {
 
 func show {
 	
-	windowHandle becomes CreateWindowExA(null,className,title,273154048,x,y,w,h,null,null,wndClassA.hInstance,null)
+	CreateWindowExA(null,className,title,273154048,x,y,w,h,null,null,wndClassA.hInstance,null)
 	msg becomes new(MSG)
 	while (GetMessageA(msg,null,null,null)) {
 		
@@ -115,4 +176,28 @@ func show {
 		
 	}
 
+}
+
+func(int interval_ms) createTimer FormTimer {
+	
+	int id becomes SetTimer(windowHandle,cTimerId,interval_ms,null)
+	FormTimer timer becomes new(FormTimer,id,windowHandle)
+	timers.add(timer)
+	++cTimerId
+	
+}
+
+func(str msg,str m_title) mbox int {
+	
+	retn(MessageBoxA(windowHandle,msg,m_title,0))
+	
+}
+
+func rePaint {
+	
+	RECT region becomes new(RECT)
+	region.right becomes w
+	region.bottom becomes h
+	RedrawWindow(windowHandle,region,null,RDW_INVALIDATE)
+	
 }

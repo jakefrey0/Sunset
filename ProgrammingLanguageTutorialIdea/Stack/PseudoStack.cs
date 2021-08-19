@@ -74,7 +74,7 @@ namespace ProgrammingLanguageTutorialIdea.Stack {
 					case ItemType.LOCAL_VAR:
 						String varName=((LocalVar)stackItem).varName;
 						Byte offset=this.getVarEbpOffset(varName);
-						Console.WriteLine("Item #"+i.ToString()+": Local var \""+varName+"\", list index: "+this.items.IndexOf(stackItem).ToString()+", current EBP offset: "+offset.ToString("X").PadLeft(2,'0')+"h ("+unchecked((SByte)offset).ToString()+')');
+						Console.WriteLine("Item #"+i.ToString()+": Local var \""+varName+"\", list index: "+this.items.IndexOf(stackItem).ToString()+", current EBP offset: "+offset.ToString("X").PadLeft(2,'0')+"h ("+unchecked((SByte)offset).ToString()+".)");
 						break;
 					case ItemType.PRESERVED_EBP:
 						Console.WriteLine("Item #"+i.ToString()+": Preserved EBP ptr, list index: "+this.items.IndexOf(stackItem).ToString());

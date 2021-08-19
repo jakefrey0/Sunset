@@ -1,0 +1,3 @@
+STRUCT
+int keyCode
+int flags

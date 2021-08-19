@@ -1,0 +1,15 @@
+;dllref(User32,int,int) KillTimer bool
+int id
+int hwnd
+constructor(int _id,int hWnd) {
+	
+	id becomes _id
+	hwnd becomes hWnd
+	
+}
+; Return value: whether or not the function was successful
+func destroy bool {
+	
+	;retn(KillTimer(hwnd,id))
+	
+}

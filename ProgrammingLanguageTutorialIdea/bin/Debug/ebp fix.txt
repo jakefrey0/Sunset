@@ -1,0 +1,9 @@
+func(int i) test int {
+	
+	if (true) { retn(i) }
+	int j becomes 23
+	retn(j)
+	
+}
+
+retn(test(46))

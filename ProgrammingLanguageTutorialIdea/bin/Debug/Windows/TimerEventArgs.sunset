@@ -1,0 +1,4 @@
+STRUCT
+import(Windows/FormTimer)
+FormTimer sendingTimer
+int formHandle

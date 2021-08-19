@@ -1,0 +1,24 @@
+dllref(User32,int,str,str,int) MessageBoxA int
+dllref(User32,str,str,int) cdecl:wsprintfA int
+
+str emptyString becomes ""
+
+func(str msg) simpleMbox int { retn(MessageBoxA(0,msg,emptyString,0)) }
+func(int num) mboxNumber int {
+	
+	str buffer becomes "-############"
+	str format becomes "%d"
+	wsprintfA(buffer,format,num)
+	MessageBoxA(0,buffer,emptyString,0)
+	
+}
+func(str msg,str title) mbox int {
+	
+	retn(MessageBoxA(0,msg,title,0))
+	
+}
+func(int handle,str msg,str title,int flags) nativeMbox int {
+	
+	retn(MessageBoxA(handle,msg,title,flags))
+	
+}

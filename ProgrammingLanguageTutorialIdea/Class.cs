@@ -17,7 +17,7 @@ namespace ProgrammingLanguageTutorialIdea {
 	public class Class {
 		
 		public readonly String className;
-		public readonly UInt32 byteSize,opcodePortionByteSize,initialAppendAfterCount,classAppendAfterCount;
+		public readonly UInt32 byteSize,opcodePortionByteSize,initialAppendAfterCount,classAppendAfterCount,bytesToReserve;
 		public readonly ClassType classType;
 		public UInt32 memAddr;
 		public Dictionary<String,Tuple<UInt32,String>>variables;
@@ -29,6 +29,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		public Class (String className,UInt32 byteSize,ClassType classType,UInt32 memAddr,Parser parserUsed,UInt32 opcodePortionByteSize,UInt32 initialAppendAfterCount,UInt32 classAppendAfterCount) {
 			
+			this.bytesToReserve=parserUsed.compiledBytesFinalNo;
 			this.className=className;
 			this.byteSize=byteSize;
 			this.classType=classType;

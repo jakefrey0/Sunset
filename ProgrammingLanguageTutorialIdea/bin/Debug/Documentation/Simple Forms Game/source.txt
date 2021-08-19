@@ -1,0 +1,72 @@
+import(Windows/Form)
+import(Windows/TimerEventArgs)
+import(Windows/FormEventArgs)
+import(Windows/RECT)
+import(Windows/KeyEventArgs)
+Form form becomes new(Form,"My Form",100,100,400,360)
+RECT player becomes new(RECT)
+player.top becomes 100
+player.bottom becomes 200
+player.left becomes 0
+player.right becomes 100
+int gravity becomes 2
+int groundLevel becomes 334 ; should be divisible by gravity
+int speed becomes 8
+int jumpTicks becomes 0
+int jumpPower becomes gravity*2
+
+func(TimerEventArgs args) formTick {
+	
+	if (jumpTicks,=/=,0) {
+		
+		player.top becomes player.top-jumpPower
+		player.bottom becomes player.bottom-jumpPower
+		--jumpTicks
+		form.rePaint
+		
+	}
+	else {
+		if (player.bottom,=/=,groundLevel) {
+			player.top becomes player.top+gravity
+			player.bottom becomes player.bottom+gravity
+			form.rePaint
+		}
+	}
+	
+	
+}
+
+func(KeyEventArgs args) keyDown {
+	
+	switch(args.keyCode) {
+		
+		case(32): ; SPACE BAR
+			if (player.bottom,=/=,groundLevel) { break }
+			jumpTicks becomes 20
+			break
+		case(37): ; LEFT ARROW KEY
+			player.left becomes player.left-speed
+			player.right becomes player.right-speed
+			form.rePaint
+			break
+		case(39): ; RIGHT ARROW KEY
+			player.left becomes player.left+speed
+			player.right becomes player.right+speed
+			form.rePaint
+			break
+		
+	}
+	
+}
+
+func(FormEventArgs args) init {
+	
+	form.onTimerTick.addFunction($formTick)
+	form.createTimer(13)
+	form.rectangles.add(player)
+	form.onKeyDown.addFunction($keyDown)
+	
+}
+
+form.onFormCreation.addFunction($init)
+form.show

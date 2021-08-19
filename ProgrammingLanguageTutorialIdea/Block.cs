@@ -8,6 +8,7 @@
  */
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ProgrammingLanguageTutorialIdea {
 	
@@ -54,6 +55,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		public Byte[] afterBlockClosedOpcodes;
 		
 		public List<String>restoreArraySetValueFuncs;
+		private List<Block>children;
 		
 		public Block (Action onBlockEnd,UInt32 startMemAddr,Byte[] opcodesToAddOnBlockEnd,Boolean xorEax=false,Boolean addEnterAutomatically=true) {
 			
@@ -66,6 +68,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			this.blockMemPositions=new List<UInt32>();
 			this.blockRVAPositions=new List<Tuple<UInt32,UInt32>>();
 			this.restoreArraySetValueFuncs=new List<String>();
+			this.children=new List<Block>();
 			
 		}
 		
@@ -73,6 +76,16 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			b.pairedBlock=b0;
 			b0.pairedBlock=b;
+			
+		}
+		
+		public void addChild (Block child) { this.children.Add(child); }
+		
+		public Boolean hasChild (Block child) { 
+			
+			if (children.Contains(child))
+				return true;
+			return children.Count>0&&children.Any(x=>x.hasChild(child));
 			
 		}
 		
