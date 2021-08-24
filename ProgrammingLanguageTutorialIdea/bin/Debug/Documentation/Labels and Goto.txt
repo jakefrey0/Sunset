@@ -1,0 +1,31 @@
+; Labels are markers in the file that can be made anywhere outside of blocks
+; and jumped to from anywhere via the goto keyword. They are not directly 
+; accessible outside of the containing file and modifiers do not apply to labels.
+
+; A reason that a label is significant given the correct siutuation,
+; is because instructional code can be written outside of blocks.
+
+; An example:
+
+TOGGLE_GUI
+
+dllref(User32,int,str,str,int) MessageBoxA int
+
+int i becomes 123
+
+~start ; This line defines a label named "start"
+
+if(i,=,0) {
+	
+	; This jumps to the not yet defined "here" label
+	goto(here)	
+	
+}
+
+--i
+
+goto(start) ; Usage of the goto keyword in this manner is similar to that of a loop
+; ^ this goto keyword jumps to the aforementioned start label
+
+~here
+MessageBoxA(0,"Here","",0)

@@ -1,0 +1,32 @@
+﻿<Properties StartupConfiguration="{19D2E25E-77E6-443C-B6EB-2E58499E4104}|Default">
+  <MonoDevelop.Ide.Workbench ActiveDocument="ProgrammingLanguageTutorialIdea/Keywords/KWReturn.cs">
+    <Files>
+      <File FileName="ProgrammingLanguageTutorialIdea/Parser.cs" Line="637" Column="68" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWGoto.cs" Line="19" Column="51" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWBreak.cs" Line="1" Column="1" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWContinue.cs" Line="1" Column="1" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWReturn.cs" Line="1" Column="1" />
+    </Files>
+    <Pads>
+      <Pad Id="ProjectPad">
+        <State name="__root__">
+          <Node name="ProgrammingLanguageTutorialIdea" expanded="True">
+            <Node name="ProgrammingLanguageTutorialIdea" expanded="True">
+              <Node name="Keywords" expanded="True">
+                <Node name="KWReturn.cs" selected="True" />
+              </Node>
+              <Node name="Stack" expanded="True" />
+            </Node>
+          </Node>
+        </State>
+      </Pad>
+    </Pads>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MultiItemStartupConfigurations />
+  <MonoDevelop.Ide.ItemProperties.ProgrammingLanguageTutorialIdea PreferredExecutionTarget="MonoDevelop.Default" />
+</Properties>

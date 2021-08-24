@@ -1,0 +1,3 @@
+import(Documentation/Passing Acknowledgements Demo/MyClass)
+TEST_ACK num becomes 123
+retn(num)

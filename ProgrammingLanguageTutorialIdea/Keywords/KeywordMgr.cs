@@ -16,6 +16,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		private List<Keyword> keywords;
 		public List<String> classWords;
 		public Dictionary<String,String> synonyms;
+        public Dictionary<String,String> acknowledgements;
 		
 		public KeywordMgr () {
 			
@@ -56,12 +57,18 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			                       	new KWGetProcessHeap(),
 			                       	new KWLengthOf(),
 			                       	new KWSizeOf(),
-			                       	new KWTypeSizeOf()
+			                       	new KWTypeSizeOf(),
+                                    new KWAcknowledge(),
+                                    new KWAs(),
+                                    new KWCast(),
+                                    new KWMultiForeach(),
+                                    new KWGoto()
 			                       	
 			                       });
 			
 			this.classWords=new List<String>();
 			this.synonyms=new Dictionary<String,String>();
+            this.acknowledgements=new Dictionary<String,String>();
 			
 		}
 		
@@ -83,6 +90,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				return 4;
 			else if (synonyms.ContainsKey(varType))
 				return getVarTypeByteSize(synonyms[varType]);
+            else if (acknowledgements.ContainsKey(varType))
+                return getVarTypeByteSize(acknowledgements[varType]);
 			else
 				throw new Exception("(DEV) Invalid var type \""+varType+'"');
 			

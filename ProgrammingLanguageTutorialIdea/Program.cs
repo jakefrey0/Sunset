@@ -6,6 +6,7 @@
  * 
  * To change this template use Tools | Options | Coding | Edit Standard Headers.
  */
+
 using System;
 using System.IO;
 using System.Linq;
@@ -45,7 +46,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			if (!(File.Exists(args[0])))
 				Program.exitWithError("Invalid filepath: \""+args[0]+'"',2);
 			
-			Parser psr=new Parser("Main parser"){className=args[0].Split('.')[0].Split(new Char[]{'\\','/'}).Last()};
+			Parser psr=new Parser("Main parser",args[0]){className=args[0].Split('.')[0].Split(new Char[]{'\\','/'}).Last()};
 			
 			String outputFilename=args[0].Contains('.')?args[0].Split('\\').Last().Split('/').Last().Split('.').First()+".exe":"output.exe",sourceFilename=args[0];
 

@@ -11,13 +11,14 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <NoWin32Manifest>False</NoWin32Manifest>
     <SignAssembly>False</SignAssembly>
-    <DelaySign>False</DelaySign>
     <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <NoStdLib>False</NoStdLib>
     <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
     <IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
     <WarningLevel>4</WarningLevel>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Platform)' == 'AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -48,15 +49,12 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Data.DataSetExtensions">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -124,6 +122,11 @@
     <Compile Include="Stack\ReturnPtr.cs" />
     <Compile Include="Stack\SwitchVar.cs" />
     <Compile Include="VarType.cs" />
+    <Compile Include="Keywords\KWAcknowledge.cs" />
+    <Compile Include="Keywords\KWAs.cs" />
+    <Compile Include="Keywords\KWCast.cs" />
+    <Compile Include="Keywords\KWMultiForeach.cs" />
+    <Compile Include="Keywords\KWGoto.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

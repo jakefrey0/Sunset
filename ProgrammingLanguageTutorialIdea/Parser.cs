@@ -16,8 +16,9 @@ using System.Runtime.InteropServices;
 namespace ProgrammingLanguageTutorialIdea {
 	
 	public class Parser {
-		
-		public const String NULL_STR="null",THIS_STR="this";
+
+		public const String NULL_STR="null",THIS_STR="this",PTR_STR="PTR",FUNC_PTR_STR="FUNCPTR";
+        public readonly static Tuple<String,VarType>PTR=new Tuple<String,VarType>(PTR_STR,VarType.NATIVE_VARIABLE),FUNC_PTR=new Tuple<String,VarType>(FUNC_PTR_STR,VarType.NATIVE_VARIABLE);
 		
 		public readonly String parserName;
 		
@@ -26,14 +27,15 @@ namespace ProgrammingLanguageTutorialIdea {
 			private set;
 			get;
 			
-		}
+		} 
+        public readonly String fileName;
 		public Boolean winApp {
 			
 			get;
 			internal set;
 			
 		}
-		public String referencedVariable;
+		public String referencedVariable,rTypeDefinition;
 		public Boolean referencedVariableIsLocal,referencedVariableIsFromClass;
 		
 		internal Boolean lastReferencedVariableIsLocal,lastReferencedVariableIsFromClass;
@@ -127,7 +129,9 @@ namespace ProgrammingLanguageTutorialIdea {
 			private set;
 		}
 		internal List<Tuple<String,Tuple<String,VarType>>>passedVarTypes;
-		
+		internal Dictionary<String,Tuple<String,VarType>>acknowledgements=new Dictionary<String,Tuple<String, VarType>>();
+        internal new Dictionary<String,List<Tuple<UInt32,UInt32>>>labelReferences=new Dictionary<String,List<Tuple<UInt32,UInt32>>>(); // Name of label,(Opcode Index, Mem Address at exact point of Reference before the long jump opcode)
+        
 		private List<Byte> opcodes=new List<Byte>(),importOpcodes=null,finalBytes=new List<Byte>(),appendAfter=new List<Byte>();
 		private ParsingStatus status;
 		private Dictionary<String,Tuple<UInt32,String>> variables=new Dictionary<String,Tuple<UInt32,String>>();//Name,(Mem Address,Var Type)
@@ -135,6 +139,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		private Dictionary<String,Tuple<UInt32,String,Class>> classes=new Dictionary<String,Tuple<UInt32,String,Class>>();//Name,(Ptr To Mem Address of Heap Handle,Class type name,Class type)
 		private List<UInt32>int32sToSubtractByFinalOpcodesCount=new List<UInt32>();
 		private List<String>pvClassInstanceOrigin;
+        private Dictionary<String,UInt32>labels=new Dictionary<String,UInt32>();//Name, Mem Address
 		
 		private List<Tuple<UInt32,List<UInt32>>>stringsAndRefs; //(Mem Addr,List of References by Opcode Index),Note: Currently the Inner list of Opcode Indexes will only have a length of 1 (6/19/2021 5:19PM)
 		private Dictionary<String,UInt32> setArrayValueFuncPtrs;
@@ -150,7 +155,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		private const Char accessorChar='.';
 		private readonly UInt32 startingMemAddr;
 		
-		public Parser (String name,Boolean winApp=true,Boolean setToWinAppIfDllReference=false,Boolean skipHdr=false,Boolean fillToNextPage=true,Boolean writeImportSection=true) {
+		public Parser (String name,String fileName,Boolean winApp=true,Boolean setToWinAppIfDllReference=false,Boolean skipHdr=false,Boolean fillToNextPage=true,Boolean writeImportSection=true) {
 			
 			memAddress=winApp?0x00401000:(UInt32)0;
 			startingMemAddr=memAddress;
@@ -206,6 +211,11 @@ namespace ProgrammingLanguageTutorialIdea {
 			defineTimeOrder=new List<String>();
 			pvClassInstanceOrigin=new List<String>();
 			blocksClosed=new Dictionary<Block,List<Block>>();
+            acknowledgements.Add(PTR_STR,new Tuple<String,VarType>(KWInteger.constName,VarType.NATIVE_VARIABLE));
+            acknowledgements.Add(FUNC_PTR_STR,new Tuple<String,VarType>(KWInteger.constName,VarType.NATIVE_VARIABLE));
+            keywordMgr.acknowledgements.Add(PTR_STR,KWInteger.constName);
+            keywordMgr.acknowledgements.Add(FUNC_PTR_STR,KWInteger.constName);
+            this.fileName=fileName;
 			
 			Console.WriteLine("Parser \""+parserName+"\" skipHdr:"+skipHdr.ToString());
 			
@@ -230,7 +240,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			foreach (Char c in data) {
 				
-				Console.WriteLine(" - Checking:\""+c+"\",ParsingStatus:"+status.ToString()+",blockBracketBalance #no:"+blockBracketBalances.Count.ToString()+",rbbrv:"+rbbrv.ToString()+",attemptingClassAccess:"+attemptingClassAccess.ToString()+",gettingClassItem:"+gettingClassItem.ToString()+",lastReferencedClassInstance:"+merge(lastReferencedClassInstance,"#")+",LRV:"+lastReferencedVariable+",RV:"+referencedVariable);
+				Console.WriteLine(" - Checking:\""+c+"\",ParsingStatus:"+status.ToString()+",blockBracketBalance #no:"+blockBracketBalances.Count.ToString()+",rbbrv:"+rbbrv.ToString()+",attemptingClassAccess:"+attemptingClassAccess.ToString()+",gettingClassItem:"+gettingClassItem.ToString()+",lastReferencedClassInstance:"+merge(lastReferencedClassInstance,"#")+",LRV:"+lastReferencedVariable+",RV:"+referencedVariable+",File Path:"+fileName);
 				
 				if (setExpectsElse>0) {
 					
@@ -248,7 +258,8 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 				switchStart:
 				switch (status) {
-					
+
+                    case ParsingStatus.SEARCHING_TYPE_DEFINITION_NAME:
 					case ParsingStatus.SEARCHING_FUNCTION_NAME:
 					case ParsingStatus.SEARCHING_ARRAY_NAME:
 					case ParsingStatus.SEARCHING_VALUE:
@@ -258,6 +269,8 @@ namespace ProgrammingLanguageTutorialIdea {
 							
 							if (this.indicatesComment(c))
 								status=ParsingStatus.IN_COMMENT;
+                            else if (this.indicatesLabel(c))
+                                status=ParsingStatus.READING_LABEL;
 							else {
 							
 								inDoubleQuotes=c=='"';
@@ -594,6 +607,46 @@ namespace ProgrammingLanguageTutorialIdea {
 							break;
 						}
 						throw new ParsingError("Expected colon, got \""+c+'"');
+
+                    case ParsingStatus.READING_TYPE_DEFINITION_NAME:
+
+                        if (this.isValidNameChar(c))
+                            nameReader.Append(c);
+                        else if (this.isFormOfBlankspace(c)) {
+
+                            status=ParsingStatus.SEARCHING_NAME;
+                            nextExpectedKeywordTypes=new [] { KeywordType.TYPE_DEFINITION_ASSIGNEMENT };
+                            rTypeDefinition=nameReader.ToString();
+                            nameReader.Clear();
+                            if (this.nameExists(rTypeDefinition))
+                                throw new ParsingError("Can't acknowledge \""+rTypeDefinition+"\", name is in use");
+
+                        }
+                        else
+                            throw new ParsingError("Got invalid character '"+c+"' while reading name \""+nameReader.ToString()+"\": \""+c+'"');
+
+
+                        break;
+                    case ParsingStatus.READING_LABEL:
+
+                        if (this.isValidNameChar(c))
+                            nameReader.Append(c);
+                        else if (this.isFormOfBlankspace(c)) {
+
+                            status=ParsingStatus.SEARCHING_NAME;
+                            String labelName=nameReader.ToString();
+                            nameReader.Clear();
+                            if (this.nameExists(labelName))
+                                throw new ParsingError("Can't define label \""+labelName+"\", name is in use");
+                            if (blocks.Count!=0)
+                                throw new ParsingError("Label \""+labelName+"\" cannot be defined because it is in a block");
+                            this.labels.Add(labelName,this.memAddress);
+
+                        }
+                        else
+                            throw new ParsingError("Got invalid character '"+c+"' while reading name \""+nameReader.ToString()+"\": \""+c+'"');
+
+                        break;
 						
 				}
 				
@@ -628,6 +681,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			this.fillHeapFreeReferences();
 			this.fillConstantStringReferences();
 			this.subtractInt32s();
+            this.fillLabelReferences();
 			
 			if ((!(winApp))&&(this.toImport.Count!=0)) {
 				
@@ -845,6 +899,15 @@ namespace ProgrammingLanguageTutorialIdea {
 					this.setExpectsBlock=1;
 					return;
 				}
+                else if (!(String.IsNullOrEmpty(rTypeDefinition))) {
+                    
+                    this.acknowledgements.Add(rTypeDefinition,pvtGet(name));
+                    this.keywordMgr.acknowledgements.Add(rTypeDefinition,pvtGet(name).Item1);
+                    rTypeDefinition=null;
+                    status=ParsingStatus.SEARCHING_NAME;
+                    return;
+
+                }
 				status=ParsingStatus.SEARCHING_VARIABLE_NAME;
 				Tuple<String,VarType>vt=this.pvtGet(name);
 				this.lastReferencedVarType=vt.Item2;
@@ -853,8 +916,34 @@ namespace ProgrammingLanguageTutorialIdea {
 				return;
 				
 			}
-			
-			if (this.containsImportedClass(name)) {
+
+            else if (this.acknowledgements.ContainsKey(name)) {
+                
+                if (wasSearchingFuncReturnType) {
+                    this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>(this.functions.Last().Value.Item1,this.acknowledgements[name],functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5);
+                    status=ParsingStatus.SEARCHING_NAME;
+                    this.setExpectsBlock=1;
+                    return;
+                }
+                else if (!(String.IsNullOrEmpty(rTypeDefinition))) {
+                    
+                    this.acknowledgements.Add(rTypeDefinition,this.acknowledgements[name]);
+                    this.keywordMgr.acknowledgements.Add(rTypeDefinition,this.acknowledgements[name].Item1);
+                    rTypeDefinition=null;
+                    status=ParsingStatus.SEARCHING_NAME;
+                    return;
+
+                }
+                status=ParsingStatus.SEARCHING_VARIABLE_NAME;
+                Tuple<String,VarType>vt=this.acknowledgements[name];
+                this.lastReferencedVarType=vt.Item2;
+                this.varType=name;
+                
+                return;
+                
+            }
+
+            if (this.containsImportedClass(name)) {
 					
 					if (!pKTs.Contains(KeywordType.NONE)&&!pKTs.Contains(KeywordType.TYPE)) {
 						if (pKTs.Length>1) {
@@ -1019,7 +1108,15 @@ namespace ProgrammingLanguageTutorialIdea {
 						status=ParsingStatus.SEARCHING_NAME;
 						this.setExpectsBlock=1;
 					}
-					lastReferencedVariableIsLocal=false;
+                    else if (!(String.IsNullOrEmpty(rTypeDefinition))&&kwt!=typeof(KWAs)) {
+                        
+                        this.acknowledgements.Add(rTypeDefinition,new Tuple<String,VarType>(this.varType,this.lastReferencedVarType));
+                        this.keywordMgr.acknowledgements.Add(rTypeDefinition,this.varType);
+                        rTypeDefinition=null;
+                        status=ParsingStatus.SEARCHING_NAME;
+
+                    }
+                    lastReferencedVariableIsLocal=false;
 					if (kw.type==KeywordType.INCREMENT||kw.type==KeywordType.DECREMENT)
 						this.lastReferencedClassInstance.Clear();
 					return;
@@ -1431,6 +1528,8 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.addByte(0x5A);//POP EDX
 				this.addByte(0x58);//POP EAX
 				//EDX has VALUE, EAX has PTR
+                if (acknowledgements.ContainsKey(type))
+                    type=ackRootOf(type).Item1;
 				
 				if (tpl.Item1==KWBoolean.constName&&type!=KWBoolean.constName)
 					throw new ParsingError("You can only apply \""+KWBoolean.constTrue+"\" and +\""+KWBoolean.constFalse+"\" to boolean variables");
@@ -1511,11 +1610,14 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 			}
 			else {
-				
+
 //				Console.WriteLine("Did not make an array");
 				Tuple<String,VarType> tpl=this.pushValue(value);
-				this.tryConvertVars(new Tuple<String,VarType>(type,this.referencedVarType),tpl);
-				
+                //this.debugLine(referencedVariable+" processValue type result: "+tpl.Item1+" (this may not be the type of \""+referencedVariable+"\")");
+				Console.WriteLine("value: \""+value+"\",type: "+type);
+                this.tryConvertVars(new Tuple<String,VarType>(type,this.referencedVarType),tpl);
+                if (acknowledgements.ContainsKey(type))
+                    type=ackRootOf(type).Item1;
 				if (tpl.Item1==KWBoolean.constName&&type!=KWBoolean.constName)
 					throw new ParsingError("You can only apply \""+KWBoolean.constTrue+"\" and \""+KWBoolean.constFalse+"\" to boolean variables");
 				
@@ -1827,8 +1929,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					while (i!=4) {
 						
 						Console.WriteLine("Total opcodes: "+this.opcodes.Count.ToString()+", Writing at: "+(pos+i).ToString());
-						try { this.opcodes[(Int32)(pos+i)]=memAdd[i]; }
-						catch (Exception) { /* this.debugLine(funcMemAddr.Item1); */ }
+						this.opcodes[(Int32)(pos+i)]=memAdd[i];
 						
 						++i;
 						
@@ -2064,15 +2165,17 @@ namespace ProgrammingLanguageTutorialIdea {
 			foreach (String str in keywordMgr.getKeywords().Select(x=>x.name))
 				if (str==name) return true;
 			
-			return this.arrays.ContainsKey(name) ||
-				this.variables.ContainsKey(name) ||
-				name==KWBoolean.constFalse       ||
-				name==KWBoolean.constTrue        ||
-				this.functions.ContainsKey(name) ||
-				this.isALocalVar(name)           ||
-				name==Parser.NULL_STR            ||
-				this.containsImportedClass(name) ||
-				name==Parser.THIS_STR             ;
+			return this.arrays.ContainsKey(name)        ||
+				this.variables.ContainsKey(name)        ||
+				name==KWBoolean.constFalse              ||
+				name==KWBoolean.constTrue               ||
+				this.functions.ContainsKey(name)        ||
+				this.isALocalVar(name)                  ||
+				name==Parser.NULL_STR                   ||
+				this.containsImportedClass(name)        ||
+                this.acknowledgements.ContainsKey(name) ||
+				name==Parser.THIS_STR                   ||
+                this.labels.ContainsKey(name)            ;
 			
 		}
 		
@@ -2282,7 +2385,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			//HACK:: check var type here
 			
-			Boolean gettingAddr=value.StartsWith("$");
+			Boolean gettingAddr=value.StartsWith("$",StringComparison.CurrentCulture);
 			if (gettingAddr)
 				value=value.Substring(1);
 			
@@ -2392,7 +2495,7 @@ namespace ProgrammingLanguageTutorialIdea {
 						this.variableReferences[value].Add((UInt32)this.opcodes.Count+1);
 						this.addBytes(new Byte[]{0x68,0,0,0,0});
 					}
-					return new Tuple<String,VarType>(KWInteger.constName,VarType.NATIVE_VARIABLE);
+                    return PTR;
 					
 				}
 				
@@ -2444,9 +2547,15 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 				if (gettingAddr) {
 					
-					this.arrayReferences[value].Add((UInt32)this.opcodes.Count+1);
-					this.addBytes(new Byte[]{0x68,0,0,0,0}); //PUSH DWORD
-					return new Tuple<String,VarType>(KWInteger.constName,VarType.NATIVE_VARIABLE);
+                    if (addEsiToLocalAddresses) {
+                        this.addBytes(new Byte[] { 0x8D,0x86}.Concat(BitConverter.GetBytes(appendAfterIndex[value])));//LEA EAX,[ESI+DWORD]
+                        this.addByte(0x50);//PUSH EAX
+                    }
+                    else {
+                        this.arrayReferences[value].Add((UInt32)this.opcodes.Count+1);
+    					this.addBytes(new Byte[]{0x68,0,0,0,0}); //PUSH DWORD
+                    }
+					return PTR;
 					
 				}
 				if (addEsiToLocalAddresses)
@@ -2496,7 +2605,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					}
 					else
 						this.addBytes(new Byte[]{0x68}.Concat(BitConverter.GetBytes((UInt32)(this.functions[value].Item1))));
-					return new Tuple<String,VarType>(KWInteger.constName,VarType.NATIVE_VARIABLE);
+					return FUNC_PTR;
 					
 				}
 				
@@ -2549,10 +2658,12 @@ namespace ProgrammingLanguageTutorialIdea {
 				if (gettingAddr) {
 					this.addBytes(new Byte[]{0x8D,0x45,pseudoStack.getVarEbpOffset(value)}); //LEA EAX,[EBP+-OFFSET]
 					this.addByte(0x50); //PUSH EAX
+                    return PTR;
 				}
-				else
+				else {
 					this.addBytes(new Byte[]{0xFF,0x75,pseudoStack.getVarEbpOffset(value)});
-				return localVarHomeBlock.localVariables[value].Item1;
+				    return localVarHomeBlock.localVariables[value].Item1;
+                }
 				
 			}
 			else if (this.classes.ContainsKey(value)) {
@@ -2569,7 +2680,7 @@ namespace ProgrammingLanguageTutorialIdea {
 						this.classReferences[value].Add((UInt32)this.opcodes.Count+1);
 						this.addBytes(new Byte[]{0x68,0,0,0,0}); //PUSH DWORD
 					}
-					return new Tuple<String,VarType>(KWInteger.constName,VarType.NATIVE_VARIABLE);
+					return PTR;
 					
 				}
 				if (addEsiToLocalAddresses)
@@ -2713,19 +2824,20 @@ namespace ProgrammingLanguageTutorialIdea {
 					
 					this.addBytes(new Byte[]{0x8B,0xF8}); //MOV EDI,EAX
 					UInt32 sz=this.keywordMgr.getVarTypeByteSize(initialClass.variables[pValue].Item2);
-					if (gettingAddr)
+					if (gettingAddr) {
 						this.addByte(0x57);//PUSH EDI
-					else
-						this.addBytes(sz==1?
-						              new Byte[]{0x31,0xC0, //XOR EAX,EAX
-						              	0x8A,7, //MOV AL,[EDI]
-						              	0x50}: //PUSH EAX
-						              sz==2?
-						              new Byte[]{0x31,0xC0, //XOR EAX,EAX
-						              	0x66,0x8B,7, //MOV AX,[EDI]
-						              	0x50}: //PUSH EAX
-						              new Byte[]{0xFF,0x37}/*PUSH DWORD[EDI]*/);
-					
+                        return PTR;
+                    }
+					this.addBytes(sz==1?
+					              new Byte[]{0x31,0xC0, //XOR EAX,EAX
+					              	0x8A,7, //MOV AL,[EDI]
+					              	0x50}: //PUSH EAX
+					              sz==2?
+					              new Byte[]{0x31,0xC0, //XOR EAX,EAX
+					              	0x66,0x8B,7, //MOV AX,[EDI]
+					              	0x50}: //PUSH EAX
+					              new Byte[]{0xFF,0x37}/*PUSH DWORD[EDI]*/);
+				
 					UInt32 size=keywordMgr.getVarTypeByteSize(varType);
 					return new Tuple<String,VarType>(initialClass.variables[pValue].Item2,VarType.NATIVE_VARIABLE);
 					
@@ -2739,7 +2851,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					UInt32 sz=this.keywordMgr.getVarTypeByteSize(initialClass.classes[pValue].Item2);
 					if (gettingAddr) {
 						this.addByte(0x57);//PUSH EDI
-						return new Tuple<String,VarType>(KWInteger.constName,VarType.NATIVE_VARIABLE);
+						return PTR;
 					}
 					this.addBytes(new Byte[]{0xFF,0x37}/*PUSH DWORD[EDI]*/);
 					
@@ -2753,7 +2865,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					
 						this.addByte(5);//ADD EAX,FOLLOWING DWORD
 						this.addBytes(BitConverter.GetBytes(initialClass.functions[pValue].Item1)); //DWORD HERE
-						return new Tuple<String,VarType>(KWInteger.constName,VarType.NATIVE_VARIABLE);
+						return FUNC_PTR;
 						
 					}
 					Tuple<String,VarType>retType=initialClass.functions[pValue].Item2;
@@ -2822,7 +2934,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					if (gettingAddr) {
 						
 						this.addByte(0x50);//PUSH EAX
-						return new Tuple<String,VarType>(KWInteger.constName, VarType.NATIVE_VARIABLE);
+						return PTR;
 						
 						
 					}
@@ -2837,7 +2949,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					
 					if (gettingAddr) {
 						this.addByte(0x50);//PUSH EAX
-						return new Tuple<String,VarType>(KWInteger.constName,VarType.NATIVE_VARIABLE);
+						return PTR;
 					}
 					else {
 						this.addBytes(new Byte[]{0xFF,0x30}); //PUSH [EAX]
@@ -3187,8 +3299,15 @@ namespace ProgrammingLanguageTutorialIdea {
 						return new Tuple<String,VarType>(pvtGet(substr).Item1,VarType.NATIVE_ARRAY);
 				}
 			}
-			
-			
+
+            if (acknowledgements.ContainsKey(value))
+			    return new Tuple<String,VarType>(value,acknowledgements[value].Item2);
+			else if (value.EndsWith("#")) {
+                String substr=value.Substring(0,value.Length-1);
+                if(acknowledgements.ContainsKey(substr))
+                    return new Tuple<String,VarType>(substr,VarType.NATIVE_ARRAY);
+            }
+
 			//NATIVE_VARIABLE
 			foreach (Keyword kw in keywordMgr.getKeywords().Where(x=>x.type==KeywordType.TYPE)) {
 				
@@ -3249,6 +3368,8 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal void tryConvertVars (Tuple<String,VarType>to,Tuple<String,VarType>from) {
 			
 			//HACK:: check var type here
+
+            Console.WriteLine("tryConvertVars: "+to.Item1+", "+from.Item1);
 			
 			if (from.Item2==VarType.NATIVE_ARRAY_INDEXER||from.Item2==VarType.NATIVE_VARIABLE) {
 				if (keywordMgr.getVarTypeByteSize(to.Item1)<keywordMgr.getVarTypeByteSize(from.Item1))
@@ -3260,8 +3381,9 @@ namespace ProgrammingLanguageTutorialIdea {
 				throw new ParsingError("Can't convert \""+from.Item1+"\" to \""+to.Item1+'"');
 			else if (from.Item2!=to.Item2&&keywordMgr.getVarTypeByteSize(to.Item1)!=4)// What this does is allow pointers of native arrays etc to be moved into native integers!
 				throw new ParsingError("Can't convert \""+to.Item2.ToString()+"\" of \""+to.Item1.ToString()+"\" to \""+from.Item2.ToString()+"\" of \""+from.Item1+'"');
-				
-			
+			else if ((acknowledgements.ContainsKey(from.Item1))&&from.Item1!=to.Item1)
+                throw new ParsingError("Can't convert \""+from.Item1+"\" to \""+to.Item1+"\", did you mean to cast(...,...)?");
+            
 		}
 		
 		internal String getVariablesType (String varName) {
@@ -4319,10 +4441,60 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		
-		#region Character parsing helpers
-		//TODO:: make all this static
-		
-		private Boolean isMultiplication (Char c) {
+        internal Boolean tryGetAcknowledgement (String varType,out Tuple<String,VarType>type) {
+            type=null;
+            if (!(acknowledgements.ContainsKey(varType)))
+                return false;
+            type=acknowledgements[varType];
+            return true;
+        }
+
+        private Tuple<String,VarType> ackRootOf (String ack) {
+
+            if (!(this.acknowledgements.ContainsKey(ack)))
+                throw new ParsingError("Not an acknowledgement: "+ack);
+
+            Tuple<String,VarType>root=this.acknowledgements[ack];
+            if (this.acknowledgements.ContainsKey(root.Item1))
+                return ackRootOf(root.Item1);
+            else
+                return root;
+
+        }
+
+        private void fillLabelReferences () {
+
+            Byte[] addr;
+            Byte i;
+
+            foreach (KeyValuePair<String,List<Tuple<UInt32,UInt32>>>kvp in this.labelReferences) {
+
+                if (!(labels.ContainsKey(kvp.Key)))
+                    throw new ParsingError("Label was referenced but does not exist: \""+kvp.Key+'"');
+
+                foreach (Tuple<UInt32,UInt32>tpl in kvp.Value) {
+
+                    addr=BitConverter.GetBytes((Int32)labels[kvp.Key]-((Int32)tpl.Item2+5));
+
+                    i=0;
+                    while (i!=4) {
+
+                        opcodes[(Int32)(tpl.Item1+i)]=addr[i];
+                        ++i;
+
+                    }
+
+                }
+
+            }
+
+
+        }
+
+        #region Character parsing helpers
+        //TODO:: make all this static
+
+        private Boolean isMultiplication (Char c) {
 			
 			return c=='*';
 			
@@ -4381,6 +4553,12 @@ namespace ProgrammingLanguageTutorialIdea {
 			return c=='>';
 			
 		}
+
+        private Boolean indicatesLabel (Char c) {
+
+            return c=='~';
+
+        }
 		
 		#endregion
 		

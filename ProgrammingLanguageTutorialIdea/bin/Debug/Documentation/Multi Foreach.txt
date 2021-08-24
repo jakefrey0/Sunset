@@ -1,0 +1,33 @@
+; Using multi foreach (mforeach) many arrays can be looped through in a single block
+; The format for the parameters is item,array,item0,array0,item1,array1 ....
+; Only arrays are valid (Aug 24 06:53 2021)
+; The parameters must be divsible by 2 and they are in pairs: 'item,array' item corresponds to the next listed parameter
+; The collections used in the multi foreach loop can have different lengths, however the loop will break after the collection with the smallest length reaches its last item
+
+; An example:
+
+TOGGLE_GUI
+
+dllref(User32,str,str,int,int,int) cdecl:wsprintfA int
+dllref(User32,int,str,str,int) MessageBoxA int
+
+int# arr becomes #,(1,2,3,4,5)
+int# arr0 becomes #,(10,9,8,7,6,5,4,3,2,1)
+int# arr1 becomes #,(1,2,4,8,16,32,64,128,256,512,1024,2048)
+
+str buffer becomes "No. #: ##: ###"
+str format becomes "No. %d: %d: %d"
+str empty  becomes ""
+
+mforeach(n,arr,n0,arr0,n1,arr1) {
+	
+	; This block will loop 5 times - lengthof(arr)
+	; Local variables defined at this point:
+	; int n
+	; int n0
+	; int n1
+	
+	wsprintfA(buffer,format,n,n0,n1)
+	MessageBoxA(0,buffer,empty,0)
+	
+}

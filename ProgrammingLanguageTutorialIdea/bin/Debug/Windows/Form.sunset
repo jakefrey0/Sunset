@@ -1,5 +1,12 @@
 TOGGLE_GUI
 
+acknowledge HDC       as PTR
+acknowledge HWND      as PTR
+acknowledge HMENU     as PTR
+acknowledge HINSTANCE as PTR
+acknowledge HBRUSH    as PTR
+acknowledge HRGN      as PTR
+
 import(Windows/MSG)
 import(Windows/PAINTSTRUCT) 
 import(Windows/POINT)
@@ -20,21 +27,21 @@ import(Event<KeyEventArgs>)
 
 dllref(Kernel32,str) GetModuleHandleA int
 dllref(User32,WNDCLASSA) RegisterClassA int
-dllref(User32,int,int,int,int) DefWindowProcA int
-dllref(User32,int,str,str,int,int,int,int,int,int,int,int,int) CreateWindowExA int
-dllref(User32,MSG,int,int,int) GetMessageA bool
+dllref(User32,HWND,int,int,int) DefWindowProcA int
+dllref(User32,int,str,str,int,int,int,int,int,HWND,HMENU,HINSTANCE,int) CreateWindowExA HWND
+dllref(User32,MSG,HWND,int,int) GetMessageA bool
 dllref(User32,MSG) TranslateMessage void
 dllref(User32,MSG) DispatchMessageA void
-dllref(User32,int,PAINTSTRUCT) BeginPaint int
-dllref(User32,int,RECT,int) FillRect int
-dllref(User32,int,PAINTSTRUCT) EndPaint int
-dllref(User32,int) GetSysColorBrush int
-dllref(User32,int,RECT) GetClientRect bool
-dllref(Gdi32,int,int,int,str,int) TextOutA bool
+dllref(User32,HWND,PAINTSTRUCT) BeginPaint HDC
+dllref(User32,HDC,RECT,HBRUSH) FillRect int
+dllref(User32,HWND,PAINTSTRUCT) EndPaint bool
+dllref(User32,int) GetSysColorBrush HBRUSH
+dllref(User32,HWND,RECT) GetClientRect bool
+dllref(Gdi32,HDC,int,int,str,int) TextOutA bool
 dllref(User32,int) PostQuitMessage void
-dllref(User32,int,str,str,int) MessageBoxA int
-dllref(User32,int,int,int,int) SetTimer int
-dllref(User32,int,RECT,int,int) RedrawWindow bool
+dllref(User32,HWND,str,str,int) MessageBoxA int
+dllref(User32,HWND,int,int,FUNCPTR) SetTimer int
+dllref(User32,HWND,RECT,HRGN,int) RedrawWindow bool
 
 WNDCLASSA wndClassA
 MSG msg
@@ -166,7 +173,6 @@ constructor(str formTitle,int X,int Y,int width,int height) {
 }
 
 func show {
-	
 	CreateWindowExA(null,className,title,273154048,x,y,w,h,null,null,wndClassA.hInstance,null)
 	msg becomes new(MSG)
 	while (GetMessageA(msg,null,null,null)) {

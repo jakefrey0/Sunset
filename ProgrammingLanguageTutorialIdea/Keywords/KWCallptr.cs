@@ -25,9 +25,10 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			if (@params.Length==0)
 				throw new ParsingError("Expected at least 1 parameter for \""+constName+"\" (func address as \""+KWInteger.constName+"\", + optional function parameters)");
 			
-			outputType=new Tuple<String,VarType>(KWInteger.constName,VarType.NATIVE_VARIABLE);
-			if (!sender.pushValue(@params[0]).Equals(outputType))
-				throw new ParsingError("Expected an unsigned integer (\""+KWInteger.constName+"\") as the first parameter of \""+constName+"\", as the func address!");
+			outputType=Parser.FUNC_PTR;
+            Tuple<String,VarType>inputType=sender.pushValue(@params[0]);
+			if (!inputType.Equals(outputType))
+				throw new ParsingError("Expected a FUNCTION POINTER (\""+Parser.FUNC_PTR_STR+"\") as the first parameter of \""+constName+"\", as the func address! (Got: "+inputType.Item1+')');
 			
 			Byte i=0;
 			

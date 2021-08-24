@@ -1,0 +1,15 @@
+; Variables can be converted to lower byte size variable types at 
+; the risk of losing data. Data will be lost in some particular scenarios, 
+; i.e: a integer with a size of >255 is being converted to a byte, 
+; or an integer with a size of >65535 is being converted to a short.
+
+; This is a healthy example of Integer to Byte conversion via casting:
+
+int myNum becomes 123
+byte otherNum becomes cast(myNum,byte)
+
+retn(otherNum)
+
+; Expected exit code: 123. (7Bh)
+
+; Exit code result:  123. (7Bh)

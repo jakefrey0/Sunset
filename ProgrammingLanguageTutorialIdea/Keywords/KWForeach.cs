@@ -92,7 +92,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				return base.execute(sender,@params);
 			}
 			else
-				throw new ParsingError("Expected var of type array or string, got \""+arrName+"\" of type \""+vt.Item1+" (\""+vt.Item2.ToString()+"\")");
+				throw new ParsingError("Expected var of type array or string, got \""+arrName+"\" of type \""+vt.Item1+"\" (\""+vt.Item2.ToString()+"\")");
 			
 		}		
 				

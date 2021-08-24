@@ -1,0 +1,39 @@
+ - Public, Private, Local, Pullable, Static, Constant,  (Any access, only access within same file, only access within same folder, Like public but can only get, Accessible without instance, Non-changing, in pushValue it is processed like pushValue("123") etc., ), and update all current sunset libs for this. When doing static, ensure the only variables that can be accessed are local or static variables. Maybe make Boolean Parser#inStaticContext. 
+ - Classes inheriting eachother, and update all current sunset libs for this
+ - blogic (pb)
+ - for loops - Set the parser to parse the first parameter normally but set the block to the for block
+ - magic #'s
+ 
+ 
+  ~~~
+TODO/FIXME :: in solution
+  ~~~
+TEST AND UPDATE LIBS, DOCS, RECOMPILE ETC..
+  ~~~
+LET ARRAYS BE PASSED EXTERNALLY EASILY (i.e without +8, maybe make automatic.)
+  ~~~
+LINUX LIBS & LINUX SUPPORT
+
+Classes Inheriting Eachother:
+INHERIT: ClassName,ClassName0. ; Colon to indicate begin searching, comma to split, period to end query
+
+; More proper syntax to test:
+; INHERIT:ClassName,ClassName0
+; INHERIT:ClassName.
+; INHERIT: ClassName, ClassName0.
+; INHERIT: ClassName, ClassName0 .
+; INHERIT: ClassName , ClassName0 .
+; INHERIT:ClassName .
+; INHERIT : ClassName,ClassName0 .
+; INHERIT :ClassName,ClassName0.
+; INHERIT: ClassName.
+;
+; INHERIT :ClassName,
+; ClassName0
+;.
+; 
+; INHERIT:
+; 	ClassName,
+; 	ClassName0,
+; .
+

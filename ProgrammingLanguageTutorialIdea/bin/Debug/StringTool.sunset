@@ -73,8 +73,8 @@ func(str string) quote str {
 	retn(string)
 	
 }
-; ----> when the Block keyword is added, the 'int func' logic should be replaced by it :P
-func (str string,int func) where str {
+
+func (str string,FUNCPTR func) where str {
 	
 	byte# arr becomes #lengthOf(string)+1
 	int i becomes 0

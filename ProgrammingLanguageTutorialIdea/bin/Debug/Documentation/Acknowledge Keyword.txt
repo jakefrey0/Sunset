@@ -1,0 +1,35 @@
+; The acknowledge keyword simply creates a synonym for an already existing variable type
+; It is paired with the "as" keyword
+; i.e:
+acknowledge INTEGER as int
+acknowledge TEST as INTEGER
+; There are default acknowledgements:
+; PTR as int
+; FUNCPTR as int
+
+; With the previous acknowledgement in this file, the following lines can be written:
+INTEGER myNum becomes 34
+
+; myNum functions as an int:
+myNum becomes myNum+4
+
+; However, acknowledgements can not be converted from directly, they must be casted:
+
+TEST i becomes cast(myNum,TEST)
+
+func(int i) feedback int { retn(i+5) }
+
+myNum becomes feedback(cast(myNum,int))
+
+; A reasonable way to cast it would be as such:
+int myNum0 becomes cast(myNum,int)
+; ... and use myNum0 as an int
+; Though, casting generally is not used so often for the one variable, and
+; if it is, a revision might be necessary in many cases.
+
+; Acknowledgements are passed down to the next class when a class with acknowledgements is imported.
+
+retn(myNum0)
+
+; Should expect exit code: 34.+4+5=43.
+; Got exit code: 43. (2Bh)

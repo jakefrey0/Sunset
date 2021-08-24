@@ -1,6 +1,6 @@
 STRUCT
 int       style
-int       lpfnWndProc
+FUNCPTR   lpfnWndProc
 int       cbClsExtra
 int       cbWndExtra
 int       hInstance

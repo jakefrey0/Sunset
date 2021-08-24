@@ -1,9 +1,9 @@
 EXPECTED_TYPES(EvtArgs)
-import(List<int>)
+import(List<FUNCPTR>)
 
-List<int> pointers becomes new(List<int>)
+List<FUNCPTR> pointers becomes new(List<FUNCPTR>)
 
-func(int ptr) addFunction { pointers.add(ptr) }
+func(FUNCPTR ptr) addFunction { pointers.add(ptr) }
 
 func(EvtArgs args) raise { 
 	

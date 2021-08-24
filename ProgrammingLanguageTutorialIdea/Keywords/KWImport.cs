@@ -55,7 +55,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			String className=fp.Split('.')[0].Split(new Char[]{'\\','/'}).Last();
 			Int32 initialAppendAfterCount=sender.getAppendAfterCount();
 			UInt32 startMemAddr=(UInt32)(sender.memAddress+initialAppendAfterCount);
-			Parser childParser=new Parser("Child parser",false,true,true,false,false){addEsiToLocalAddresses=true,gui=sender.gui,className=className};
+			Parser childParser=new Parser("Child parser",fp,false,true,true,false,false){addEsiToLocalAddresses=true,gui=sender.gui,className=className};
 			childParser.keywordMgr.classWords=classWords;
 			if (passedTypes!=null)
 				childParser.passedVarTypes=passedTypes;
@@ -109,7 +109,15 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			}
 			
 			sender.keywordMgr.classWords.AddRange(childParser.keywordMgr.classWords);
-			
+            foreach (KeyValuePair<String,String>kvp in childParser.keywordMgr.acknowledgements) {
+                if (!sender.keywordMgr.acknowledgements.ContainsKey(kvp.Key))
+                    sender.keywordMgr.acknowledgements.Add(kvp.Key,kvp.Value);
+            }
+			foreach (KeyValuePair<String,Tuple<String,VarType>>kvp in childParser.acknowledgements) {
+                if (!sender.acknowledgements.ContainsKey(kvp.Key))
+                    sender.acknowledgements.Add(kvp.Key,kvp.Value);
+            }
+
 			if (!String.IsNullOrEmpty(passingTypesUnparsed))
 				className+='<'+passingTypesUnparsed+'>';
 			className=className.Contains("\\")?className.Split('\\').Last():className;
