@@ -1,0 +1,6 @@
+pullable int x
+pullable int y
+pullable int speed
+int jumpPower
+int size
+int health

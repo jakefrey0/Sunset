@@ -20,6 +20,9 @@ namespace ProgrammingLanguageTutorialIdea {
 		public const String NULL_STR="null",THIS_STR="this",PTR_STR="PTR",FUNC_PTR_STR="FUNCPTR";
         public readonly static Tuple<String,VarType>PTR=new Tuple<String,VarType>(PTR_STR,VarType.NATIVE_VARIABLE),FUNC_PTR=new Tuple<String,VarType>(FUNC_PTR_STR,VarType.NATIVE_VARIABLE);
 		
+        public static Dictionary<String,UInt32>classMemoryAddresses=new Dictionary<String,UInt32>(); //CLASS ID - NOT NAME but Class#classID, Compiler Known Memory Address 0x00401000> or 0> for non windows apps
+        public static UInt32 globalMemAddress;
+
 		public readonly String parserName;
 		
 		public String lastReferencedVariable {
@@ -41,7 +44,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal Boolean lastReferencedVariableIsLocal,lastReferencedVariableIsFromClass;
 		
 		internal VarType lastReferencedVarType=VarType.NONE,referencedVarType=VarType.NONE;
-		internal String varType; //to fix for classes later, maybe set to a Tuple<String,String>//Name,Origin or something? where Origin is something like the filename, or something to get the exact class that is being referred to
+		internal String varType;
 		internal Dictionary<String,List<UInt32>> variableReferences=new Dictionary<String,List<UInt32>>(),//Name,(Index in the Opcodes List)
 												 arrayReferences=new Dictionary<String,List<UInt32>>(),//Name,(Index in the Opcodes List)
 												 classReferences=new Dictionary<String,List<UInt32>>();//Name,(Index in the Opcodes List)
@@ -74,7 +77,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal Boolean expectsBlock=false,expectsElse=false,searchingFunctionReturnType=false,inFunction=false,@struct=false;
 		internal Byte setExpectsElse=0,setExpectsBlock=0;
 		
-		internal Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>> functions;//Function Name,(Memory Address,(Return Type, Return Var Type),No. of expected parameters,Function Type,Calling Convention)
+		internal Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>> functions;//Function Name,(Memory Address,(Return Type, Return Var Type),No. of expected parameters,Function Type,Calling Convention,Modifiers)
 		internal Tuple<UInt32,List<Tuple<String,VarType>>> constructor;//Memory Address,Func Param Types
 		internal Dictionary<String,List<Tuple<UInt32,UInt32>>> functionReferences;//Function Name,(Indexes in Opcodes of the reference,Memory Address at time of Reference)
 		internal UInt16 nextFunctionParamsCount;
@@ -130,16 +133,19 @@ namespace ProgrammingLanguageTutorialIdea {
 		}
 		internal List<Tuple<String,Tuple<String,VarType>>>passedVarTypes;
 		internal Dictionary<String,Tuple<String,VarType>>acknowledgements=new Dictionary<String,Tuple<String, VarType>>();
-        internal new Dictionary<String,List<Tuple<UInt32,UInt32>>>labelReferences=new Dictionary<String,List<Tuple<UInt32,UInt32>>>(); // Name of label,(Opcode Index, Mem Address at exact point of Reference before the long jump opcode)
-        
+         internal Dictionary<String,List<Tuple<UInt32,UInt32>>>labelReferences=new Dictionary<String,List<Tuple<UInt32,UInt32>>>(); // Name of label,(Opcode Index, Mem Address at exact point of Reference before the long jump opcode)
+         internal Modifier currentMods=Modifier.NONE;
+        internal Dictionary<String,UInt32>importedClassAppendAfterIndex=new Dictionary<String,UInt32>();//Imported Class (not class instance), start index in appendAfter
+
 		private List<Byte> opcodes=new List<Byte>(),importOpcodes=null,finalBytes=new List<Byte>(),appendAfter=new List<Byte>();
 		private ParsingStatus status;
-		private Dictionary<String,Tuple<UInt32,String>> variables=new Dictionary<String,Tuple<UInt32,String>>();//Name,(Mem Address,Var Type)
-		private Dictionary<String,Tuple<UInt32,String,ArrayStyle>> arrays=new Dictionary<String,Tuple<UInt32,String,ArrayStyle>>();//Name,(Ptr To Mem Address of Heap Handle(Dynamic) or Mem Block(Static),Array Var Type,ArrayStyle(Dynamic or Static))
-		private Dictionary<String,Tuple<UInt32,String,Class>> classes=new Dictionary<String,Tuple<UInt32,String,Class>>();//Name,(Ptr To Mem Address of Heap Handle,Class type name,Class type)
+		private Dictionary<String,Tuple<UInt32,String,Modifier>> variables=new Dictionary<String,Tuple<UInt32,String,Modifier>>();//Name,(Mem Address,Var Type,Modifiers)
+		private Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier>> arrays=new Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier>>();//Name,(Ptr To Mem Address of Heap Handle(Dynamic) or Mem Block(Static),Array Var Type,ArrayStyle(Dynamic or Static),Modifiers)
+		private Dictionary<String,Tuple<UInt32,String,Class,Modifier>> classes=new Dictionary<String,Tuple<UInt32,String,Class,Modifier>>();//Name,(Ptr To Mem Address of Heap Handle,Class type name,Class type),Modifier
 		private List<UInt32>int32sToSubtractByFinalOpcodesCount=new List<UInt32>();
 		private List<String>pvClassInstanceOrigin;
-        private Dictionary<String,UInt32>labels=new Dictionary<String,UInt32>();//Name, Mem Address
+         private Dictionary<String,UInt32>labels=new Dictionary<String,UInt32>();//Name, Mem Address
+         private Dictionary<String,Tuple<UInt32,Tuple<String,VarType>>>constants=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>>>();//var name,(constant value,(Generic Var Type Tuple))
 		
 		private List<Tuple<UInt32,List<UInt32>>>stringsAndRefs; //(Mem Addr,List of References by Opcode Index),Note: Currently the Inner list of Opcode Indexes will only have a length of 1 (6/19/2021 5:19PM)
 		private Dictionary<String,UInt32> setArrayValueFuncPtrs;
@@ -148,6 +154,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		private Int16 sharpbb=0;
 		private UInt32 freeHeapsMemAddr,esiFuncVarIndex=0;
 		private Boolean attemptingClassAccess=false,gettingClassItem=false,clearNextPvOrigin=false;
+         private String constantBeingSet=null;
 		
 		private const String KERNEL32="KERNEL32.DLL";
 		private readonly Char[] mathOperators=new []{'+','-','*','/','%'};
@@ -158,6 +165,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		public Parser (String name,String fileName,Boolean winApp=true,Boolean setToWinAppIfDllReference=false,Boolean skipHdr=false,Boolean fillToNextPage=true,Boolean writeImportSection=true) {
 			
 			memAddress=winApp?0x00401000:(UInt32)0;
+            if (name=="Main parser") Parser.globalMemAddress=memAddress;
 			startingMemAddr=memAddress;
 			keywordMgr=new KeywordMgr();
 			style=winApp?ArrayStyle.DYNAMIC_MEMORY_HEAP:ArrayStyle.STATIC_MEMORY_BLOCK;
@@ -189,7 +197,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				}
 				
 			};
-			functions=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>>();
+			functions=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>>();
 			functionReferences=new Dictionary<String,List<Tuple<UInt32,UInt32>>>();
 			freeHeapsRefs=new List<UInt32>();
 			functionParamTypes=new Dictionary<String,List<Tuple<String,VarType>>>();
@@ -206,7 +214,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			this.fillToNextPage=fillToNextPage;
 			this.writeImportSection=writeImportSection;
 			importedClasses=new List<Class>();
-			classes=new Dictionary<String,Tuple<UInt32,String,Class>>();
+			classes=new Dictionary<String,Tuple<UInt32,String,Class,Modifier>>();
 			staticClassReferences=new Dictionary<Class,List<UInt32>>();
 			defineTimeOrder=new List<String>();
 			pvClassInstanceOrigin=new List<String>();
@@ -295,7 +303,7 @@ namespace ProgrammingLanguageTutorialIdea {
 							if (searchingFunctionReturnType) {
 								
 								n+=c;
-								this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>(this.functions.Last().Value.Item1,this.getVarType(n),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5);
+								this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.getVarType(n),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
 								status=ParsingStatus.SEARCHING_NAME;
 								this.setExpectsBlock=1;
 								
@@ -579,12 +587,17 @@ namespace ProgrammingLanguageTutorialIdea {
 							if (functionParamTypes.ContainsKey(funcName))
 								throw new ParsingError("A function is already declared with the name \""+funcName+'"');
 							this.functionParamTypes.Add(funcName,new List<Tuple<String,VarType>>(this.nextFunctionParamTypes));
-							this.functions.Add(funcName,new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>((this.nextType== FunctionType.SUNSET)?blocks.Keys.Last().startMemAddr:0,null,(UInt16)this.nextFunctionParamTypes.Length,this.nextType,cl));
+                            if (!currentMods.hasAccessorModifier())
+                                currentMods=currentMods|Modifier.PRIVATE;
+                            if (currentMods.HasFlag(Modifier.PULLABLE)||currentMods.HasFlag(Modifier.CONSTANT))
+                                throw new ParsingError("Pullable and constant are not valid modifiers for functions");
+							this.functions.Add(funcName,new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>((this.nextType== FunctionType.SUNSET)?blocks.Keys.Last().startMemAddr:0,null,(UInt16)this.nextFunctionParamTypes.Length,this.nextType,cl,currentMods));
 							this.functionReferences.Add(funcName,new List<Tuple<UInt32,UInt32>>());
 							status=ParsingStatus.SEARCHING_NAME;
 							if (this.nextType==FunctionType.SUNSET)
 								this.nextExpectedKeywordTypes=new []{KeywordType.TYPE};
 							this.searchingFunctionReturnType=true;
+                            currentMods=Modifier.NONE;
 							
 						}
 						
@@ -744,28 +757,28 @@ namespace ProgrammingLanguageTutorialIdea {
 				else return;
 			}
 			
-			Dictionary<String,Tuple<UInt32,String>> newDict=new Dictionary<String,Tuple<UInt32,String>>(this.variables.Count);
-			foreach (KeyValuePair<String,Tuple<UInt32,String>> kvp in this.variables) {
+			Dictionary<String,Tuple<UInt32,String,Modifier>> newDict=new Dictionary<String,Tuple<UInt32,String,Modifier>>(this.variables.Count);
+			foreach (KeyValuePair<String,Tuple<UInt32,String,Modifier>> kvp in this.variables) {
 //				Console.WriteLine("For variable: "+kvp.Key+", updating mem address to: "+(kvp.Value.Item1+1).ToString("X"));
-				newDict.Add(kvp.Key,new Tuple<UInt32,String>(kvp.Value.Item1+1,kvp.Value.Item2));
+				newDict.Add(kvp.Key,new Tuple<UInt32,String,Modifier>(kvp.Value.Item1+1,kvp.Value.Item2,kvp.Value.Item3));
 			}
 			
-			this.variables=new Dictionary<String,Tuple<UInt32,String>>(newDict);
+			this.variables=new Dictionary<String,Tuple<UInt32,String,Modifier>>(newDict);
 			
-			Dictionary<String,Tuple<UInt32,String,ArrayStyle>> newDict0=new Dictionary<String,Tuple<UInt32,String,ArrayStyle>>(this.arrays.Count);
-			foreach (KeyValuePair<String,Tuple<UInt32,String,ArrayStyle>> kvp in this.arrays) {
+			Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier>> newDict0=new Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier>>(this.arrays.Count);
+			foreach (KeyValuePair<String,Tuple<UInt32,String,ArrayStyle,Modifier>> kvp in this.arrays) {
 			
 			
 //					Console.WriteLine("For array: "+kvp.Key+", updating mem address to: "+(kvp.Value.Item1+1).ToString("X"));
 				
-				newDict0.Add(kvp.Key,new Tuple<UInt32,String,ArrayStyle>(kvp.Value.Item1+1,kvp.Value.Item2,kvp.Value.Item3));
+				newDict0.Add(kvp.Key,new Tuple<UInt32,String,ArrayStyle,Modifier>(kvp.Value.Item1+1,kvp.Value.Item2,kvp.Value.Item3,kvp.Value.Item4));
 				
 			}
 			
-			this.arrays=new Dictionary<String,Tuple<UInt32,String,ArrayStyle>>(newDict0);
+			this.arrays=new Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier>>(newDict0);
 			
-			Dictionary<String,Tuple<UInt32,String,Class>> newDict1=new Dictionary<String,Tuple<UInt32,String,Class>>(this.classes.Count);
-			foreach (KeyValuePair<String,Tuple<UInt32,String,Class>> kvp in this.classes) {
+			Dictionary<String,Tuple<UInt32,String,Class,Modifier>> newDict1=new Dictionary<String,Tuple<UInt32,String,Class,Modifier>>(this.classes.Count);
+			foreach (KeyValuePair<String,Tuple<UInt32,String,Class,Modifier>> kvp in this.classes) {
 				
 				if (kvp.Value.Item1==0) newDict1.Add(kvp.Key,kvp.Value);
 				
@@ -773,7 +786,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 					Console.WriteLine("For class: "+kvp.Key+", updating mem address to: "+(kvp.Value.Item1+1).ToString("X"));
 					
-					newDict1.Add(kvp.Key,new Tuple<UInt32,String,Class>(kvp.Value.Item1+1,kvp.Value.Item2,kvp.Value.Item3));
+					newDict1.Add(kvp.Key,new Tuple<UInt32,String,Class,Modifier>(kvp.Value.Item1+1,kvp.Value.Item2,kvp.Value.Item3,kvp.Value.Item4));
 				
 				}
 			}
@@ -781,7 +794,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			foreach (Class cl in this.importedClasses)
 				++cl.memAddr;
 			
-			this.classes=new Dictionary<String,Tuple<UInt32,String,Class>>(newDict1);
+			this.classes=new Dictionary<String,Tuple<UInt32,String,Class,Modifier>>(newDict1);
 			
 			List<Tuple<UInt32,List<UInt32>>>newList=new List<Tuple<UInt32,List<UInt32>>>(this.stringsAndRefs.Count);
 			foreach (Tuple<UInt32,List<UInt32>>str in this.stringsAndRefs) {
@@ -796,9 +809,15 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.processHeapVar=new Tuple<UInt32,List<UInt32>>(this.processHeapVar.Item1+1,this.processHeapVar.Item2);
 				
 			}
+            
+            Dictionary<String,UInt32>nd=new Dictionary<String,UInt32>(Parser.classMemoryAddresses.Count);
+            foreach (KeyValuePair<String,UInt32>kvp in Parser.classMemoryAddresses)
+                nd.Add(kvp.Key,kvp.Value+1);
+            Parser.classMemoryAddresses=new Dictionary<String,UInt32>(nd);
 			
 			opcodes.Add(b);
 			++memAddress;
+            ++Parser.globalMemAddress;
 			this.increaseRefdFuncsToIncreaseWithOpcodes();
 			
 		}
@@ -894,7 +913,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			if (!this.pvtNull()&&this.pvtContainsKey(name)) {
 				
 				if (wasSearchingFuncReturnType) {
-					this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>(this.functions.Last().Value.Item1,this.pvtGet(name),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5);
+					this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.pvtGet(name),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
 					status=ParsingStatus.SEARCHING_NAME;
 					this.setExpectsBlock=1;
 					return;
@@ -920,7 +939,7 @@ namespace ProgrammingLanguageTutorialIdea {
             else if (this.acknowledgements.ContainsKey(name)) {
                 
                 if (wasSearchingFuncReturnType) {
-                    this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>(this.functions.Last().Value.Item1,this.acknowledgements[name],functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5);
+                    this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.acknowledgements[name],functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
                     status=ParsingStatus.SEARCHING_NAME;
                     this.setExpectsBlock=1;
                     return;
@@ -943,29 +962,29 @@ namespace ProgrammingLanguageTutorialIdea {
                 
             }
 
-            if (this.containsImportedClass(name)) {
-					
-					if (!pKTs.Contains(KeywordType.NONE)&&!pKTs.Contains(KeywordType.TYPE)) {
-						if (pKTs.Length>1) {
-							StringBuilder sb=new StringBuilder();
-							foreach (KeywordType kt in pKTs)
-								sb.Append('"'+kt.ToString()+"\", ");
-							throw new ParsingError("Expected a keyword of any of the following types: "+String.Concat(sb.ToString().Take(sb.Length-2)));
-						}
-						else throw new ParsingError("Expected a keyword of type \""+pKTs[0].ToString()+'"');
+            if (this.containsImportedClass(name)&&!attemptingClassAccess) {
+
+				if (!pKTs.Contains(KeywordType.NONE)&&!pKTs.Contains(KeywordType.TYPE)) {
+					if (pKTs.Length>1) {
+						StringBuilder sb=new StringBuilder();
+						foreach (KeywordType kt in pKTs)
+							sb.Append('"'+kt.ToString()+"\", ");
+						throw new ParsingError("Expected a keyword of any of the following types: "+String.Concat(sb.ToString().Take(sb.Length-2)));
 					}
+					else throw new ParsingError("Expected a keyword of type \""+pKTs[0].ToString()+'"');
+				}
+			
+				this.varType=name;
+				this.lastReferencedVarType=VarType.CLASS;
+				status=ParsingStatus.SEARCHING_VARIABLE_NAME;
 				
-					this.varType=name;
-					this.lastReferencedVarType=VarType.CLASS;
-					status=ParsingStatus.SEARCHING_VARIABLE_NAME;
-					
-					if (wasSearchingFuncReturnType) {
-						this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>(this.functions.Last().Value.Item1,new Tuple<String,VarType>(this.varType,VarType.CLASS),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5);
-						status=ParsingStatus.SEARCHING_NAME;
-						this.setExpectsBlock=1;
-					}
-					lastReferencedVariableIsLocal=false;
-					return;
+				if (wasSearchingFuncReturnType) {
+					this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,new Tuple<String,VarType>(this.varType,VarType.CLASS),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+					status=ParsingStatus.SEARCHING_NAME;
+					this.setExpectsBlock=1;
+				}
+				lastReferencedVariableIsLocal=false;
+				return;
 				
 			}
 			else if (attemptingClassAccess) {
@@ -985,7 +1004,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					else throw new ParsingError("\""+name+"\" does not exist in \""+merge(lastReferencedClassInstance,".")+'"');
 					
 				}
-				else if (this.classes.ContainsKey(name)) {
+				else if (this.classes.ContainsKey(name)||this.importedClasses.Select(x=>x.className).Contains(name)) {
 					
 					this.lastReferencedVariable=name;
 					this.status=ParsingStatus.SEARCHING_NAME;
@@ -1104,7 +1123,7 @@ namespace ProgrammingLanguageTutorialIdea {
 						this.execKeyword(kw,new String[0]);
 					
 					if (wasSearchingFuncReturnType) {
-						this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>(this.functions.Last().Value.Item1,new Tuple<String,VarType>(this.varType,this.lastReferencedVarType),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5);
+						this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,new Tuple<String,VarType>(this.varType,this.lastReferencedVarType),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
 						status=ParsingStatus.SEARCHING_NAME;
 						this.setExpectsBlock=1;
 					}
@@ -1175,7 +1194,10 @@ namespace ProgrammingLanguageTutorialIdea {
 				return;
 				
 			}
-			
+
+			if (!(currentMods.hasAccessorModifier()))
+                currentMods=currentMods|Modifier.PRIVATE;
+
 			Console.WriteLine("Registering variable "+varName+" (a type of \""+this.varType+"\"), memAddress: "+memAddress.ToString("X"));
 			
 			if (this.nameExists(varName))
@@ -1187,7 +1209,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			//if (class) -> appendAfter.addRange ... class or struct size.. because, the pointers are 4 bytes, but the actual struct could and probably is greater or different than 4bytes
 			if (this.blocks.Count==0) {//not local var
 				this.defineTimeOrder.Add(varName);
-				this.variables.Add(varName,new Tuple<UInt32,String>(memAddress+(UInt32)appendAfter.Count,this.varType));
+				this.variables.Add(varName,new Tuple<UInt32,String,Modifier>(memAddress+(UInt32)appendAfter.Count,this.varType,currentMods));
 				this.appendAfterIndex.Add(varName,(UInt32)appendAfter.Count);
 				this.appendAfter.AddRange(new Byte[keywordMgr.getVarTypeByteSize(this.varType)]);
 				this.variableReferences.Add(varName,new List<UInt32>());
@@ -1199,6 +1221,12 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.offsetEBPs(4);
 			}
 			this.lastReferencedVariable=varName;
+            if (currentMods.HasFlag(Modifier.CONSTANT)) {
+                nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT };
+                constantBeingSet=varName;
+                constants.Add(varName,new Tuple<uint, Tuple<string, VarType>>(0,null));
+            }
+            currentMods=Modifier.NONE;
 			status=ParsingStatus.SEARCHING_NAME;
 			
 		}
@@ -1208,21 +1236,41 @@ namespace ProgrammingLanguageTutorialIdea {
 			Console.WriteLine("------------ processValue ------------");
 			Console.WriteLine("is local: "+this.referencedVariableIsLocal.ToString()+", var name: "+this.referencedVariable+", referenced var type: "+this.referencedVarType.ToString());
 			String type;
-			if (this.referencedVariableIsFromClass)
-				type=getOriginFinalClass(this.lastReferencedClassInstance,referencedVariableIsLocal).getVarType(this.referencedVariable).Item1;
-			else if (!(this.referencedVariableIsLocal))
+            Modifier mods;
+			if (this.referencedVariableIsFromClass) {
+                Class cl=getOriginFinalClass(this.lastReferencedClassInstance,referencedVariableIsLocal);
+                mods=getClassOriginItemMod(lastReferencedClassInstance,referencedVariable,this.referencedVarType,this.referencedVariableIsLocal);
+				throwIfCantAccess(mods,referencedVariable,cl.path,false);
+                type=cl.getVarType(this.referencedVariable).Item1;
+            } 
+            else if (!(this.referencedVariableIsLocal)) {
 				type=(this.referencedVarType==VarType.NATIVE_ARRAY||this.referencedVarType==VarType.NATIVE_ARRAY_INDEXER)?this.arrays[this.referencedVariable].Item2:(this.referencedVarType==VarType.CLASS?this.classes[this.referencedVariable].Item2:this.variables[this.referencedVariable].Item2);
-			else
+                mods=modsOf(this.referencedVariable,this.referencedVarType);
+            }
+			else {
 				type=this.getLocalVarHomeBlock(this.referencedVariable).localVariables[this.referencedVariable].Item1.Item1;
+                mods=Modifier.NONE;
+            }
 			
+            if(constantBeingSet!=null) {
+
+                UInt32 constantValue;
+                Tuple<String,VarType>returnType=getConstantValue(value,out constantValue);
+                constants[constantBeingSet]=new Tuple<UInt32,Tuple<String,VarType>>(constantValue,returnType);
+                goto done;
+
+            }
+            else if (mods.HasFlag(Modifier.CONSTANT))
+                throw new ParsingError("Can only set constants immediately at definition time ("+this.referencedVariable+')');
+
 //			Console.WriteLine("referencingArray: "+referencingArray.ToString());
 //			Console.WriteLine("this.arrays[referencedVariable]: "+this.arrays[referencedVariable].Item2);
-			
+
 			//HACK:: check variable type
 			if (this.referencedVarType==VarType.NATIVE_ARRAY) {
 				
 				if (this.isNativeArrayCreationIndicator(value[0])) {
-						
+				    
 					Console.WriteLine("Making array named \""+this.referencedVariable+"\" of array type \""+type+"\" with value \""+value+"\".");
 					String adjustedValue=value.Substring(1);
 					const String HL="HeapAlloc";
@@ -1417,7 +1465,7 @@ namespace ProgrammingLanguageTutorialIdea {
 						this.addBytes(new Byte[]{0x89,0x10}); //MOV [EAX],EDX
 						this.addBytes(new Byte[]{0x83,0xC4,4}); //ADD ESP,4
 						//FIXME:: probable bug on next line, it may apply for all classes of that type
-						this.getOriginFinalClass(this.lastReferencedClassInstance,lastReferencedVariableIsLocal).arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle>(this.arrays[value].Item1,this.arrays[value].Item2,this.arrays[value].Item3);
+						this.getOriginFinalClass(this.lastReferencedClassInstance,lastReferencedVariableIsLocal).arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle,Modifier>(this.arrays[value].Item1,this.arrays[value].Item2,this.arrays[value].Item3,this.arrays[value].Item4);
 					}
 					else {
 						this.arrayReferences[value].Add((UInt32)this.opcodes.Count+1);
@@ -1430,8 +1478,7 @@ namespace ProgrammingLanguageTutorialIdea {
 							this.addBytes(new Byte[]{0xA3,0,0,0,0}); //MOV [PTR+ESI],EAX
 						}
 					}
-					this.status=ParsingStatus.SEARCHING_NAME;
-					return;
+					goto done;
 					
 				}
 				else if (this.isValidFunction(value)||this.hasClassAccessorOutsideParentheses(value)) {
@@ -1459,8 +1506,8 @@ namespace ProgrammingLanguageTutorialIdea {
 						}
 						else {
 							
-							Tuple<UInt32,String,ArrayStyle>_refdVar=this.arrays[this.referencedVariable];
-							this.arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle>(this.memAddress+(UInt32)(appendAfter.Count),_refdVar.Item2,_refdVar.Item3);
+							Tuple<UInt32,String,ArrayStyle,Modifier>_refdVar=this.arrays[this.referencedVariable];
+							this.arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle,Modifier>(this.memAddress+(UInt32)(appendAfter.Count),_refdVar.Item2,_refdVar.Item3,_refdVar.Item4);
 							this.appendAfterIndex.Add(referencedVariable,(UInt32)appendAfter.Count);
 							this.appendAfter.AddRange(new Byte[4]);
 							
@@ -1485,7 +1532,7 @@ namespace ProgrammingLanguageTutorialIdea {
 						this.addBytes(new Byte[]{0x89,0x10}); //MOV [EAX],EDX
 						this.addBytes(new Byte[]{0x83,0xC4,4}); //ADD ESP,4
 						//FIXME:: probable bug on next line, it may apply for all classes of that type
-						this.getOriginFinalClass(this.lastReferencedClassInstance,lastReferencedVariableIsLocal).arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle>(this.arrays[value].Item1,this.arrays[value].Item2,this.arrays[value].Item3);
+						this.getOriginFinalClass(this.lastReferencedClassInstance,lastReferencedVariableIsLocal).arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle,Modifier>(this.arrays[value].Item1,this.arrays[value].Item2,this.arrays[value].Item3,this.arrays[value].Item4);
 					}
 					else {
 						
@@ -1698,8 +1745,10 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 			}
 			
-			status=ParsingStatus.SEARCHING_NAME;
-			this.lastReferencedClassInstance.Clear();
+            done:
+		    status=ParsingStatus.SEARCHING_NAME;
+            constantBeingSet=null;
+		    this.lastReferencedClassInstance.Clear();
 			
 		}
 		
@@ -1802,12 +1851,15 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			if (this.nameExists(arrayName))
 				throw new ParsingError("The name \""+arrayName+"\" is already in use");
-			
+
+			if (!(currentMods.hasAccessorModifier()))
+                currentMods=currentMods|Modifier.PRIVATE;
+
 			this.tryIncreaseBlockVarCount();
 			
 			if (this.blocks.Count==0) {
 				this.defineTimeOrder.Add(arrayName);
-				this.arrays.Add(arrayName,new Tuple<UInt32,String,ArrayStyle>(this.memAddress+(UInt32)(appendAfter.Count),this.varType,this.style));
+				this.arrays.Add(arrayName,new Tuple<UInt32,String,ArrayStyle,Modifier>(this.memAddress+(UInt32)(appendAfter.Count),this.varType,this.style,currentMods));
 				this.appendAfterIndex.Add(arrayName,(UInt32)appendAfter.Count);
 //						this.debugLine(referencedVariable+','+appendAfter.Count.ToString());
 				this.appendAfter.AddRange(new Byte[4]);
@@ -1820,9 +1872,14 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.lastReferencedVariableIsLocal=true;
 				this.offsetEBPs(4);
 			}
-			
+			if (currentMods.HasFlag(Modifier.CONSTANT)) {
+                nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT };
+                constantBeingSet=arrayName;
+                constants.Add(arrayName,new Tuple<uint, Tuple<string, VarType>>(0,null));
+            }
 			this.lastReferencedVariable=arrayName;
 			this.lastReferencedVarType=VarType.NATIVE_ARRAY;
+             currentMods=Modifier.NONE;
 			status=ParsingStatus.SEARCHING_NAME;
 			
 		}
@@ -1945,8 +2002,9 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			dllName=dllName.ToUpper();
 			
-			if (!(dllName.EndsWith(".DLL")))
-				dllName+=".DLL";
+            const String ext=".DLL";
+			if (!(dllName.EndsWith(ext,StringComparison.CurrentCulture)))
+				dllName+=ext;
 			
 			if (!(this.toImport.ContainsKey(dllName))) {
 				
@@ -2479,6 +2537,12 @@ namespace ProgrammingLanguageTutorialIdea {
 				return new Tuple<String,VarType>(className,VarType.CLASS);
 				
 			}
+            else if (constants.ContainsKey(value)) {
+                
+                this.addBytes(new Byte[]{0x68}.Concat(BitConverter.GetBytes(this.constants[value].Item1))); //PUSH DWORD
+                return this.constants[value].Item2;
+
+            }
 			else if (@struct)
 				throw new ParsingError("Can only apply constant values to a struct");
 			else if (this.variables.ContainsKey(value)) {
@@ -2818,7 +2882,15 @@ namespace ProgrammingLanguageTutorialIdea {
 					
 				}
 				else if (initialClass.variables.ContainsKey(pValue)) {
-					
+
+                    throwIfCantAccess(initialClass.variables[pValue].Item3,pValue,initialClass.path,true);
+                    throwIfStatic(initialClass.variables[pValue].Item3,pValue);
+				  if (initialClass.constants.ContainsKey(pValue)) {
+                
+                       this.addBytes(new Byte[]{0x68 }.Concat(BitConverter.GetBytes(initialClass.constants[pValue].Item1)));
+                       return initialClass.constants[pValue].Item2;
+
+                    }
 					this.addByte(5);//ADD EAX,FOLLOWING DWORD
 					this.addBytes(BitConverter.GetBytes(initialClass.variables[pValue].Item1+initialClass.opcodePortionByteSize)); //DWORD HERE
 					
@@ -2843,7 +2915,15 @@ namespace ProgrammingLanguageTutorialIdea {
 					
 				}
 				else if (initialClass.classes.ContainsKey(pValue)) {
-					
+
+                    throwIfCantAccess(initialClass.classes[pValue].Item4,pValue,initialClass.path,true);
+                    throwIfStatic(initialClass.classes[pValue].Item4,pValue);
+				    if (initialClass.constants.ContainsKey(pValue)) {
+                    
+                           this.addBytes(new Byte[]{0x68 }.Concat(BitConverter.GetBytes(initialClass.constants[pValue].Item1)));
+                           return initialClass.constants[pValue].Item2;
+
+                        }
 					this.addByte(5);//ADD EAX,FOLLOWING DWORD
 					this.addBytes(BitConverter.GetBytes(initialClass.classes[pValue].Item1+initialClass.opcodePortionByteSize)); //DWORD HERE
 				
@@ -2861,6 +2941,8 @@ namespace ProgrammingLanguageTutorialIdea {
 				}
 				else if (initialClass.functions.ContainsKey(pValue)) {
 					
+                    throwIfCantAccess(initialClass.functions[pValue].Item6,pValue,initialClass.path,true);
+                    throwIfStatic(initialClass.functions[pValue].Item6,pValue);
 					if (gettingAddr) {
 					
 						this.addByte(5);//ADD EAX,FOLLOWING DWORD
@@ -2881,6 +2963,9 @@ namespace ProgrammingLanguageTutorialIdea {
 				}
 				else if (this.isFuncWithParams(pValue,initialClass)) {
 					
+                    throwIfCantAccess(initialClass.functions[pValue].Item6,pValue,initialClass.path,true);
+                    throwIfStatic(initialClass.functions[pValue].Item6,pValue);
+
 					this.throwIfAddr(gettingAddr,value);
 					
 					String funcName=pValue.Split('(')[0];
@@ -2925,8 +3010,10 @@ namespace ProgrammingLanguageTutorialIdea {
 					
 				}
 				else if (this.isArrayIndexer(pValue)) {
-					
+
 					String arrName=pValue.Split('[')[0];
+                    throwIfCantAccess(initialClass.arrays[pValue].Item4,pValue,initialClass.path,true);
+                    throwIfStatic(initialClass.arrays[pValue].Item4,pValue);
 					if (!(initialClass.arrays.ContainsKey(arrName)))
 						throw new ParsingError("Array does not exist in \""+initialClass.className+"\": \""+arrName+'"');
 					this.addByte(5);//ADD EAX,FOLLOWING DWORD
@@ -2943,7 +3030,15 @@ namespace ProgrammingLanguageTutorialIdea {
 					
 				}
 				else if (initialClass.arrays.ContainsKey(pValue)) {
-				
+
+                    throwIfCantAccess(initialClass.arrays[pValue].Item4,pValue,initialClass.path,true);
+                    throwIfStatic(initialClass.arrays[pValue].Item4,pValue);
+				  if (initialClass.constants.ContainsKey(pValue)) {
+                
+                       this.addBytes(new Byte[]{0x68 }.Concat(BitConverter.GetBytes(initialClass.constants[pValue].Item1)));
+                       return initialClass.constants[pValue].Item2;
+
+                    }
 					this.addByte(5);//ADD EAX,FOLLOWING DWORD
 					this.addBytes(BitConverter.GetBytes(initialClass.arrays[pValue].Item1+initialClass.opcodePortionByteSize)); //DWORD HERE
 					
@@ -2988,7 +3083,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			this.referenceDll(Parser.KERNEL32,HF);
 			
 			List<UInt32> doneMemAddrs=new List<UInt32>();
-			foreach (KeyValuePair<String,Tuple<UInt32,String,ArrayStyle>> array in this.arrays) {
+			foreach (KeyValuePair<String,Tuple<UInt32,String,ArrayStyle,Modifier>> array in this.arrays) {
 				
 				if (doneMemAddrs.Contains(array.Value.Item1))
 					continue;
@@ -3437,12 +3532,15 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			if (this.nameExists(varName))
 				throw new ParsingError("The name \""+varName+"\" is already in use");
-		
+
+    		if (!(currentMods.hasAccessorModifier()))
+                    currentMods=currentMods|Modifier.PRIVATE;
+
 			this.tryIncreaseBlockVarCount();
 			
 			if (this.blocks.Count==0) {//not local var
 				this.defineTimeOrder.Add(varName);
-				this.classes.Add(varName,new Tuple<UInt32,String,Class>(memAddress+(UInt32)appendAfter.Count,this.varType,this.importedClasses.Where(x=>x.className==this.varType).First()));
+				this.classes.Add(varName,new Tuple<UInt32,String,Class,Modifier>(memAddress+(UInt32)appendAfter.Count,this.varType,this.importedClasses.Where(x=>x.className==this.varType).First(),currentMods));
 				this.appendAfterIndex.Add(varName,(UInt32)appendAfter.Count);
 				this.appendAfter.AddRange(new Byte[4]);
 				this.classReferences.Add(varName,new List<UInt32>());
@@ -3453,7 +3551,13 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.lastReferencedVariableIsLocal=true;
 				this.offsetEBPs(4);
 			}
+            if (currentMods.HasFlag(Modifier.CONSTANT)) {
+                nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT };
+                constantBeingSet=varName;
+                constants.Add(varName,new Tuple<uint, Tuple<string, VarType>>(0,null));
+            }
 			this.lastReferencedVariable=varName;
+            currentMods=Modifier.NONE;
 			status=ParsingStatus.SEARCHING_NAME;
 			
 		}
@@ -3999,13 +4103,13 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		
-		internal Dictionary<String,Tuple<UInt32,String>>getVariables () {
+		internal Dictionary<String,Tuple<UInt32,String,Modifier>>getVariables () {
 			
 			return this.variables;
 			
 		}
 		
-		internal Dictionary<String,Tuple<UInt32,String,Class>>getClasses () {
+		internal Dictionary<String,Tuple<UInt32,String,Class,Modifier>>getClasses () {
 			
 			return this.classes;
 			
@@ -4028,7 +4132,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		
-		internal Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention>>getFunctions () {
+		internal Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>>getFunctions () {
 			
 			return this.functions;
 			
@@ -4119,8 +4223,13 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal void moveClassInstanceIntoEax (String classInstance) {
 			
 			Console.WriteLine("[classInstance: \""+classInstance+"\"]");
-			
-			if (!(this.isALocalVar(classInstance))) {
+
+
+			if (isImportedClass(classInstance)) {
+                Console.WriteLine("==========================Imported");
+                this.addBytes(new Byte[]{0xB8 }.Concat(BitConverter.GetBytes(Parser.classMemoryAddresses[classIDOf(classInstance)])));
+            }
+			else if (!(this.isALocalVar(classInstance))) {
 				
 				if (addEsiToLocalAddresses) {
 					
@@ -4153,6 +4262,10 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			if(!cl.functions.ContainsKey(func)) throw new Exception("Func:"+func+", origin: "+merge(classInstance,"."));
 			
+            throwIfCantAccess(cl.functions[func].Item6,func,cl.path,true);
+            if (!this.containsImportedClass(classInstance.Last()))
+                throwIfStatic(cl.functions[func].Item6,func);
+
 			if (cl.functions[func].Item3!=parameters.Length)
 				throw new ParsingError("Expected \""+cl.functions[func].Item3+"\" parameters for \""+func+"\", got \""+parameters.Length+'"');
 			
@@ -4261,7 +4374,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		
-		public Dictionary<String,Tuple<UInt32,String,ArrayStyle>> getArrays () {
+		public Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier>> getArrays () {
 			
 			return this.arrays;
 			
@@ -4273,7 +4386,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			String fc=origin.First();
 			this.moveClassInstanceIntoEax(fc);
 			Console.WriteLine(originLocal.ToString());
-			Class pc=(originLocal)?this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(fc).localVariables[fc].Item1.Item1).First():this.classes[fc].Item3;
+			Class pc=isImportedClass(fc)?getImportedClass(fc):(originLocal)?this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(fc).localVariables[fc].Item1.Item1).First():this.classes[fc].Item3;
 			foreach (String s in origin.Skip(1)) {
 				
 				this.moveClassItemAddrIntoEax(null,s,VarType.CLASS,true,pc);
@@ -4290,7 +4403,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			String fc=origin.First();
 			Console.WriteLine("Fc: "+fc+", originLocal: "+originLocal.ToString()+", origin.Count(): "+origin.Count().ToString());
-			Class pc=(originLocal)?this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(fc).localVariables[fc].Item1.Item1).First():this.classes[fc].Item3;
+			Class pc=isImportedClass(fc)?getImportedClass(fc):(originLocal)?this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(fc).localVariables[fc].Item1.Item1).First():this.classes[fc].Item3;
 			foreach (String s in origin.Skip(1))
 				pc=pc.classes[s].Item3;
 			return pc;
@@ -4305,7 +4418,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			if (!originAlreadyInEax) {
 				this.moveClassInstanceIntoEax(fc);
 				Console.WriteLine(originLocal.ToString());
-				pc=(originLocal)?this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(fc).localVariables[fc].Item1.Item1).First():this.classes[fc].Item3;
+				pc=isImportedClass(fc)?getImportedClass(fc):(originLocal)?this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(fc).localVariables[fc].Item1.Item1).First():this.classes[fc].Item3;
 				if (origin.Count!=1) {
 					foreach (String s in origin.Skip(1).Take(origin.Count-1)) {
 						
@@ -4402,10 +4515,13 @@ namespace ProgrammingLanguageTutorialIdea {
 			Byte roundBracketBalance=1,sharpBracketBalance=0;
 			List<String>@params=new List<String>();
 			StringBuilder paramBuilder=new StringBuilder();
+            Boolean inQuotes=false;
 			//HACK:: sub parsing
 			foreach (Char c in unparsedParams) {
 				
-				if (c=='(') ++roundBracketBalance;
+                if (inQuotes&&c!='"') continue;
+                else if (c=='"') inQuotes=!inQuotes;
+				else if (c=='(') ++roundBracketBalance;
 				else if (c==')') --roundBracketBalance;
 				else if (c=='<') ++sharpBracketBalance;
 				else if (c=='>') --sharpBracketBalance;
@@ -4490,6 +4606,146 @@ namespace ProgrammingLanguageTutorialIdea {
 
 
         }
+
+        private void throwIfCantAccess (Modifier mods,String instanceName,String classFilePath,Boolean getting) {
+
+            if (mods.HasFlag(Modifier.PRIVATE)||(mods.HasFlag(Modifier.LOCAL)&&((classFilePath.Contains('\\')||classFilePath.Contains('/'))&&merge(fileName.Split(new []{'/','\\' }).allButLast(),"/")!=merge(classFilePath.Split(new []{'/','\\' }).allButLast(),"/")))||(mods.HasFlag(Modifier.PULLABLE)&&!getting))
+                throw new ParsingError("Can't access \""+instanceName+"\" from \""+classFilePath+"\": exists, but inaccessible due to its modifiers");
+            
+        }
+
+        private void throwIfStatic (Modifier mods,String instanceName) {
+
+            if (mods.HasFlag(Modifier.STATIC))
+                throw new ParsingError("Tried to access a static instance \""+instanceName+"\" from a class instance (use class name)");
+
+        }
+
+        /// <summary>
+        /// Doesn't throw all possible ParsingErrors (check for anything invalid beforehand if necessary)
+        /// </summary>
+        /// <param name="vt">Should be CLASS || FUNCTION || NATIVE_ARRAY || NATIVE_VARIABLE</param>
+        public Modifier getClassOriginItemMod (List<String>origin,String item,VarType vt,Boolean originLocal) {
+            
+            String fc=origin.First();
+            Class pc=isImportedClass(fc)?getImportedClass(fc):(originLocal)?this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(fc).localVariables[fc].Item1.Item1).First():this.classes[fc].Item3;
+            if (origin.Count!=1)
+                foreach (String s in origin.Skip(1).Take(origin.Count-1))
+                    pc=pc.classes[s].Item3;
+            else pc=this.getOriginFinalClass(origin,originLocal);
+
+            switch (vt) {
+
+                case VarType.CLASS:
+                    return pc.classes[item].Item4;
+                case VarType.FUNCTION:
+                    return pc.functions[item].Item6;
+                case VarType.NATIVE_ARRAY:
+                    return pc.arrays[item].Item4;
+                case VarType.NATIVE_VARIABLE:
+                    return pc.variables[item].Item3;
+                default:
+                    throw new ParsingError("Invalid VarType (?!): "+vt.ToString());
+
+            }
+
+        }
+
+        public Tuple<String,VarType> getConstantValue (String value,out UInt32 constValue) {
+
+            //constants:
+            UInt32 _value;
+            Int32 _value0;
+            if (UInt32.TryParse(value,out _value)) {
+                String rv;
+                constValue=_value;
+                if (_value<=SByte.MaxValue)
+                    return new Tuple<String,VarType>(KWByte.constName,VarType.NATIVE_VARIABLE);
+                else if (_value<=UInt16.MaxValue)
+                    rv=KWShort.constName;
+                else rv=KWInteger.constName;
+                
+                return new Tuple<String,VarType>(rv,VarType.NATIVE_VARIABLE);
+                
+            }
+            else if (Int32.TryParse(value,out _value0)) {
+                
+                //TODO:: SIGNED VARIABLES
+                constValue=unchecked((UInt32)_value0);
+                return new Tuple<String,VarType>(KWInteger.constName,VarType.NATIVE_VARIABLE);
+                
+            }
+            else if (value==KWBoolean.constFalse) {
+                
+                constValue=0;
+                return new Tuple<String,VarType>(KWBoolean.constName,VarType.NATIVE_VARIABLE);
+                
+            }
+            else if (value==KWBoolean.constTrue) {
+                
+                constValue=1;
+                return new Tuple<String,VarType>(KWBoolean.constName,VarType.NATIVE_VARIABLE);
+                
+            }
+            else if (value==Parser.NULL_STR) {
+                
+                constValue=0;
+                return new Tuple<String,VarType>(Parser.NULL_STR,VarType.NONE);
+                
+            }
+            else if (constants.ContainsKey(value)) {
+                
+                constValue=this.constants[value].Item1;
+                return this.constants[value].Item2;
+
+            }
+
+            throw new ParsingError("Not constant value: "+value);
+
+        }
+
+        internal Dictionary<String,Tuple<UInt32,Tuple<String,VarType>>> getConstants () { return this.constants; }
+
+        private Modifier modsOf (String varName,VarType varType) {
+
+            switch (varType) {
+
+                case VarType.CLASS:
+                    return this.classes[varName].Item4;
+                case VarType.FUNCTION:
+                    return this.functions[varName].Item6;
+                case VarType.NATIVE_ARRAY:
+                    return this.arrays[varName].Item4;
+                case VarType.NATIVE_VARIABLE:
+                    return this.variables[varName].Item3;
+                case VarType.NONE:
+                    throw new ParsingError("Can't get var type of void/null variable: "+varName);
+                default:
+                    throw new ParsingError("Can't get var type of: "+varName);
+
+            }
+
+        }
+
+        internal static void dumpGlobalInfo (Boolean readKey=false) {
+
+            Console.WriteLine("\n--- Global Info ---\n");
+            Console.WriteLine("Global Mem Address: "+globalMemAddress.ToString("X")+'h');
+            Console.WriteLine("\nImported class memory addresses:\n");
+            foreach (KeyValuePair<String,UInt32>kvp in Parser.classMemoryAddresses)
+                Console.WriteLine(" - ID = "+kvp.Key+"\n - Address: "+kvp.Value.ToString("X")+"h\n\n");
+            Console.WriteLine("---             ---");
+
+            if (readKey)
+                Console.ReadKey(true);
+
+        }
+
+        private Boolean isImportedClass (String name) { return this.importedClasses.Select(x=>x.className).Contains(name); }
+        /// <param name="name">No checks or exceptions if this is not a valid imported class</param>
+        private Class getImportedClass  (String name) { return this.importedClasses.Where(x=>x.className==name).First(); }
+
+        internal String classIDOf (String name) { return getImportedClass(name).classID;}
 
         #region Character parsing helpers
         //TODO:: make all this static

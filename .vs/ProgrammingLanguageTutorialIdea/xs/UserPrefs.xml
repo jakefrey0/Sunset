@@ -1,11 +1,16 @@
 ﻿<Properties StartupConfiguration="{19D2E25E-77E6-443C-B6EB-2E58499E4104}|Default">
-  <MonoDevelop.Ide.Workbench ActiveDocument="ProgrammingLanguageTutorialIdea/Keywords/KWReturn.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="ProgrammingLanguageTutorialIdea/Keywords/KWImport.cs">
     <Files>
-      <File FileName="ProgrammingLanguageTutorialIdea/Parser.cs" Line="637" Column="68" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWGoto.cs" Line="19" Column="51" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWBreak.cs" Line="1" Column="1" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWContinue.cs" Line="1" Column="1" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWReturn.cs" Line="1" Column="1" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Parser.cs" Line="28" Column="4" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KeywordMgr.cs" Line="70" Column="38" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Modifier.cs" Line="32" Column="52" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWConstant.cs" Line="22" Column="1" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWPrivate.cs" Line="14" Column="43" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Class.cs" Line="29" Column="203" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Order.cs" Line="1" Column="1" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWImport.cs" Line="126" Column="267" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Program.cs" Line="1" Column="1" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWInteger.cs" Line="1" Column="1" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
@@ -13,9 +18,8 @@
           <Node name="ProgrammingLanguageTutorialIdea" expanded="True">
             <Node name="ProgrammingLanguageTutorialIdea" expanded="True">
               <Node name="Keywords" expanded="True">
-                <Node name="KWReturn.cs" selected="True" />
+                <Node name="KWImport.cs" selected="True" />
               </Node>
-              <Node name="Stack" expanded="True" />
             </Node>
           </Node>
         </State>

@@ -1,0 +1,2 @@
+import(DummyClass)
+nofunct(8)

@@ -13,6 +13,8 @@ TEST AND UPDATE LIBS, DOCS, RECOMPILE ETC..
 LET ARRAYS BE PASSED EXTERNALLY EASILY (i.e without +8, maybe make automatic.)
   ~~~
 LINUX LIBS & LINUX SUPPORT
+  ~~~
+   - Only one class reference block should be made per compilation, so if it already exists from a previous Parser, don't make a new one, instead reference the initial one
 
 Classes Inheriting Eachother:
 INHERIT: ClassName,ClassName0. ; Colon to indicate begin searching, comma to split, period to end query

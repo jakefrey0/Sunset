@@ -1,0 +1,27 @@
+import(Documentation/Modifiers/MyClass)
+import(Documentation/Modifiers/Test/TestClass)
+MyClass class becomes new(MyClass)
+TestClass t_class becomes new(TestClass)
+
+class.mbox(2134)
+; This line would fail:
+; t_class.test
+; t_class.test is a local function in a seperate folder from the containing folder of this file
+
+class.num becomes 33
+class.mbox(class.num)
+
+constant int b becomes 3000
+; Constants must be set immediately
+
+; Static class access:
+class.show_num
+MyClass.show_num_static
+
+MyClass.static_num becomes 333
+MyClass.show_num_static
+class.show_num
+MyClass class0 becomes new(MyClass)
+class0.show_num
+
+retn(b)

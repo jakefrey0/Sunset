@@ -62,7 +62,13 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
                                     new KWAs(),
                                     new KWCast(),
                                     new KWMultiForeach(),
-                                    new KWGoto()
+                                    new KWGoto(),
+                                    new KWPublic(),
+                                    new KWLocal(),
+                                    new KWPrivate(),
+                                    new KWPullable(),
+                                    new KWStatic(),
+                                    new KWConstant()
 			                       	
 			                       });
 			

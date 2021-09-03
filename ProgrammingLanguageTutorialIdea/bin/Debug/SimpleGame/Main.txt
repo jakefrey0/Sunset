@@ -1,0 +1,5 @@
+import(Windows/Form)
+import(Windows/RECT)
+import(Windows/SimpleLabel)
+import(SimpleGame/Player)
+

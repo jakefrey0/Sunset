@@ -16,7 +16,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		
 		public const String constName="dllref";
 		
-		public KWDllReference () : base (constName,KeywordType.NATIVE_CALL,true) { }
+		public KWDllReference () : base (constName,KeywordType.FUNCTION,true) { }
 		
 		public override KeywordResult execute (Parser sender,String[] @params) {
 			

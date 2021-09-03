@@ -127,6 +127,13 @@
     <Compile Include="Keywords\KWCast.cs" />
     <Compile Include="Keywords\KWMultiForeach.cs" />
     <Compile Include="Keywords\KWGoto.cs" />
+    <Compile Include="Keywords\KWPublic.cs" />
+    <Compile Include="Modifier.cs" />
+    <Compile Include="Keywords\KWPrivate.cs" />
+    <Compile Include="Keywords\KWLocal.cs" />
+    <Compile Include="Keywords\KWPullable.cs" />
+    <Compile Include="Keywords\KWStatic.cs" />
+    <Compile Include="Keywords\KWConstant.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

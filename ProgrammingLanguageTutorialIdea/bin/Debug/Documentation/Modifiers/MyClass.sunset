@@ -1,0 +1,78 @@
+; Public, Private, Local, Pullable, Static and Constant are modifiers for variables, functions or both.
+; 'Private' is applied by default to any instances which don't declare an accessor modifier (Public, Private, Local, Pullable)
+
+; Variable and Function modifiers:
+
+; public - If an instance is declared with the 'public' modifier, it can be accessed from any file anywhere.
+; private - If an instance is declared with the 'private' modifier, it can be only accessed from its containing file.
+; local - If an instance is declared with the 'local' modifier, it can be only accessed from within its containing folder.
+; static - If an instance is declared with the 'static' modifier, it can be accessed without a class instance. Static functions cannot access non-static instances.
+
+; Variable exclusive modifiers:
+
+; pullable - If an instance is declared with the 'pullable' modifier, it can be accessed from any file anywhere, except it can only be read (pulled), but not modified.
+; constant - If an instance is declared with the 'constant' modifier, it must be given a value immediately and can not change.
+
+TOGGLE_GUI
+
+static private dllref(User32,str,str,int) cdecl:wsprintfA int
+static private dllref(User32,int,str,str,int) MessageBoxA int
+
+public int num becomes 123
+
+local int num0 becomes 0
+
+public static int num1 becomes 1233
+
+int num2 becomes 13253
+
+constant private int num3 becomes 55555
+constant public int num4 becomes 44444
+constant static public int CONSTANT_STATIC_PUBLIC_NUMBER becomes 66666
+
+private int num5 becomes 77777
+
+int num6 becomes 88888 ; private by default
+
+pullable int num7 becomes 99999
+
+str buffer becomes "#######"
+str format becomes "%d"
+str empty  becomes ""
+
+static public int static_num becomes 5652
+
+local func(int i) mbox { 
+	
+	wsprintfA(buffer,format,i)
+	MessageBoxA(null,buffer,empty,null)
+	
+}
+
+static public func show_num_static {
+	
+	str z becomes "#####"
+	wsprintfA(z,"%d",static_num)
+	MessageBoxA(null,z,"Static number",null)	
+	; TODO:: FAIL ON:
+	; num7 becomes 11111
+	
+}
+
+public func show_num {
+	
+	wsprintfA(buffer,format,static_num)
+	MessageBoxA(null,buffer,"Static number",null)	
+	
+}
+
+;mbox(num)
+;mbox(num0)
+;mbox(num1)
+;mbox(num2)
+;mbox(num3)
+;mbox(num4)
+;mbox(CONSTANT_STATIC_PUBLIC_NUMBER)
+;mbox(num5)
+;mbox(num6)
+;mbox(num7)

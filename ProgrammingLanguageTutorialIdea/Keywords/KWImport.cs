@@ -55,6 +55,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			String className=fp.Split('.')[0].Split(new Char[]{'\\','/'}).Last();
 			Int32 initialAppendAfterCount=sender.getAppendAfterCount();
 			UInt32 startMemAddr=(UInt32)(sender.memAddress+initialAppendAfterCount);
+            List<String>alreadyImported=Parser.classMemoryAddresses.Keys.ToList();
 			Parser childParser=new Parser("Child parser",fp,false,true,true,false,false){addEsiToLocalAddresses=true,gui=sender.gui,className=className};
 			childParser.keywordMgr.classWords=classWords;
 			if (passedTypes!=null)
@@ -123,13 +124,27 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			className=className.Contains("\\")?className.Split('\\').Last():className;
 			if (sender.importedClasses.Select(x=>x.className).Contains(className))
 				throw new ParsingError("Class (with same name) already imported: \""+className+'"');
-			Class cl=new Class(className,(UInt32)data.Length,childParser.@struct?ClassType.STRUCT:ClassType.NORMAL,startMemAddr,childParser,childParser.memAddress,(UInt32)initialAppendAfterCount,(UInt32)childParser.getAppendAfterCount());
+            String path=Path.GetFullPath(childParser.fileName),id="path: \""+path+"\" && name: \""+className+'"';
+            UInt32 startAddr=(UInt32)(sender.memAddress+initialAppendAfterCount);
+            if (!(Parser.classMemoryAddresses.ContainsKey(id))) // < -------
+                //Parser.classMemoryAddresses.Add(id,startAddr);
+                Parser.classMemoryAddresses.Add(id,0);
+		    Class cl=new Class(className,path,(UInt32)data.Length,childParser.@struct?ClassType.STRUCT:ClassType.NORMAL,startMemAddr,childParser,childParser.memAddress,(UInt32)initialAppendAfterCount,(UInt32)childParser.getAppendAfterCount(),id);
 			sender.importedClasses.Add(cl);
 			sender.staticClassReferences.Add(cl,new List<UInt32>());
 			
 			if (!sender.keywordMgr.classWords.Contains(className))
 				sender.keywordMgr.classWords.Add(className);
-			
+
+            Dictionary<String,UInt32>nd=new Dictionary<String,UInt32>(Parser.classMemoryAddresses.Count);
+            foreach (KeyValuePair<String,UInt32>kvp in Parser.classMemoryAddresses) {
+                if (!alreadyImported.Contains(kvp.Key))
+                       nd.Add(kvp.Key,(UInt32)(kvp.Value+initialAppendAfterCount+startAddr));
+                else
+                    nd.Add(kvp.Key,kvp.Value);
+            }
+            Parser.classMemoryAddresses=new Dictionary<String,UInt32>(nd);
+
 			return base.execute(sender, @params);
 			
 		}

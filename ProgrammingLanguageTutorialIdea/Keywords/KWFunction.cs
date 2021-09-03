@@ -17,7 +17,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		
 		public const String constName="func";
 		
-		public KWFunction () : base (constName,KeywordType.NATIVE_CALL,true) { }
+		public KWFunction () : base (constName,KeywordType.FUNCTION,true) { }
 		
 		public override KeywordResult execute (Parser sender,String[] @params) {
 			
