@@ -2790,7 +2790,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 			}
 			else if (value.Any(x=>this.accessingClass(x))&&(this.classes.ContainsKey(value.Split(Parser.accessorChar).First())||(this.isALocalVar(value.Split(Parser.accessorChar).First()))||this.pvClassInstanceOrigin.Contains(value.Split(Parser.accessorChar).First()))) {
-				
+
 				if (clearNextPvOrigin) pvClassInstanceOrigin.Clear();
 				
 				//HACK:: sub parsing
@@ -2962,13 +2962,13 @@ namespace ProgrammingLanguageTutorialIdea {
 					
 				}
 				else if (this.isFuncWithParams(pValue,initialClass)) {
-					
-                    throwIfCantAccess(initialClass.functions[pValue].Item6,pValue,initialClass.path,true);
-                    throwIfStatic(initialClass.functions[pValue].Item6,pValue);
+                    
+                    String funcName=pValue.Split('(')[0];
 
+                    throwIfCantAccess(initialClass.functions[funcName].Item6,funcName,initialClass.path,true);
+                    throwIfStatic(initialClass.functions[funcName].Item6,funcName);
 					this.throwIfAddr(gettingAddr,value);
 					
-					String funcName=pValue.Split('(')[0];
 					
 					if (initialClass.functions[funcName].Item2==null)
 						throw new ParsingError("Function \""+funcName+"\" has no return value, therefore its return value can't be obtained");
@@ -3004,6 +3004,7 @@ namespace ProgrammingLanguageTutorialIdea {
 						
 					}
 					Console.WriteLine("unparsedParams: \""+unparsedParams+'"');
+                    Console.WriteLine("3");
 					this.callClassFunc(pvClassInstanceOrigin,funcName,@params.ToArray(),local,true,initialClass);
 					this.addByte(0x50); //PUSH EAX
 					return initialClass.functions[funcName].Item2;

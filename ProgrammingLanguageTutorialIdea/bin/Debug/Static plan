@@ -9,3 +9,8 @@ Todo:
  - In static functions, only permit referencing of static/local variables
  - Query static instances from origin functions
  - Fix static numbers inside classes being treated as if they werent (not accessing the actual static mem addr)
+ 
+ 
+Idea!:
+
+ - While in static func, set addEsiToLocalVars to false (and reset to original value afterwards)

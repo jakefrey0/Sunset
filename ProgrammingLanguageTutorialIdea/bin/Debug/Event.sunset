@@ -1,11 +1,11 @@
 EXPECTED_TYPES(EvtArgs)
 import(List<FUNCPTR>)
 
-List<FUNCPTR> pointers becomes new(List<FUNCPTR>)
+private List<FUNCPTR> pointers becomes new(List<FUNCPTR>)
 
-func(FUNCPTR ptr) addFunction { pointers.add(ptr) }
+public func(FUNCPTR ptr) addFunction { pointers.add(ptr) }
 
-func(EvtArgs args) raise { 
+public func(EvtArgs args) raise { 
 	
 	foreach(ptr,pointers.toArray) {
 		

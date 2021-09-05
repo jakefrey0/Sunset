@@ -2,12 +2,10 @@ EXPECTED_TYPES(T)
 dllref(Kernel32,int,int,T#) HeapFree bool
 dllref(Kernel32,int) SetLastError void
 
-nofunct(10)
-
 T# innerList becomes #0
 int length becomes 0
 
-func(T item) add {
+public func(T item) add {
 	
 	T# newArr becomes #length+1
 	int i becomes 0
@@ -24,7 +22,7 @@ func(T item) add {
 	
 }
 
-func(int index) get T {	
+public func(int index) get T {	
 	
 	; ERROR_NO_MATCH
 	if (index,>=,length) { SetLastError(1169) }
@@ -33,4 +31,4 @@ func(int index) get T {
 }
 
 ; Note: this will be referenced to the List (any updates on the array will update the list)
-func toArray T# { retn(innerList) }
+public func toArray T# { retn(innerList) }

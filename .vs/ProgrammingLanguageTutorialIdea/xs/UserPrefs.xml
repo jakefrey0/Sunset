@@ -1,16 +1,19 @@
 ﻿<Properties StartupConfiguration="{19D2E25E-77E6-443C-B6EB-2E58499E4104}|Default">
-  <MonoDevelop.Ide.Workbench ActiveDocument="ProgrammingLanguageTutorialIdea/Keywords/KWImport.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="ProgrammingLanguageTutorialIdea/Keywords/KWConstructor.cs">
     <Files>
-      <File FileName="ProgrammingLanguageTutorialIdea/Parser.cs" Line="28" Column="4" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Parser.cs" Line="1" Column="1" />
       <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KeywordMgr.cs" Line="70" Column="38" />
       <File FileName="ProgrammingLanguageTutorialIdea/Modifier.cs" Line="32" Column="52" />
       <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWConstant.cs" Line="22" Column="1" />
       <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWPrivate.cs" Line="14" Column="43" />
       <File FileName="ProgrammingLanguageTutorialIdea/Class.cs" Line="29" Column="203" />
       <File FileName="ProgrammingLanguageTutorialIdea/Order.cs" Line="1" Column="1" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWImport.cs" Line="126" Column="267" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWImport.cs" Line="126" Column="89" />
       <File FileName="ProgrammingLanguageTutorialIdea/Program.cs" Line="1" Column="1" />
       <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWInteger.cs" Line="1" Column="1" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWDecrease.cs" Line="1" Column="1" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWNew.cs" Line="95" Column="15" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWConstructor.cs" Line="74" Column="18" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
@@ -18,8 +21,10 @@
           <Node name="ProgrammingLanguageTutorialIdea" expanded="True">
             <Node name="ProgrammingLanguageTutorialIdea" expanded="True">
               <Node name="Keywords" expanded="True">
-                <Node name="KWImport.cs" selected="True" />
+                <Node name="KWConstructor.cs" selected="True" />
               </Node>
+              <Node name="Properties" expanded="True" />
+              <Node name="Stack" expanded="True" />
             </Node>
           </Node>
         </State>

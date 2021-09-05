@@ -1,4 +1,4 @@
 STRUCT
 import(Windows/FormTimer)
-FormTimer sendingTimer
-int formHandle
+public FormTimer sendingTimer
+public int formHandle

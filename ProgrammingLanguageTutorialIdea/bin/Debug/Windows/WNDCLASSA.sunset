@@ -1,11 +1,11 @@
 STRUCT
-int       style
-FUNCPTR   lpfnWndProc
-int       cbClsExtra
-int       cbWndExtra
-int       hInstance
-int       hIcon
-int       hCursor
-int       hbrBackground
-str       lpszMenuName
-str       lpszClassName
+public int       style
+public FUNCPTR   lpfnWndProc
+public int       cbClsExtra
+public int       cbWndExtra
+public int       hInstance
+public int       hIcon
+public int       hCursor
+public int       hbrBackground
+public str       lpszMenuName
+public str       lpszClassName

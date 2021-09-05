@@ -1,5 +1,202 @@
 import(Windows/Form)
-import(Windows/RECT)
 import(Windows/SimpleLabel)
-import(SimpleGame/Player)
+import(Windows/RECT)
+import(Windows/TimerEventArgs)
+import(Windows/FormEventArgs)
+import(Windows/KeyEventArgs)
 
+import(SimpleGame/Player)
+import(SimpleGame/Course)
+import(SimpleGame/CourseEndEventArgs)
+
+dllref(User32,str,str,int) cdecl:wsprintfA int
+dllref(Kernel32,int) ExitProcess void
+
+str title becomes "Geom. Dash Clone"
+Form form becomes new(Form,title,0,0,560,449)
+SimpleLabel lbl becomes new(SimpleLabel)
+lbl.text becomes title
+form.simpleLabels.add(lbl) 
+SimpleLabel lbl0 becomes new(SimpleLabel)
+lbl0.text becomes "Space bar to jump"
+lbl0.y becomes 15
+form.simpleLabels.add(lbl0)
+SimpleLabel lbl1 becomes new(SimpleLabel)
+lbl1.text becomes "Courses completed: 0/3"
+lbl1.y becomes 30
+form.simpleLabels.add(lbl1)
+
+Player player becomes new(Player)
+player.bounds becomes new(RECT)
+constant int playerSize becomes 50
+constant int correction becomes 29 ; To offset form height by title bar height
+int groundLevel becomes form.h-correction
+player.bounds.left becomes form.w/6
+player.bounds.right becomes player.bounds.left+playerSize
+player.bounds.bottom becomes 300
+player.bounds.top becomes player.bounds.bottom-playerSize
+player.jumpTicks becomes 0
+player.jumpPower becomes 6
+
+int gravity becomes 2
+
+form.rectangles.add(player.bounds)
+
+RECT cib becomes new(RECT) ; Course item bounds
+
+Course course becomes new(Course,form,3,player)
+cib.right becomes 10
+cib.bottom becomes 33
+course.addObstacle(cib,733,groundLevel-33)
+course.addJumpPad(1000,groundLevel-16)
+course.addJumpOrb(1200,330)
+cib.bottom becomes 90
+course.addObstacle(cib,1100,groundLevel-90)
+cib.bottom becomes 180
+course.addObstacle(cib,1275,groundLevel-180)
+cib.bottom becomes 40
+course.addObstacle(cib,1450,groundLevel-40)
+cib.bottom becomes 40
+course.addObstacle(cib,1565,groundLevel-40)
+course.addFinishFlag(1650,groundLevel-100)
+
+Course course0 becomes new(Course,form,4,player)
+cib.bottom becomes 10
+cib.right becomes 100
+course0.addObstacle(cib,425,groundLevel-10)
+course0.addJumpPad(670,groundLevel-16)
+cib.bottom becomes 300
+cib.right becomes 10
+course0.addObstacle(cib,747,0)
+cib.bottom becomes 40
+course0.addObstacle(cib,835,groundLevel-40)
+course0.addJumpPad(940,groundLevel-16)
+course0.addJumpOrb(1140,170)
+course0.addJumpOrb(1455,170)
+course0.addFinishFlag(1925,groundLevel-100)
+
+Course course1 becomes new(Course,form,6,player)
+course1.addJumpPad(300,groundLevel-16)
+course1.addFinishFlag(450,groundLevel-100)
+course1.addObstacle(cib,735,groundLevel-40)
+course1.addJumpPad(800,groundLevel-16)
+course1.addFallingObstacle(cib,1600,0)
+course1.addObstacle(cib,1600,groundLevel-40)
+course1.addJumpPad(1750,groundLevel-16)
+course1.addJumpOrb(2000,170)
+course1.addFallingObstacle(cib,2000,0)
+course1.addFallingObstacle(cib,2020,0)
+course1.addFallingObstacle(cib,2040,0)
+course1.addFallingObstacle(cib,2060,0)
+course1.addFallingObstacle(cib,2080,0)
+course1.addFallingObstacle(cib,2100,0)
+course1.addFallingObstacle(cib,2120,0)
+course1.addFallingObstacle(cib,2140,0)
+course1.addFallingObstacle(cib,2160,0)
+course1.addFallingObstacle(cib,2180,0)
+course1.addFallingObstacle(cib,2200,0)
+course1.addFallingObstacle(cib,2220,0)
+course1.addFallingObstacle(cib,2240,0)
+course1.addFallingObstacle(cib,2260,0)
+course1.addFinishFlag(2025,groundLevel-100)
+course1.addFinishFlag(2125,groundLevel-100)
+course1.addFinishFlag(2225,groundLevel-100)
+course1.addFinishFlag(2325,groundLevel-100)
+course1.addFinishFlag(2425,groundLevel-100)
+course1.addFinishFlag(2525,groundLevel-100)
+course1.addFinishFlag(2625,groundLevel-100)
+course1.addJumpPad(2875,groundLevel-16)
+cib.bottom becomes 145
+course1.addFallingObstacle(cib,3700,105)
+course1.addJumpPad(3730,groundLevel-16)
+cib.bottom becomes 32
+course1.addFallingObstacle(cib,3875,75)
+course1.addFinishFlag(4200,groundLevel-100)
+
+int lastCheckpoint ;0 by default
+int coursesCompleted ;0 by default
+
+int flagBufferTicks ;0 by default
+
+func(TimerEventArgs args) onTick {
+	
+	if (flagBufferTicks,=/=,0) { --flagBufferTicks }
+	
+	if (player.jumpTicks,=/=,0) {
+		player.bounds.bottom becomes player.bounds.bottom-player.jumpPower
+		player.bounds.top becomes player.bounds.top-player.jumpPower
+		player.jumpTicks becomes player.jumpTicks-1
+		form.rePaint
+	}
+	else {
+		if (player.bounds.bottom,=/=,groundLevel) {
+			player.bounds.bottom becomes player.bounds.bottom+(gravity*2)
+			player.bounds.top becomes player.bounds.top+(gravity*2)
+			form.rePaint
+		}
+	}
+	
+}
+
+func jump {
+	
+	if (player.bounds.bottom,=,groundLevel) {
+		player.jumpTicks becomes 20
+	}
+	
+}
+
+func(KeyEventArgs args) onKeyDown {
+	
+	if (args.keyCode,=,32) { jump }
+	
+}
+
+func(CourseEndEventArgs args) onCourseEnd {
+	
+	if (args.won) {
+		if (flagBufferTicks,=,0) {
+			++coursesCompleted
+			wsprintfA(lbl1.text,"Courses completed: %d/3",coursesCompleted)
+			switch (coursesCompleted) {
+				
+				case(1):
+					course0.load
+					break
+				case(2):
+					course1.load
+					break
+				case(3):
+					SimpleLabel lbl becomes new(SimpleLabel)
+					lbl.x becomes 200
+					lbl.y becomes 200
+					lbl.text becomes "WINNER."
+					form.simpleLabels.add(lbl) 
+					break
+				
+				
+			}
+			flagBufferTicks becomes 180
+		}
+	}
+	else {
+		ExitProcess(0)
+	}
+	
+}
+
+func(FormEventArgs args) init {
+	
+	form.onTimerTick.addFunction($onTick)
+	form.onKeyDown.addFunction($onKeyDown)
+	form.createTimer(13)
+	course.onCourseEnd.addFunction($onCourseEnd)
+	course0.onCourseEnd.addFunction($onCourseEnd)
+	course1.onCourseEnd.addFunction($onCourseEnd)
+	course.load
+	
+}
+
+form.onFormCreation.addFunction($init)
+
+form.show

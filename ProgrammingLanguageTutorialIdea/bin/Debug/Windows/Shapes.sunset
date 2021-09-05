@@ -1,0 +1,10 @@
+import(Windows/RECT)
+dllref(User32,RECT,RECT,RECT) IntersectRect bool
+
+pullable RECT lastRectIntersection becomes new(RECT)
+
+public func(RECT r,RECT r0) areRectsIntersecting bool {
+	
+	retn(IntersectRect(lastRectIntersection,r,r0))
+	
+}

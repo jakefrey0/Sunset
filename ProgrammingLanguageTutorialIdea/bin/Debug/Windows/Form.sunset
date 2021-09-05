@@ -42,38 +42,46 @@ dllref(User32,int) PostQuitMessage void
 dllref(User32,HWND,str,str,int) MessageBoxA int
 dllref(User32,HWND,int,int,FUNCPTR) SetTimer int
 dllref(User32,HWND,RECT,HRGN,int) RedrawWindow bool
+dllref(Kernel32,int) ExitProcess void
+dllref(Gdi32,HDC,int,int,int,int) Ellipse bool
+dllref(Gdi32,HDC,int,int,int,int,int,int) RoundRect bool
+dllref(Gdi32,HDC,int) SetDCBrushColor int
+dllref(Gdi32,HDC,int) SetDCPenColor int
 
 WNDCLASSA wndClassA
 MSG msg
 str className becomes "SunsetClass"
-int WM_DESTROY becomes 2
-int COLOR_WINDOW becomes 5
-int WM_PAINT becomes 15
-int WM_NCCREATE becomes 129
-int ETO_CLIPPED becomes 4
-int WM_TIMER becomes 275
-int COLOR_WINDOWTEXT becomes 8
-int RDW_INVALIDATE becomes 1
-int WM_KEYDOWN becomes 256
-int WM_KEYUP becomes 257
-int windowHandle
-int brushHandle becomes GetSysColorBrush(COLOR_WINDOW)
-int contentsHandle becomes GetSysColorBrush(COLOR_WINDOWTEXT)
+pullable int WM_DESTROY becomes 2
+pullable int COLOR_WINDOW becomes 5
+pullable int WM_PAINT becomes 15
+pullable int WM_NCCREATE becomes 129
+pullable int ETO_CLIPPED becomes 4
+pullable int WM_TIMER becomes 275
+pullable int COLOR_WINDOWTEXT becomes 8
+pullable int RDW_INVALIDATE becomes 1
+pullable int WM_KEYDOWN becomes 256
+pullable int WM_KEYUP becomes 257
+pullable int windowHandle
+pullable int brushHandle becomes GetSysColorBrush(COLOR_WINDOW)
+pullable int contentsHandle becomes GetSysColorBrush(COLOR_WINDOWTEXT)
 StringTool st becomes new(StringTool)
-List<SimpleLabel> simpleLabels becomes new(List<SimpleLabel>)
-List<FormTimer> timers becomes new(List<FormTimer>)
-List<RECT> rectangles becomes new(List<RECT>)
-int w ;Width
-int h ;Height
-int x ;X
-int y ;Y
-str title ;Form title
-Event<FormEventArgs> onFormClosing becomes new(Event<FormEventArgs>)
-Event<FormEventArgs> onFormCreation becomes new(Event<FormEventArgs>)
-Event<TimerEventArgs> onTimerTick becomes new(Event<TimerEventArgs>)
-Event<KeyEventArgs> onKeyDown becomes new(Event<KeyEventArgs>)
-Event<KeyEventArgs> onKeyUp becomes new(Event<KeyEventArgs>)
-int cTimerId becomes 1
+public List<SimpleLabel> simpleLabels becomes new(List<SimpleLabel>)
+public List<FormTimer> timers becomes new(List<FormTimer>)
+public List<RECT> rectangles becomes new(List<RECT>)
+public List<RECT> roundRectangles becomes new(List<RECT>)
+public List<RECT> ellipses becomes new(List<RECT>)
+pullable int w ;Width
+pullable int h ;Height
+pullable int x ;X
+pullable int y ;Y
+pullable str title ;Form title
+public Event<FormEventArgs> onFormClosing becomes new(Event<FormEventArgs>)
+public Event<FormEventArgs> onFormCreation becomes new(Event<FormEventArgs>)
+public Event<TimerEventArgs> onTimerTick becomes new(Event<TimerEventArgs>)
+public Event<KeyEventArgs> onKeyDown becomes new(Event<KeyEventArgs>)
+public Event<KeyEventArgs> onKeyUp becomes new(Event<KeyEventArgs>)
+public int cTimerId becomes 1
+int RGBref
 func(int hwnd,int uMsg,int wParam,int lParam) wndProc int {
 	
 	if (uMsg,=,WM_NCCREATE) {
@@ -88,7 +96,7 @@ func(int hwnd,int uMsg,int wParam,int lParam) wndProc int {
 		
 		PAINTSTRUCT pstrc becomes new(PAINTSTRUCT)
 		RECT rc becomes new(RECT)
-		int hdc becomes BeginPaint(hwnd,pstrc)
+		HDC hdc becomes BeginPaint(hwnd,pstrc)
 		GetClientRect(hwnd,rc)
 		int maxBottom becomes rc.bottom
 		FillRect(hdc,rc,brushHandle)
@@ -99,6 +107,12 @@ func(int hwnd,int uMsg,int wParam,int lParam) wndProc int {
 			; Update this to a new class maybe
 			; FormRectangle, STRUCT with RECT bounds and int brush
 			FillRect(hdc,rct,contentsHandle)
+		}
+		foreach (rct,roundRectangles.toArray) {
+			RoundRect(hdc,rct.left,rct.top,rct.right,rct.bottom,15,15)
+		}
+		foreach (rct,ellipses.toArray) {
+			Ellipse(hdc,rct.left,rct.top,rct.right,rct.bottom)
 		}
 		EndPaint(hwnd,pstrc)
 		retn(null)
@@ -111,7 +125,7 @@ func(int hwnd,int uMsg,int wParam,int lParam) wndProc int {
 		args.info becomes "The form is about to be destroyed"
 		onFormClosing.raise(args)
 		PostQuitMessage(null)
-		retn(null)
+		ExitProcess(0)
 		
 	}
 	
@@ -151,7 +165,7 @@ func(int hwnd,int uMsg,int wParam,int lParam) wndProc int {
 	
 }
 
-func(SimpleLabel lbl) addComponent {
+public func(SimpleLabel lbl) addComponent {
 	
 	simpleLabels.add(lbl)
 	
@@ -172,7 +186,7 @@ constructor(str formTitle,int X,int Y,int width,int height) {
 	
 }
 
-func show {
+public func show {
 	CreateWindowExA(null,className,title,273154048,x,y,w,h,null,null,wndClassA.hInstance,null)
 	msg becomes new(MSG)
 	while (GetMessageA(msg,null,null,null)) {
@@ -184,7 +198,7 @@ func show {
 
 }
 
-func(int interval_ms) createTimer FormTimer {
+public func(int interval_ms) createTimer FormTimer {
 	
 	int id becomes SetTimer(windowHandle,cTimerId,interval_ms,null)
 	FormTimer timer becomes new(FormTimer,id,windowHandle)
@@ -193,17 +207,23 @@ func(int interval_ms) createTimer FormTimer {
 	
 }
 
-func(str msg,str m_title) mbox int {
+public func(str msg,str m_title) mbox int {
 	
 	retn(MessageBoxA(windowHandle,msg,m_title,0))
 	
 }
 
-func rePaint {
+public func rePaint {
 	
 	RECT region becomes new(RECT)
 	region.right becomes w
 	region.bottom becomes h
 	RedrawWindow(windowHandle,region,null,RDW_INVALIDATE)
+	
+}
+
+public func(byte r,byte g,byte b) setDrawingRGB {
+	
+	RGBref becomes r+g+b
 	
 }

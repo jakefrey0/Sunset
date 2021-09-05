@@ -1,0 +1,230 @@
+import(Windows/RECT)
+import(Windows/Form)
+import(List<RECT>)
+import(SimpleGame/CourseEndEventArgs)
+import(Event<CourseEndEventArgs>)
+import(SimpleGame/Player)
+import(Windows/Shapes)
+
+public Event<CourseEndEventArgs> onCourseEnd becomes new(Event<CourseEndEventArgs>)
+
+pullable int courseSpeed
+
+Form referenceForm
+List<RECT> obstacles becomes new(List<RECT>)
+List<RECT> finishFlagRects becomes new(List<RECT>)
+List<RECT> jumpPads becomes new(List<RECT>)
+List<RECT> jumpOrbs becomes new(List<RECT>)
+List<RECT> fallingObstacles becomes new(List<RECT>)
+
+bool enabled
+Player referencePlayer
+Shapes shapes becomes new(Shapes)
+CourseEndEventArgs lostArgs becomes new(CourseEndEventArgs)
+CourseEndEventArgs wonArgs becomes new(CourseEndEventArgs)
+;lostArgs.won is false by default
+wonArgs.won becomes true
+
+func win {
+	onCourseEnd.raise(wonArgs) 
+}
+
+func lose {
+	onCourseEnd.raise(lostArgs)
+}
+
+func superJump {
+	referencePlayer.jumpTicks becomes 35
+}
+
+func(List<RECT> rects,FUNCPTR onCollide) moveRectsLeft {
+	
+	foreach (r,rects.toArray) {
+			
+		r.left becomes r.left-courseSpeed
+		r.right becomes r.right-courseSpeed
+		
+		if (shapes.areRectsIntersecting(r,referencePlayer.bounds)) { 
+			callptr(onCollide)
+		}
+		
+	}
+	
+}
+
+public func onTick {
+	
+	if (enabled) {
+	
+		moveRectsLeft(obstacles,$lose)
+		moveRectsLeft(finishFlagRects,$win)
+		moveRectsLeft(jumpPads,$superJump)
+		moveRectsLeft(jumpOrbs,$superJump)
+		foreach (r,fallingObstacles.toArray) {
+				
+			r.left becomes r.left-courseSpeed
+			r.right becomes r.right-courseSpeed
+			if (r.left,<,600) {
+				r.bottom becomes r.bottom+3
+				r.top becomes r.top+3
+			}
+			
+			if (shapes.areRectsIntersecting(r,referencePlayer.bounds)) { lose }
+			
+		}
+		
+		referenceForm.rePaint
+	
+	}
+	
+}
+
+; Rectangle
+public func(RECT bounds,int x,int y) addObstacle {
+	
+	RECT obstacle becomes new(RECT)
+	obstacle.left becomes x+bounds.left
+	obstacle.right becomes x+bounds.right
+	obstacle.top becomes y+bounds.top
+	obstacle.bottom becomes y+bounds.bottom
+	obstacles.add(obstacle)
+	
+}
+
+; Many rectangles
+public func(int x,int y) addFinishFlag {
+	
+	RECT pole becomes new(RECT)
+	pole.left becomes x
+	pole.top becomes y
+	pole.bottom becomes y+100
+	pole.right becomes x+10
+	RECT checker becomes new(RECT)
+	RECT checker0 becomes new(RECT)
+	RECT checker1 becomes new(RECT)
+	RECT checker2 becomes new(RECT)
+	RECT checker3 becomes new(RECT)
+	RECT checker4 becomes new(RECT)
+	RECT checker5 becomes new(RECT)
+	RECT checker6 becomes new(RECT)
+	checker.left becomes x+10
+	checker.bottom becomes y+10
+	checker.top becomes y
+	checker.right becomes x+20
+	checker0.left becomes x+30
+	checker0.bottom becomes y+10
+	checker0.top becomes y
+	checker0.right becomes x+40
+	checker1.left becomes x+50
+	checker1.bottom becomes y+10
+	checker1.top becomes y
+	checker1.right becomes x+60
+	checker2.left becomes x+20
+	checker2.bottom becomes y+20
+	checker2.top becomes y+10
+	checker2.right becomes x+30
+	checker3.left becomes x+40
+	checker3.bottom becomes y+20
+	checker3.top becomes y+10
+	checker3.right becomes x+50
+	checker4.left becomes x+10
+	checker4.bottom becomes y+30
+	checker4.top becomes y+20
+	checker4.right becomes x+20
+	checker5.left becomes x+30
+	checker5.bottom becomes y+30
+	checker5.top becomes y+20
+	checker5.right becomes x+40
+	checker6.left becomes x+50
+	checker6.bottom becomes y+30
+	checker6.top becomes y+20
+	checker6.right becomes x+60
+	RECT outline becomes new(RECT)
+	RECT outline0 becomes new(RECT)
+	RECT outline1 becomes new(RECT)
+	outline.left becomes x
+	outline.top becomes y
+	outline.right becomes x+60
+	outline.bottom becomes y+2
+	outline0.left becomes x+58
+	outline0.top becomes y
+	outline0.right becomes x+60
+	outline0.bottom becomes y+30
+	outline1.left becomes x
+	outline1.top becomes y+28
+	outline1.right becomes x+60
+	outline1.bottom becomes y+30
+	
+	
+	finishFlagRects.add(pole)
+	finishFlagRects.add(checker)
+	finishFlagRects.add(checker0)
+	finishFlagRects.add(checker1)
+	finishFlagRects.add(checker2)
+	finishFlagRects.add(checker3)
+	finishFlagRects.add(checker4)
+	finishFlagRects.add(checker5)
+	finishFlagRects.add(checker6)
+	finishFlagRects.add(outline)
+	finishFlagRects.add(outline0)
+	finishFlagRects.add(outline1)
+	
+}
+
+; Round rectangles, yellow
+public func(int x,int y) addJumpPad {
+	
+	referenceForm.setDrawingRGB(255,0,0)
+	RECT pad becomes new(RECT)
+	pad.left becomes x
+	pad.top becomes y
+	pad.right becomes x+50
+	pad.bottom becomes y+20	
+	jumpPads.add(pad)
+	
+}
+
+; Circle, yellow
+public func(int x,int y) addJumpOrb {
+	
+	referenceForm.setDrawingRGB(255,0,0)
+	RECT orb becomes new(RECT)
+	orb.left becomes x
+	orb.top becomes y
+	orb.right becomes x+33
+	orb.bottom becomes y+33	
+	jumpOrbs.add(orb)
+	
+}
+
+; Rectangle
+public func(RECT bounds,int x,int y) addFallingObstacle {
+	
+	RECT obstacle becomes new(RECT)
+	obstacle.left becomes x+bounds.left
+	obstacle.right becomes x+bounds.right
+	obstacle.top becomes y+bounds.top
+	obstacle.bottom becomes y+bounds.bottom
+	fallingObstacles.add(obstacle)
+	
+}
+
+public func load {
+	
+	foreach (r,obstacles.toArray) { referenceForm.rectangles.add(r) }
+	foreach (r,finishFlagRects.toArray) { referenceForm.rectangles.add(r) }
+	foreach (r,jumpPads.toArray) { referenceForm.roundRectangles.add(r) }
+	foreach (r,jumpOrbs.toArray) { referenceForm.ellipses.add(r) }
+	foreach (r,fallingObstacles.toArray) { referenceForm.rectangles.add(r) }
+	enabled becomes true
+	
+}
+
+constructor(Form sender,int speed,Player coursePlayer) {
+	
+	courseSpeed becomes speed
+	referenceForm becomes sender
+	referenceForm.onTimerTick.addFunction($onTick)
+	referencePlayer becomes coursePlayer
+	
+}
