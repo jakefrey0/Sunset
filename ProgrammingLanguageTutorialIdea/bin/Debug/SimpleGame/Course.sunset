@@ -171,7 +171,7 @@ public func(int x,int y) addFinishFlag {
 	
 }
 
-; Round rectangles, yellow
+; Round rectangles
 public func(int x,int y) addJumpPad {
 	
 	referenceForm.setDrawingRGB(255,0,0)
@@ -184,7 +184,7 @@ public func(int x,int y) addJumpPad {
 	
 }
 
-; Circle, yellow
+; Circle
 public func(int x,int y) addJumpOrb {
 	
 	referenceForm.setDrawingRGB(255,0,0)
