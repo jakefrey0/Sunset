@@ -37,7 +37,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			Block functionBlock=new Block(delegate{sender.inFunction=false;if(sender.addEsiToLocalAddresses)sender.pseudoStack.pop();sender.pseudoStack.pop();},sender.memAddress,endOpcodes,true);
 			
 			//For information on this, see KWNew -> Extra esi dword var on classes information
-			if (sender.addEsiToLocalAddresses) {
+			if (sender.addEsiToLocalAddresses&&!sender.currentMods.HasFlag(Modifier.STATIC)) {
 				sender.addByte(0x56);//PUSH ESI
 				sender.esiFuncReferences.Add(sender.getOpcodesCount()+1);
 				sender.addBytes(new Byte[]{0xE8}.Concat(BitConverter.GetBytes(sender.memAddress))); //CALL DWORD RELATIVE ADDRESS
@@ -46,7 +46,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			List<Tuple<String,VarType>>paramTypes=new List<Tuple<String,VarType>>();
 			UInt16 paramIndex=0;
 			foreach (String s in @params.Reverse())
-				sender.pseudoStack.push(new LocalVar(s.Split(' ')[1]));
+				sender.pseudoStack.push( new LocalVar(s.Split(' ')[1]));
 			foreach (String s in @params) {
 				
 				String[]split=s.Split(' ');

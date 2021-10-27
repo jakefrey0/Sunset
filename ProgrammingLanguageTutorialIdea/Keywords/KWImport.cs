@@ -38,8 +38,17 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				foreach (String s in passingTypesUnparsed.Split(',')) {
 					Tuple<String,VarType>vt=sender.getVarType(s);
 					passedTypes.Add(new Tuple<String,Tuple<String,VarType>>(null,vt));
+                    Console.WriteLine(vt.Item1+","+vt.Item2.ToString());
 					if (vt.Item2==VarType.CLASS)
 						classWords.Add(vt.Item1);
+                    else if (vt.Item2==VarType.NATIVE_ARRAY) {
+                        Tuple<String,VarType>varType=vt;
+                        while (varType.Item2==VarType.NATIVE_ARRAY) {
+                            varType=sender.getVarType(vt.Item1);
+                            if (varType.Item2==VarType.CLASS)
+                                classWords.Add(varType.Item1);
+                        }   
+                    }
 				}
 				
 			}
@@ -56,8 +65,11 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			Int32 initialAppendAfterCount=sender.getAppendAfterCount();
 			UInt32 startMemAddr=(UInt32)(sender.memAddress+initialAppendAfterCount);
             List<String>alreadyImported=Parser.classMemoryAddresses.Keys.ToList();
+            UInt32 pGlobalAddr=Parser.globalMemAddress;
 			Parser childParser=new Parser("Child parser",fp,false,true,true,false,false){addEsiToLocalAddresses=true,gui=sender.gui,className=className};
 			childParser.keywordMgr.classWords=classWords;
+            foreach (String cw_name in classWords)
+                childParser.importedClasses.AddRange(sender.importedClasses.Where(x=>x.className==cw_name));
 			if (passedTypes!=null)
 				childParser.passedVarTypes=passedTypes;
 			Byte[]data=childParser.parse(File.ReadAllText(fp));
@@ -129,6 +141,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
             if (!(Parser.classMemoryAddresses.ContainsKey(id))) // < -------
                 //Parser.classMemoryAddresses.Add(id,startAddr);
                 Parser.classMemoryAddresses.Add(id,0);
+                
 		    Class cl=new Class(className,path,(UInt32)data.Length,childParser.@struct?ClassType.STRUCT:ClassType.NORMAL,startMemAddr,childParser,childParser.memAddress,(UInt32)initialAppendAfterCount,(UInt32)childParser.getAppendAfterCount(),id);
 			sender.importedClasses.Add(cl);
 			sender.staticClassReferences.Add(cl,new List<UInt32>());
@@ -137,6 +150,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				sender.keywordMgr.classWords.Add(className);
 
             Dictionary<String,UInt32>nd=new Dictionary<String,UInt32>(Parser.classMemoryAddresses.Count);
+
             foreach (KeyValuePair<String,UInt32>kvp in Parser.classMemoryAddresses) {
                 if (!alreadyImported.Contains(kvp.Key))
                        nd.Add(kvp.Key,(UInt32)(kvp.Value+initialAppendAfterCount+startAddr));
@@ -144,7 +158,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
                     nd.Add(kvp.Key,kvp.Value);
             }
             Parser.classMemoryAddresses=new Dictionary<String,UInt32>(nd);
-
+            
 			return base.execute(sender, @params);
 			
 		}

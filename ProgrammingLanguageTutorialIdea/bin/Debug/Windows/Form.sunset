@@ -6,6 +6,8 @@ acknowledge HMENU     as PTR
 acknowledge HINSTANCE as PTR
 acknowledge HBRUSH    as PTR
 acknowledge HRGN      as PTR
+acknowledge HBITMAP   as PTR
+acknowledge HGDIOBJ   as PTR
 
 import(Windows/MSG)
 import(Windows/PAINTSTRUCT) 
@@ -24,6 +26,10 @@ import(List<FormTimer>)
 import(List<RECT>)
 import(Windows/KeyEventArgs)
 import(Event<KeyEventArgs>)
+import(List<POINT>)
+import(List<List<POINT>>)
+import(ImageReference)
+import(List<ImageReference>)
 
 dllref(Kernel32,str) GetModuleHandleA int
 dllref(User32,WNDCLASSA) RegisterClassA int
@@ -47,6 +53,13 @@ dllref(Gdi32,HDC,int,int,int,int) Ellipse bool
 dllref(Gdi32,HDC,int,int,int,int,int,int) RoundRect bool
 dllref(Gdi32,HDC,int) SetDCBrushColor int
 dllref(Gdi32,HDC,int) SetDCPenColor int
+dllref(Gdi32,HDC,POINT#,int) Polyline bool
+dllref(Gdi32,HDC,int,int) LineTo bool
+dllref(User32,HINSTANCE,str,int,int,int,int) LoadImageA HBITMAP
+dllref(Gdi32,HDC,int,int,int,int,HDC,int,int,int) BitBlt bool
+dllref(Gdi32,HDC) CreateCompatibleDC HDC
+dllref(Gdi32,HDC,HGDIOBJ) SelectObject HGDIOBJ
+dllref(Gdi32,HDC) DeleteDC bool
 
 WNDCLASSA wndClassA
 MSG msg
@@ -61,6 +74,7 @@ pullable int COLOR_WINDOWTEXT becomes 8
 pullable int RDW_INVALIDATE becomes 1
 pullable int WM_KEYDOWN becomes 256
 pullable int WM_KEYUP becomes 257
+pullable int SRCCOPY becomes 13369376
 pullable int windowHandle
 pullable int brushHandle becomes GetSysColorBrush(COLOR_WINDOW)
 pullable int contentsHandle becomes GetSysColorBrush(COLOR_WINDOWTEXT)
@@ -70,6 +84,9 @@ public List<FormTimer> timers becomes new(List<FormTimer>)
 public List<RECT> rectangles becomes new(List<RECT>)
 public List<RECT> roundRectangles becomes new(List<RECT>)
 public List<RECT> ellipses becomes new(List<RECT>)
+public List<List<POINT>> polyLines becomes new(List<List<POINT>>)
+public List<POINT> lineTrail becomes new(List<POINT>)
+public List<ImageReference> images becomes new(List<ImageReference>)
 pullable int w ;Width
 pullable int h ;Height
 pullable int x ;X
@@ -81,7 +98,7 @@ public Event<TimerEventArgs> onTimerTick becomes new(Event<TimerEventArgs>)
 public Event<KeyEventArgs> onKeyDown becomes new(Event<KeyEventArgs>)
 public Event<KeyEventArgs> onKeyUp becomes new(Event<KeyEventArgs>)
 public int cTimerId becomes 1
-int RGBref
+int RGBref becomes -1
 func(int hwnd,int uMsg,int wParam,int lParam) wndProc int {
 	
 	if (uMsg,=,WM_NCCREATE) {
@@ -93,13 +110,13 @@ func(int hwnd,int uMsg,int wParam,int lParam) wndProc int {
 	
 	if (uMsg,=,WM_PAINT) {
 ; On Paint
-		
 		PAINTSTRUCT pstrc becomes new(PAINTSTRUCT)
 		RECT rc becomes new(RECT)
 		HDC hdc becomes BeginPaint(hwnd,pstrc)
 		GetClientRect(hwnd,rc)
 		int maxBottom becomes rc.bottom
 		FillRect(hdc,rc,brushHandle)
+		SetDCPenColor(hdc,RGBref)
 		foreach (lbl,simpleLabels.toArray) {
 			TextOutA(hdc,lbl.x,lbl.y,lbl.text,st.lengthOf(lbl.text))
 		}
@@ -113,6 +130,19 @@ func(int hwnd,int uMsg,int wParam,int lParam) wndProc int {
 		}
 		foreach (rct,ellipses.toArray) {
 			Ellipse(hdc,rct.left,rct.top,rct.right,rct.bottom)
+		}
+		foreach (polyLine,polyLines.toArray) {
+			Polyline(hdc,polyLine.toArray+8,lengthof(polyLine.toArray))
+		}
+		foreach (part,lineTrail.toArray) {
+			LineTo(hdc,part.x,part.y)
+		}
+		foreach (imgref,images.toArray) {
+			HBITMAP bitmap becomes LoadImageA(null,imgref.fileName,0,null,null,16)
+			HDC hMemDC becomes CreateCompatibleDC(hdc)
+			SelectObject(hMemDC,cast(bitmap,HGDIOBJ))
+			BitBlt(hdc,imgref.x,imgref.y,imgref.width,imgref.height,hMemDC,0,0,SRCCOPY)
+			DeleteDC(hMemDC)
 		}
 		EndPaint(hwnd,pstrc)
 		retn(null)
@@ -204,6 +234,7 @@ public func(int interval_ms) createTimer FormTimer {
 	FormTimer timer becomes new(FormTimer,id,windowHandle)
 	timers.add(timer)
 	++cTimerId
+	retn(timer)
 	
 }
 
@@ -224,6 +255,13 @@ public func rePaint {
 
 public func(byte r,byte g,byte b) setDrawingRGB {
 	
-	RGBref becomes r+g+b
+	RGBref becomes r+g+b ; this wont work
+	; it needs to be appended not added
+	; 00 | 00 | 00
+	; not 00 + 00 + 00
 	
+}
+
+public func kill {
+	ExitProcess(0)
 }

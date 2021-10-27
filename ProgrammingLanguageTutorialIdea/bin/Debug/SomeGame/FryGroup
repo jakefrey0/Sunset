@@ -1,0 +1,8 @@
+STRUCT
+import(ImageReference)
+public ImageReference fries
+public ImageReference fries0
+public ImageReference fries1
+public int ticksLeft
+public int originX
+public int originY

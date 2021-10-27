@@ -1,1 +1,7 @@
 local func test { }
+
+static func test0 {
+	
+	nofunct(32)	
+	
+}

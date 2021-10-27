@@ -1,4 +1,5 @@
-acknowledge char as byte
+acknowledge char  as byte
+acknowledge WCHAR as int
 setpheapvar
 
 ; ASCII:
@@ -117,5 +118,19 @@ public func(str string) toUpper str {
 		
 	}
 	retn(stringFromBytes(arr))
+	
+}
+
+public func(str string) toWchars WCHAR# {
+	
+	int# arr becomes #lengthOf(string)+1
+	int ctr becomes 0
+	foreach (b,string) {
+		
+		arr[ctr] becomes b
+		++ctr
+		
+	}
+	retn(cast(arr,WCHAR#))
 	
 }

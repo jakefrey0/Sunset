@@ -2,7 +2,7 @@
  - Classes inheriting eachother, and update all current sunset libs for this
  - blogic (pb)
  - for loops - Set the parser to parse the first parameter normally but set the block to the for block
- - magic #'s
+ - magic #'s, neural network, creative ways all to give unique performance !
  
  
   ~~~

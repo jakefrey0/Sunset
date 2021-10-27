@@ -54,7 +54,7 @@ static public func show_num_static {
 	str z becomes "#####"
 	wsprintfA(z,"%d",static_num)
 	MessageBoxA(null,z,"Static number",null)	
-	; TODO:: FAIL ON:
+	; TODO:: SHOULD FAIL ON:
 	; num7 becomes 11111
 	
 }

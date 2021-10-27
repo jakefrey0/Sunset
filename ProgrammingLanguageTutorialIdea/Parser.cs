@@ -144,9 +144,10 @@ namespace ProgrammingLanguageTutorialIdea {
 		private Dictionary<String,Tuple<UInt32,String,Class,Modifier>> classes=new Dictionary<String,Tuple<UInt32,String,Class,Modifier>>();//Name,(Ptr To Mem Address of Heap Handle,Class type name,Class type),Modifier
 		private List<UInt32>int32sToSubtractByFinalOpcodesCount=new List<UInt32>();
 		private List<String>pvClassInstanceOrigin;
-         private Dictionary<String,UInt32>labels=new Dictionary<String,UInt32>();//Name, Mem Address
-         private Dictionary<String,Tuple<UInt32,Tuple<String,VarType>>>constants=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>>>();//var name,(constant value,(Generic Var Type Tuple))
-		
+        private Dictionary<String,UInt32>labels=new Dictionary<String,UInt32>();//Name, Mem Address
+        private Dictionary<String,Tuple<UInt32,Tuple<String,VarType>>>constants=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>>>();//var name,(constant value,(Generic Var Type Tuple))
+        private List<UInt32>dwordsToIncByOpcodes=new List<UInt32>();
+
 		private List<Tuple<UInt32,List<UInt32>>>stringsAndRefs; //(Mem Addr,List of References by Opcode Index),Note: Currently the Inner list of Opcode Indexes will only have a length of 1 (6/19/2021 5:19PM)
 		private Dictionary<String,UInt32> setArrayValueFuncPtrs;
 		private Executor waitingToExecute;
@@ -296,28 +297,33 @@ namespace ProgrammingLanguageTutorialIdea {
 						
 						if (this.isArrayDeclarationChar(c)) {
 							
-							String n=nameReader.ToString();
-							if (!this.pvtNull()&&this.pvtContainsKey(n))
-								n=this.pvtGet(n).Item1;
-							
-							if (searchingFunctionReturnType) {
-								
-								n+=c;
-								this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.getVarType(n),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
-								status=ParsingStatus.SEARCHING_NAME;
-								this.setExpectsBlock=1;
-								
-							}
-							
-							else {
-							
-								this.declareArray(n);
-								
-								this.resetLastReferencedVar();
-							
-							}
-								
-							nameReader.Clear();
+                            if (sharprv!=0) nameReader.Append(c);
+                            else {
+
+    							String n=nameReader.ToString();
+    							if (!this.pvtNull()&&this.pvtContainsKey(n))
+    								n=this.pvtGet(n).Item1;
+    							
+    							if (searchingFunctionReturnType) {
+    								
+    								n+=c;
+    								this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.getVarType(n),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+    								status=ParsingStatus.SEARCHING_NAME;
+    								this.setExpectsBlock=1;
+    								
+    							}
+    							
+    							else {
+    							
+    								this.declareArray(n);
+    								
+    								this.resetLastReferencedVar();
+    							
+    							}
+    								
+    							nameReader.Clear();
+
+                            }
 							
 						}
 						else if (this.beginsArrayIndexer(c)) {
@@ -809,16 +815,19 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.processHeapVar=new Tuple<UInt32,List<UInt32>>(this.processHeapVar.Item1+1,this.processHeapVar.Item2);
 				
 			}
-            
-            Dictionary<String,UInt32>nd=new Dictionary<String,UInt32>(Parser.classMemoryAddresses.Count);
-            foreach (KeyValuePair<String,UInt32>kvp in Parser.classMemoryAddresses)
-                nd.Add(kvp.Key,kvp.Value+1);
-            Parser.classMemoryAddresses=new Dictionary<String,UInt32>(nd);
-			
+
+            if (this.parserName=="Main parser") {
+                Dictionary<String,UInt32>nd=new Dictionary<String,UInt32>(Parser.classMemoryAddresses.Count);
+                foreach (KeyValuePair<String,UInt32>kvp in Parser.classMemoryAddresses)
+                    nd.Add(kvp.Key,kvp.Value+1);
+                Parser.classMemoryAddresses=new Dictionary<String,UInt32>(nd);
+            }
+
 			opcodes.Add(b);
 			++memAddress;
             ++Parser.globalMemAddress;
 			this.increaseRefdFuncsToIncreaseWithOpcodes();
+            this.increaseDwordsByOpcodes();
 			
 		}
 		
@@ -4225,10 +4234,10 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			Console.WriteLine("[classInstance: \""+classInstance+"\"]");
 
-
 			if (isImportedClass(classInstance)) {
-                Console.WriteLine("==========================Imported");
-                this.addBytes(new Byte[]{0xB8 }.Concat(BitConverter.GetBytes(Parser.classMemoryAddresses[classIDOf(classInstance)])));
+                //Console.WriteLine("==========================Imported");
+                this.addBytes(new Byte[]{0xB8 }.Concat(BitConverter.GetBytes(Parser.classMemoryAddresses[classIDOf(classInstance)]+5)));
+                this.dwordsToIncByOpcodes.Add((UInt32)(this.opcodes.Count-4));
             }
 			else if (!(this.isALocalVar(classInstance))) {
 				
@@ -4263,9 +4272,10 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			if(!cl.functions.ContainsKey(func)) throw new Exception("Func:"+func+", origin: "+merge(classInstance,"."));
 			
-            throwIfCantAccess(cl.functions[func].Item6,func,cl.path,true);
+            Modifier mods=cl.functions[func].Item6;
+            throwIfCantAccess(mods,func,cl.path,true);
             if (!this.containsImportedClass(classInstance.Last()))
-                throwIfStatic(cl.functions[func].Item6,func);
+                throwIfStatic(mods,func);
 
 			if (cl.functions[func].Item3!=parameters.Length)
 				throw new ParsingError("Expected \""+cl.functions[func].Item3+"\" parameters for \""+func+"\", got \""+parameters.Length+'"');
@@ -4289,12 +4299,14 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			if (!classInstanceAlreadyInEax)
 				this.moveClassOriginIntoEax(classInstance,originLocal);
-			this.addBytes(new Byte[]{0x8B,0xF0}); //MOV ESI,EAX
+            if (!mods.HasFlag(Modifier.STATIC))
+			    this.addBytes(new Byte[]{0x8B,0xF0}); //MOV ESI,EAX
 			if (classInstanceAlreadyInEax)
 				this.moveClassItemAddrIntoEax(null,func,VarType.FUNCTION,true,lastClassOnOriginIfInstanceInEax);
 			else
 				this.moveClassOriginItemAddrIntoEax(classInstance.ToList(),func,VarType.FUNCTION,originLocal,true);
-			this.addBytes(new Byte[]{0x81,0xC6}.Concat(BitConverter.GetBytes(cl.opcodePortionByteSize)));
+            if (!mods.HasFlag(Modifier.STATIC))
+                this.addBytes(new Byte[]{0x81,0xC6}.Concat(BitConverter.GetBytes(cl.opcodePortionByteSize))); // ADD ESI, DWORD
 			this.addBytes(new Byte[]{0xFF,0xD0}); //CALL EAX
 			if (classInstanceAlreadyInEax)
 				this.addBytes(new Byte[]{0x83,0xC4,4});//ADD ESP,4
@@ -4747,6 +4759,32 @@ namespace ProgrammingLanguageTutorialIdea {
         private Class getImportedClass  (String name) { return this.importedClasses.Where(x=>x.className==name).First(); }
 
         internal String classIDOf (String name) { return getImportedClass(name).classID;}
+
+        private void increaseDwordsByOpcodes () {
+
+            Byte i;
+
+            foreach (UInt32 index in this.dwordsToIncByOpcodes) {
+
+                Console.WriteLine(":::::: "+index.ToString()+','+this.opcodes.Count.ToString());
+
+                Byte[] arr=new Byte[4];
+                i=0;
+                while (i!=4) {
+                    arr[i]=this.opcodes[(Int32)(i+index)];
+                    ++i;
+                }
+                arr=BitConverter.GetBytes(BitConverter.ToUInt32(arr,0)+1);
+                i=0;
+                while (i!=4) {
+                    this.opcodes[(Int32)(i+index)]=arr[i];
+                    ++i;
+                }
+
+            }
+
+        }
+
 
         #region Character parsing helpers
         //TODO:: make all this static

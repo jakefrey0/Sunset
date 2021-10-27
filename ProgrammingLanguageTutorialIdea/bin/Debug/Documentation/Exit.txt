@@ -1,0 +1,32 @@
+dllref(User32,int,str,str,int) MessageBoxA int
+int i  becomes 3
+int i0 becomes 4
+int i1 becomes 23
+:restart
+while (true) {
+	while (i,=/=,7) {
+		while (i0,=/=,30) {
+			++i0 ++i1
+			if (i1,=,24) { exit } ; Exit with no parameters will break all loops
+			if (i0,=,6) { exit(2) } ; Exit with parameters will break N(#) loops
+		}
+		++i
+		MessageBoxA(0,"After ++i","",0)
+	}
+	MessageBoxA(0,"End of while(true) loop","",0)
+	retn
+}
+MessageBoxA(0,"End of blocks,"",0)
+goto(restart)
+
+; ------------------
+
+; Expected Result:
+
+; 0: "End of blocks"
+; 1: "End of while(true) loop"
+; 2: Application terminated
+
+; Reality:
+
+; 

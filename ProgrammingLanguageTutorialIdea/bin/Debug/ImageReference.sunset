@@ -1,0 +1,6 @@
+STRUCT
+public str fileName
+public int x
+public int y
+public int width
+public int height

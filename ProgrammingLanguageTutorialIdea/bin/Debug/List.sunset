@@ -32,3 +32,33 @@ public func(int index) get T {
 
 ; Note: this will be referenced to the List (any updates on the array will update the list)
 public func toArray T# { retn(innerList) }
+
+public func(int index) remove {
+	
+	T# newArr becomes #length-1
+	int i becomes 0
+	int i0 becomes 0
+	while (i,=/=,length) { 
+		if (i,=/=,index) {
+			newArr[i0] becomes innerList[i] 
+			++i0
+		}
+		++i 
+	}
+	HeapFree(getProcessHeap,null,innerList)
+	innerList becomes newArr
+	
+	length becomes length-1
+		
+}
+
+public func(T item) indexOf int {
+	
+	int index becomes 0
+	foreach(item0,innerList) {
+		if (item,=,item0) { retn(index) }
+		++index
+	}
+	retn(-1)
+	
+}

@@ -1,5 +1,6 @@
 import(Documentation/Modifiers/MyClass)
 import(Documentation/Modifiers/Test/TestClass)
+
 MyClass class becomes new(MyClass)
 TestClass t_class becomes new(TestClass)
 

@@ -134,6 +134,7 @@
     <Compile Include="Keywords\KWPullable.cs" />
     <Compile Include="Keywords\KWStatic.cs" />
     <Compile Include="Keywords\KWConstant.cs" />
+    <Compile Include="Keywords\KWExit.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

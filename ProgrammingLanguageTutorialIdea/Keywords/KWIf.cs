@@ -44,9 +44,9 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				
 				//maybe I should make a getPushValueBytes method, instead of doing this, but w.e
 				sender.pushValue(@params[0]);
-				sender.addByte(0x58);//POP EAX
 				sender.pushValue(@params[2]);
-				newOpcodes.Add(0x5A);//POP EDX
+                newOpcodes.AddRange(new Byte[]{0x5A,0x58 });//POP EDX,POP EAX
+
 				newOpcodes.AddRange(new Byte[]{0x39,0xD0}); // CMP EAX,EDX
 				
 				String boolOp=@params[1];

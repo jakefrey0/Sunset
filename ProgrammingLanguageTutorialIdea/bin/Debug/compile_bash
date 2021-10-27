@@ -1,0 +1,2 @@
+exec & wine ProgrammingLanguageTutorialIdea.exe "./SomeGame/Some Game" "-v"
+wine "Some Game.exe"
