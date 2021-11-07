@@ -1,0 +1,35 @@
+import(Windows/Form)
+import(Windows/SimpleLabel)
+import(Windows/KeyEventArgs)
+; using System.Collections.Generic;
+
+Form form becomes new(Form,"My form",100,100,600,400)
+; Form form = new Form("My form",100,100,600,400);
+
+SimpleLabel lbl becomes new(SimpleLabel)
+; SimpleLabel lbl = new SimpleLabel();
+
+lbl.text becomes "Hello world"
+; lbl.text = "Hello world";
+
+form.addComponent(lbl)
+; form.Controls.Add(lbl);
+
+private func(KeyEventArgs args) keyDown {
+	
+	lbl.x becomes lbl.x+3
+	form.rePaint
+	
+}
+; private void KeyDown (KeyEventArgs args) {
+; 
+; 	lbl.x+=3;
+;	form.Refresh();
+;
+; }
+
+form.onKeyDown.addFunction($keyDown)
+; form.OnKeyDown += KeyDown;
+
+form.show
+; form.Show();

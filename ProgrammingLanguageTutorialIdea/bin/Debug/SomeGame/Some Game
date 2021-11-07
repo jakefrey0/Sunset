@@ -180,11 +180,10 @@ func(int x,int y) explodeFries {
 	FryGroup fg becomes new(FryGroup)
 	fg.originX becomes x
 	fg.originY becomes y-50
-	fg.ticksLeft becomes 100
+	fg.ticksLeft becomes 200
 	ImageReference fries becomes new(ImageReference)
 	ImageReference fries0 becomes new(ImageReference)
 	ImageReference fries1 becomes new(ImageReference)
-	crash
 	fries.x becomes fg.originX
 	fries0.x becomes fg.originX
 	fries1.x becomes fg.originX
@@ -203,7 +202,73 @@ func(int x,int y) explodeFries {
 	fm.images.add(fries)
 	fm.images.add(fries0)
 	fm.images.add(fries1)
+	fg.fries becomes fries
+	fg.fries0 becomes fries0
+	fg.fries1 becomes fries1
 	fryExplosions.add(fg)
+	
+}
+
+; -----------> AFTER CALLED AND TRUE, FRY IS DISPOSED OF AND THE IMAGE IS REMOVED
+func(ImageReference ref) getEatableFry bool {
+
+	int hitPos becomes character.x+characterRelativeLegX
+	bool canHit becomes false
+	int i becomes 0
+	
+	foreach (fg,fryExplosions.toArray) {
+		
+		ImageReference# localFries becomes #,(fg.fries,fg.fries0,fg.fries1)
+		
+		foreach (ref0,localFries) {
+			
+			if (ref0.x,<,hitPos) {
+				if (ref0.x+ref0.width,>,hitPos) {
+					ref.x becomes ref0.x
+					ref.y becomes ref0.y
+					ref.width becomes ref0.width
+					ref.height becomes ref0.height
+					ref.fileName becomes ref0.fileName
+					int i0 becomes 0
+					foreach (img,fm.images.toArray) {
+						if (img,=,ref0) {
+							fm.images.remove(i0)
+							break
+						}
+						++i0
+					}
+					ref0.x becomes -1
+					canHit becomes true
+					break
+				}
+			}
+		
+		}
+		
+		if (fg.fries.x,=,-1) {
+			if (fg.fries0.x,=,-1) {
+				if (fg.fries1.x,=,-1) {
+					fryExplosions.remove(i)
+					break
+				}
+			}
+		}
+		++i
+		
+	}
+	retn(canHit)
+
+}
+
+func tryEat {
+	
+	ImageReference buffer becomes new(ImageReference)
+	if (getEatableFry(buffer)) { 
+		hungerBar.right becomes hungerBar.right+30
+		if (hungerBar.right,>,250) {
+			hungerBar.right becomes 250
+		}
+	}
 	
 }
 
@@ -212,9 +277,12 @@ func(KeyEventArgs args) onKeyDown {
 	switch (args.keyCode) {
 		case(65): ; A
 			character.x becomes character.x-(speed/(sanity*2))
+			tryEat
 			break
 		case(68): ; D
 			character.x becomes character.x+(speed/(sanity*2))
+			ImageReference ref becomes new(ImageReference)
+			tryEat
 			break
 		case(87): ; W
 			if (onGround) {
@@ -288,16 +356,14 @@ func(TimerEventArgs args) onTick {
 		foreach (explosion,fryExplosions.toArray) {
 			
 			if (explosion.ticksLeft,=/=,0) {
-				
-				if (explosion.ticksLeft,>=,75) {
 					
-					crash
-					explosion.fries.x becomes explosion.fries.x-explosionSpeed
-					explosion.fries.y becomes explosion.fries.y-explosionSpeed
-					explosion.fries0.x becomes explosion.fries.x+explosionSpeed
-					explosion.fries0.y becomes explosion.fries.y-explosionSpeed
-					explosion.fries1.y becomes explosion.fries.y-explosionSpeed
-				}
+				explosion.fries.x becomes explosion.fries.x+(explosionSpeed/2)
+				explosion.fries.y becomes explosion.fries.y+explosionSpeed
+				explosion.fries0.x becomes explosion.fries0.x-(explosionSpeed/2)
+				explosion.fries0.y becomes explosion.fries0.y+explosionSpeed
+				explosion.fries1.y becomes explosion.fries1.y+explosionSpeed
+				
+				explosion.ticksLeft becomes explosion.ticksLeft-1
 				
 				
 			}
@@ -310,14 +376,18 @@ func(TimerEventArgs args) onTick {
 
 func(FormEventArgs args) formCreated {
 	
+	int groundLevel becomes 865
+	
 	fm.addComponent(lbl)
 	mainTimer becomes fm.createTimer(1)
 	hungerTimer becomes fm.createTimer(80)
 	fm.onTimerTick.addFunction($onTick)
 	drawHungerBar(250,16)
 	fm.images.add(character)
-	createGround(865,0,1600)
-	createVendingMachine(265,800)
+	createGround(groundLevel,0,1200)
+	createVendingMachine(500,800)
+	createGround(groundLevel-50,1100,1400)
+	createVendingMachine(1184,750)
 	fm.onKeyDown.addFunction($onKeyDown)
 	
 }

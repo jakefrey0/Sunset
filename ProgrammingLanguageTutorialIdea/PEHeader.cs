@@ -284,7 +284,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			if (str.Length>maxLength) throw new Exception("Name too long");
 			else if (!str.StartsWith(".")) throw new Exception("Invalid name");
-			
+
 			List<Byte> bytes=str.Select(x=>(Byte)x).ToList();
 			bytes.AddRange(new Byte[maxLength-str.Length]);
 			return bytes.ToArray();

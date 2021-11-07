@@ -1,2 +1,3 @@
-exec & wine ProgrammingLanguageTutorialIdea.exe "./SomeGame/Some Game" "-v"
-wine "Some Game.exe"
+exec & wine ProgrammingLanguageTutorialIdea.exe "simple_app"
+# wine "Some Game.exe"
+# wine "olly/OLLYDBG.exe" &> /dev/null

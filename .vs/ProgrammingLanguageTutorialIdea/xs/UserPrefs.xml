@@ -1,7 +1,7 @@
 ﻿<Properties StartupConfiguration="{19D2E25E-77E6-443C-B6EB-2E58499E4104}|Default">
-  <MonoDevelop.Ide.Workbench ActiveDocument="ProgrammingLanguageTutorialIdea/Parser.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="ProgrammingLanguageTutorialIdea/PEHeader.cs">
     <Files>
-      <File FileName="ProgrammingLanguageTutorialIdea/Parser.cs" Line="3395" Column="34" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Parser.cs" Line="70" Column="19" />
       <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KeywordMgr.cs" Line="105" Column="1" />
       <File FileName="ProgrammingLanguageTutorialIdea/Modifier.cs" Line="32" Column="52" />
       <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWConstant.cs" Line="22" Column="1" />
@@ -28,6 +28,9 @@
       <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWLengthOf.cs" Line="26" Column="117" />
       <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWIf.cs" Line="50" Column="63" />
       <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWForeach.cs" Line="69" Column="107" />
+      <File FileName="ProgrammingLanguageTutorialIdea/PEHeader.cs" Line="286" Column="71" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWSwitch.cs" Line="1" Column="1" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWSizeOf.cs" Line="1" Column="1" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
@@ -35,7 +38,7 @@
           <Node name="ProgrammingLanguageTutorialIdea" expanded="True">
             <Node name="ProgrammingLanguageTutorialIdea" expanded="True">
               <Node name="Keywords" expanded="True" />
-              <Node name="Parser.cs" selected="True" />
+              <Node name="PEHeader.cs" selected="True" />
             </Node>
           </Node>
         </State>

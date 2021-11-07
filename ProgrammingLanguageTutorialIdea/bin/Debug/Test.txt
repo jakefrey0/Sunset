@@ -1,0 +1,14 @@
+import(Windows/Form)
+import(Windows/SimpleLabel)
+; using System.Windows.Forms;
+import(List<SimpleLabel>)
+; using System.Collections.Generic
+
+Form form becomes new(Form,"My Form",100,100,400,600)
+; Form form = new Form("My Form",100,100,400,600);      
+
+SimpleLabel lbl becomes new(SimpleLabel)
+lbl.text becomes "Hello world"  
+
+form.show
+; form.show();
