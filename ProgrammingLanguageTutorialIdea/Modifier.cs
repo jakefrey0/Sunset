@@ -17,7 +17,7 @@ namespace ProgrammingLanguageTutorialIdea {
 
     public static class ModifierTools {
 
-        public static Boolean hasAccessorModifier (this Modifier mod) { return (UInt32)mod>=0x10; }
+        public static Boolean hasAccessorModifier (this Modifier mod) { return mod>=Modifier.PUBLIC; }
 
         public static void throwIfhasAccessorModifier (this Modifier mod) { 
 

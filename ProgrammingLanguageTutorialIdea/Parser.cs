@@ -4622,8 +4622,12 @@ namespace ProgrammingLanguageTutorialIdea {
 
         private void throwIfCantAccess (Modifier mods,String instanceName,String classFilePath,Boolean getting) {
 
-            if (mods.HasFlag(Modifier.PRIVATE)||(mods.HasFlag(Modifier.LOCAL)&&((classFilePath.Contains('\\')||classFilePath.Contains('/'))&&merge(fileName.Split(new []{'/','\\' }).allButLast(),"/")!=merge(classFilePath.Split(new []{'/','\\' }).allButLast(),"/")))||(mods.HasFlag(Modifier.PULLABLE)&&!getting))
-                throw new ParsingError("Can't access \""+instanceName+"\" from \""+classFilePath+"\": exists, but inaccessible due to its modifiers");
+            Char[] arr={'\\','/' };
+            instanceName=this.trimCurrentPath(instanceName);
+            classFilePath=this.trimCurrentPath(classFilePath);
+
+            if (mods.HasFlag(Modifier.PRIVATE)||(mods.HasFlag(Modifier.LOCAL)&&((classFilePath.Contains('\\')||classFilePath.Contains('/'))&&merge(fileName.Split(arr).allButLast(),"/")!=merge(classFilePath.Split(arr).allButLast(),"/")))||(mods.HasFlag(Modifier.PULLABLE)&&!getting))
+                throw new ParsingError("Can't access \""+instanceName+"\" from \""+classFilePath.Split(arr).Last()+"\": exists, but inaccessible due to its modifiers. \n\nCalling path: "+merge(fileName.Split(new []{'/','\\' }).allButLast(),"/")+"\nCalled path: "+merge(classFilePath.Split(new []{'/','\\' }).allButLast(),"/")+'\n');
             
         }
 
@@ -4782,6 +4786,12 @@ namespace ProgrammingLanguageTutorialIdea {
                 }
 
             }
+
+        }
+
+        private String trimCurrentPath (String path) {
+
+            return path.StartsWith(Environment.CurrentDirectory)?path.Substring(Environment.CurrentDirectory.Length+1):path;
 
         }
 

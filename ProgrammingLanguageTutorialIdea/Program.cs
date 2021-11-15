@@ -20,10 +20,10 @@ namespace ProgrammingLanguageTutorialIdea {
 		[DllImport("ImageHlp.dll")]
 		static extern private UInt32 MapFileAndCheckSum (String Filename,out UInt32 HeaderSum,out UInt32 CheckSum);
 		private static TextWriter tw=Console.Out;
-		private static Boolean silenced=false,dumpGlobal=false;
+		private static Boolean silenced=false,dumpGlobal=false,showStackTrace=false;
 		
 		public static void Main (String[] args) {
-			
+
 			if (args.Length!=0&&args.First()=="help") {
 				
 				Console.WriteLine("\nTo compile, set the argument to the entry file.");
@@ -35,6 +35,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				Console.WriteLine(" - \"-v\" ~ this stands for \"verbose\" and will print all compiler debug output\n");
 				Console.WriteLine(" - \"-s\" ~ this stands for \"silence\" and will disable error/compiling result output\n");
                 Console.WriteLine(" - \"-dg\" ~ this stands for \"dump global\" and will dump global data when successfuly parsed\n");
+                Console.WriteLine(" - \"-st\" ~ this stands for \"stack trace\" and will show the stack trace on exception \n");
 				return;
 				
 			}
@@ -59,22 +60,20 @@ namespace ProgrammingLanguageTutorialIdea {
 			catch (ParsingError ex) {
 				
 				Program.enableOutput();
-				#if DEBUG
-				Console.WriteLine("Error compiling: "+ex.ToString());
-				#else
-				Console.WriteLine("There was an error in your code: "+ex.Message);
-				#endif
+				if (showStackTrace)
+				    Console.WriteLine("Error compiling: "+ex.ToString());
+				else
+				    Console.WriteLine("There was an error in your code: "+ex.Message);
 				return;
 				
 			}
 			catch (IOException ex) {
 				
 				Program.enableOutput();
-				#if DEBUG
-				Console.WriteLine("Error compiling: "+ex.ToString());
-				#else
-				Console.WriteLine("There was an error writing to the file: "+ex.Message);
-				#endif
+				if (showStackTrace)
+				    Console.WriteLine("Error compiling: "+ex.ToString());
+				else
+				    Console.WriteLine("There was an error writing to the file: "+ex.Message);
 				return;
 				
 			}
@@ -114,6 +113,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		private static void exitWithError (String str,Int32 exitCode) {
 			
 			Console.ForegroundColor=ConsoleColor.Red;
+            Program.enableOutput();
 			Console.WriteLine("\n\n[!] FATAL: "+str+'\n');
 			Console.ForegroundColor=ConsoleColor.Gray;
 			Environment.Exit(exitCode);
@@ -126,7 +126,8 @@ namespace ProgrammingLanguageTutorialIdea {
 				Program.disableOutput();
 			Program.silenced=args.Contains("-s");
             Program.dumpGlobal=args.Contains("-dg");
-			newArgs=args.Where(x=>x!="-s"&&x!="-v"&&x!="-dg").ToArray();
+            Program.showStackTrace=args.Contains("-st");
+			newArgs=args.Where(x=>x!="-s"&&x!="-v"&&x!="-dg"&&x!="-st").ToArray();
 			
 		}
 		
