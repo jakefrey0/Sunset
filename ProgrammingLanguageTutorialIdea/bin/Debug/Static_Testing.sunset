@@ -1,0 +1,11 @@
+public static int num becomes 33
+static int num0 becomes 44
+int notStatic becomes 55
+
+
+public static func(int ee) addNum int {
+	
+	notStatic becomes 66 ;should fail
+	retn(ee+num0+num)
+	
+}

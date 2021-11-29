@@ -18,3 +18,5 @@ C:/Users/Elite/Documents/SharpDevelop Projects/ProgrammingLanguageTutorialIdea/P
 /home/elite/Documents/GitHub/ProgrammingLanguageTutorialIdea/ProgrammingLanguageTutorialIdea/bin/Debug/ProgrammingLanguageTutorialIdea.exe.config
 /home/elite/Documents/GitHub/ProgrammingLanguageTutorialIdea/ProgrammingLanguageTutorialIdea/bin/Debug/ProgrammingLanguageTutorialIdea.exe
 /home/elite/Documents/GitHub/ProgrammingLanguageTutorialIdea/ProgrammingLanguageTutorialIdea/bin/Debug/ProgrammingLanguageTutorialIdea.pdb
+U:\Documents\GitHub\ProgrammingLanguageTutorialIdea\ProgrammingLanguageTutorialIdea\obj\Debug\ProgrammingLanguageTutorialIdea.exe
+U:\Documents\GitHub\ProgrammingLanguageTutorialIdea\ProgrammingLanguageTutorialIdea\obj\Debug\ProgrammingLanguageTutorialIdea.pdb

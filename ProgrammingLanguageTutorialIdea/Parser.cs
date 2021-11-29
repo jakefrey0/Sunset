@@ -19,9 +19,9 @@ namespace ProgrammingLanguageTutorialIdea {
 
 		public const String NULL_STR="null",THIS_STR="this",PTR_STR="PTR",FUNC_PTR_STR="FUNCPTR";
         public readonly static Tuple<String,VarType>PTR=new Tuple<String,VarType>(PTR_STR,VarType.NATIVE_VARIABLE),FUNC_PTR=new Tuple<String,VarType>(FUNC_PTR_STR,VarType.NATIVE_VARIABLE);
-		
-        public static Dictionary<String,UInt32>classMemoryAddresses=new Dictionary<String,UInt32>(); //CLASS ID - NOT NAME but Class#classID, Compiler Known Memory Address 0x00401000> or 0> for non windows apps
-        public static UInt32 globalMemAddress;
+
+		public static Dictionary<String,Tuple<String,UInt32>>staticInstances=new Dictionary<String,Tuple<String,UInt32>>();
+        public static List<UInt32>dataSectBytes=new List<UInt32>();
 
 		public readonly String parserName;
 		
@@ -749,6 +749,8 @@ namespace ProgrammingLanguageTutorialIdea {
 			if (writeImportSection&&importOpcodes!=null) {
 				finalBytes.AddRange(importOpcodes);
 			}
+            if (dataSectBytes.Count!=0)
+                finalBytes.AddRange(dataSectBytes);
 			
 			compiledBytesFinalNo=(UInt32)finalBytes.Count;
 			return finalBytes.ToArray();
@@ -4299,14 +4301,10 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			if (!classInstanceAlreadyInEax)
 				this.moveClassOriginIntoEax(classInstance,originLocal);
-            if (!mods.HasFlag(Modifier.STATIC))
-			    this.addBytes(new Byte[]{0x8B,0xF0}); //MOV ESI,EAX
 			if (classInstanceAlreadyInEax)
 				this.moveClassItemAddrIntoEax(null,func,VarType.FUNCTION,true,lastClassOnOriginIfInstanceInEax);
 			else
 				this.moveClassOriginItemAddrIntoEax(classInstance.ToList(),func,VarType.FUNCTION,originLocal,true);
-            if (!mods.HasFlag(Modifier.STATIC))
-                this.addBytes(new Byte[]{0x81,0xC6}.Concat(BitConverter.GetBytes(cl.opcodePortionByteSize))); // ADD ESI, DWORD
 			this.addBytes(new Byte[]{0xFF,0xD0}); //CALL EAX
 			if (classInstanceAlreadyInEax)
 				this.addBytes(new Byte[]{0x83,0xC4,4});//ADD ESP,4
