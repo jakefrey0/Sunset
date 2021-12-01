@@ -1,7 +1,5 @@
 :here
 pause
-:: programminglanguagetutorialidea "Z:/Documentation/Modifiers/source.txt" -dg
-
-programminglanguagetutorialidea "not serious"
+programminglanguagetutorialidea "./Untitled-2.txt" -v
 
 goto :here

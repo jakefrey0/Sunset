@@ -20,8 +20,8 @@ namespace ProgrammingLanguageTutorialIdea {
 		public const String NULL_STR="null",THIS_STR="this",PTR_STR="PTR",FUNC_PTR_STR="FUNCPTR";
         public readonly static Tuple<String,VarType>PTR=new Tuple<String,VarType>(PTR_STR,VarType.NATIVE_VARIABLE),FUNC_PTR=new Tuple<String,VarType>(FUNC_PTR_STR,VarType.NATIVE_VARIABLE);
 
-		public static Dictionary<String,Tuple<String,UInt32>>staticInstances=new Dictionary<String,Tuple<String,UInt32>>();
-        public static List<UInt32>dataSectBytes=new List<UInt32>();
+		public static Dictionary<String,Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier>>>staticInstances=new Dictionary<String,Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier>>>();
+        public static List<Byte>dataSectBytes=new List<Byte>();
 
 		public readonly String parserName;
 		
@@ -155,7 +155,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		private Int16 sharpbb=0;
 		private UInt32 freeHeapsMemAddr,esiFuncVarIndex=0;
 		private Boolean attemptingClassAccess=false,gettingClassItem=false,clearNextPvOrigin=false;
-         private String constantBeingSet=null;
+        private String constantBeingSet=null,ID;
 		
 		private const String KERNEL32="KERNEL32.DLL";
 		private readonly Char[] mathOperators=new []{'+','-','*','/','%'};
@@ -166,7 +166,6 @@ namespace ProgrammingLanguageTutorialIdea {
 		public Parser (String name,String fileName,Boolean winApp=true,Boolean setToWinAppIfDllReference=false,Boolean skipHdr=false,Boolean fillToNextPage=true,Boolean writeImportSection=true) {
 			
 			memAddress=winApp?0x00401000:(UInt32)0;
-            if (name=="Main parser") Parser.globalMemAddress=memAddress;
 			startingMemAddr=memAddress;
 			keywordMgr=new KeywordMgr();
 			style=winApp?ArrayStyle.DYNAMIC_MEMORY_HEAP:ArrayStyle.STATIC_MEMORY_BLOCK;
@@ -225,7 +224,10 @@ namespace ProgrammingLanguageTutorialIdea {
             keywordMgr.acknowledgements.Add(PTR_STR,KWInteger.constName);
             keywordMgr.acknowledgements.Add(FUNC_PTR_STR,KWInteger.constName);
             this.fileName=fileName;
-			
+            if (className==null) className=KWImport.GetClassName(fileName);
+			ID=KWImport.CreateClassID(fileName,className);
+            staticInstances.Add(ID,new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier>>());
+
 			Console.WriteLine("Parser \""+parserName+"\" skipHdr:"+skipHdr.ToString());
 			
 		}
@@ -749,8 +751,10 @@ namespace ProgrammingLanguageTutorialIdea {
 			if (writeImportSection&&importOpcodes!=null) {
 				finalBytes.AddRange(importOpcodes);
 			}
-            if (dataSectBytes.Count!=0)
+            if (dataSectBytes.Count!=0) {
+                Console.ReadKey();
                 finalBytes.AddRange(dataSectBytes);
+            }
 			
 			compiledBytesFinalNo=(UInt32)finalBytes.Count;
 			return finalBytes.ToArray();
@@ -818,16 +822,8 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 			}
 
-            if (this.parserName=="Main parser") {
-                Dictionary<String,UInt32>nd=new Dictionary<String,UInt32>(Parser.classMemoryAddresses.Count);
-                foreach (KeyValuePair<String,UInt32>kvp in Parser.classMemoryAddresses)
-                    nd.Add(kvp.Key,kvp.Value+1);
-                Parser.classMemoryAddresses=new Dictionary<String,UInt32>(nd);
-            }
-
 			opcodes.Add(b);
 			++memAddress;
-            ++Parser.globalMemAddress;
 			this.increaseRefdFuncsToIncreaseWithOpcodes();
             this.increaseDwordsByOpcodes();
 			
@@ -1198,7 +1194,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		}
 		
 		private void registerVariable (String varName) {
-			
+
 			if (this.containsImportedClass(this.varType)) {
 				
 				this.registerClassInstance(varName);
@@ -1218,16 +1214,25 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			//when classes are a thing, make sure they are accounted for here
 			//if (class) -> appendAfter.addRange ... class or struct size.. because, the pointers are 4 bytes, but the actual struct could and probably is greater or different than 4bytes
-			if (this.blocks.Count==0) {//not local var
+
+            UInt32 vtbs=keywordMgr.getVarTypeByteSize(this.varType);
+            Tuple<String,VarType> vt=new Tuple<String,VarType>(this.varType,VarType.NATIVE_VARIABLE);
+            if (currentMods.HasFlag(Modifier.STATIC)) {
+                
+                staticInstances[ID].Add(varName,new Tuple<UInt32,Tuple<String,VarType>,Modifier>((UInt32)dataSectBytes.Count,vt,currentMods));
+                dataSectBytes.AddRange(new Byte[vtbs]);
+
+            }
+			else if (this.blocks.Count==0) {//not local var
 				this.defineTimeOrder.Add(varName);
 				this.variables.Add(varName,new Tuple<UInt32,String,Modifier>(memAddress+(UInt32)appendAfter.Count,this.varType,currentMods));
 				this.appendAfterIndex.Add(varName,(UInt32)appendAfter.Count);
-				this.appendAfter.AddRange(new Byte[keywordMgr.getVarTypeByteSize(this.varType)]);
+				this.appendAfter.AddRange(new Byte[vtbs]);
 				this.variableReferences.Add(varName,new List<UInt32>());
 			}
 			else {//should be local var
 				this.pseudoStack.push(new LocalVar(varName));
-				this.getCurrentBlock().localVariables.Add(varName,new Tuple<Tuple<String,VarType>>(new Tuple<String,VarType>(this.varType,VarType.NATIVE_VARIABLE)));
+				this.getCurrentBlock().localVariables.Add(varName,new Tuple<Tuple<String,VarType>>(vt));
 				this.lastReferencedVariableIsLocal=true;
 				this.offsetEBPs(4);
 			}
@@ -1235,7 +1240,7 @@ namespace ProgrammingLanguageTutorialIdea {
             if (currentMods.HasFlag(Modifier.CONSTANT)) {
                 nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT };
                 constantBeingSet=varName;
-                constants.Add(varName,new Tuple<uint, Tuple<string, VarType>>(0,null));
+                constants.Add(varName,new Tuple<UInt32,Tuple<String,VarType>>(0,null));
             }
             currentMods=Modifier.NONE;
 			status=ParsingStatus.SEARCHING_NAME;
@@ -1254,6 +1259,10 @@ namespace ProgrammingLanguageTutorialIdea {
 				throwIfCantAccess(mods,referencedVariable,cl.path,false);
                 type=cl.getVarType(this.referencedVariable).Item1;
             } 
+            if (staticInstances[ID].ContainsKey(referencedVariable)) {
+                type=staticInstances[ID][referencedVariable].Item2.Item1;
+                mods=staticInstances[ID][referencedVariable].Item3;
+            }
             else if (!(this.referencedVariableIsLocal)) {
 				type=(this.referencedVarType==VarType.NATIVE_ARRAY||this.referencedVarType==VarType.NATIVE_ARRAY_INDEXER)?this.arrays[this.referencedVariable].Item2:(this.referencedVarType==VarType.CLASS?this.classes[this.referencedVariable].Item2:this.variables[this.referencedVariable].Item2);
                 mods=modsOf(this.referencedVariable,this.referencedVarType);
@@ -1739,7 +1748,14 @@ namespace ProgrammingLanguageTutorialIdea {
 					
 					else if (type==KWInteger.constName||type==KWString.constName) {
 						
-						if (this.addEsiToLocalAddresses)
+                        if (mods.HasFlag(Modifier.STATIC)) {
+
+                            // TODO:: UNDONE (NEED TO REPLACE dataSectAddr WITH REFERENCE, SET TO WHATEVER DATA SECT ADDRESS ENDS UP BEING,NAME IT DATA SECT MEMORY ADDRESSES)
+                            this.addBytes(new Byte[]{0x8F,5,}.Concat(BitConverter.GetBytes((UInt32)(PEHeaderFactory.dataSectAddr+staticInstances[ID][this.referencedVariable].Item1))));
+
+                        }
+
+						else if (this.addEsiToLocalAddresses)
 							this.addBytes(new Byte[]{0x8F,0x86}.Concat(BitConverter.GetBytes(this.appendAfterIndex[this.referencedVariable]))); //POP DWORD [PTR+ESI]																								   //SUBTRACT 4 FROM APPENDAFTER COUNT BECAUSE THAT'S BYTESIZE OF VAR
 						else {
 							this.variableReferences[this.referencedVariable].Add((UInt32)this.opcodes.Count+2);
@@ -2244,6 +2260,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.containsImportedClass(name)        ||
                 this.acknowledgements.ContainsKey(name) ||
 				name==Parser.THIS_STR                   ||
+                staticInstances[ID].ContainsKey(name)   ||
                 this.labels.ContainsKey(name)            ;
 			
 		}
@@ -4236,12 +4253,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			Console.WriteLine("[classInstance: \""+classInstance+"\"]");
 
-			if (isImportedClass(classInstance)) {
-                //Console.WriteLine("==========================Imported");
-                this.addBytes(new Byte[]{0xB8 }.Concat(BitConverter.GetBytes(Parser.classMemoryAddresses[classIDOf(classInstance)]+5)));
-                this.dwordsToIncByOpcodes.Add((UInt32)(this.opcodes.Count-4));
-            }
-			else if (!(this.isALocalVar(classInstance))) {
+			if (!(this.isALocalVar(classInstance))) {
 				
 				if (addEsiToLocalAddresses) {
 					
@@ -4739,20 +4751,6 @@ namespace ProgrammingLanguageTutorialIdea {
                     throw new ParsingError("Can't get var type of: "+varName);
 
             }
-
-        }
-
-        internal static void dumpGlobalInfo (Boolean readKey=false) {
-
-            Console.WriteLine("\n--- Global Info ---\n");
-            Console.WriteLine("Global Mem Address: "+globalMemAddress.ToString("X")+'h');
-            Console.WriteLine("\nImported class memory addresses:\n");
-            foreach (KeyValuePair<String,UInt32>kvp in Parser.classMemoryAddresses)
-                Console.WriteLine(" - ID = "+kvp.Key+"\n - Address: "+kvp.Value.ToString("X")+"h\n\n");
-            Console.WriteLine("---             ---");
-
-            if (readKey)
-                Console.ReadKey(true);
 
         }
 

@@ -5,7 +5,7 @@ int notStatic becomes 55
 
 public static func(int ee) addNum int {
 	
-	notStatic becomes 66 ;should fail
-	retn(ee+num0+num)
+	;notStatic becomes 66 ;should fail
+	;retn(ee+num0+num)
 	
 }

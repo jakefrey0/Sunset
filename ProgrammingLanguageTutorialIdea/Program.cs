@@ -20,7 +20,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		[DllImport("ImageHlp.dll")]
 		static extern private UInt32 MapFileAndCheckSum (String Filename,out UInt32 HeaderSum,out UInt32 CheckSum);
 		private static TextWriter tw=Console.Out;
-		private static Boolean silenced=false,dumpGlobal=false,showStackTrace=false;
+		private static Boolean silenced=false,showStackTrace=false;
 		
 		public static void Main (String[] args) {
 
@@ -34,7 +34,6 @@ namespace ProgrammingLanguageTutorialIdea {
 				Console.WriteLine("The flags (don't actually print the double quotes):\n");
 				Console.WriteLine(" - \"-v\" ~ this stands for \"verbose\" and will print all compiler debug output\n");
 				Console.WriteLine(" - \"-s\" ~ this stands for \"silence\" and will disable error/compiling result output\n");
-                Console.WriteLine(" - \"-dg\" ~ this stands for \"dump global\" and will dump global data when successfuly parsed\n");
                 Console.WriteLine(" - \"-st\" ~ this stands for \"stack trace\" and will show the stack trace on exception \n");
 				return;
 				
@@ -54,8 +53,6 @@ namespace ProgrammingLanguageTutorialIdea {
 			try {
 				File.WriteAllBytes(outputFilename,psr.parse(File.ReadAllText(sourceFilename)));
 				Program.enableOutput();
-                if (Program.dumpGlobal)
-                    Parser.dumpGlobalInfo();
 			}
 			catch (ParsingError ex) {
 				
@@ -125,7 +122,6 @@ namespace ProgrammingLanguageTutorialIdea {
 			if (!args.Contains("-v"))
 				Program.disableOutput();
 			Program.silenced=args.Contains("-s");
-            Program.dumpGlobal=args.Contains("-dg");
             Program.showStackTrace=args.Contains("-st");
 			newArgs=args.Where(x=>x!="-s"&&x!="-v"&&x!="-dg"&&x!="-st").ToArray();
 			

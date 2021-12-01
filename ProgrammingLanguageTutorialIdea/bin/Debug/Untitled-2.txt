@@ -1,0 +1,11 @@
+
+dllref(user32,str,str,int) cdecl:wsprintfA int
+
+str str0 becomes "Number:  " 
+int num becomes 5
+
+wsprintfA(str0,"Number: %d",5)
+
+dllref(user32,int,str,str,int) MessageBoxA int 
+
+MessageBoxA(0,str0,"Message Box",0)

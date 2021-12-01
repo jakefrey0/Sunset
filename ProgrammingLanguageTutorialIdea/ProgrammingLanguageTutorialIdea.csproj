@@ -7,7 +7,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>ProgrammingLanguageTutorialIdea</RootNamespace>
     <AssemblyName>ProgrammingLanguageTutorialIdea</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <NoWin32Manifest>False</NoWin32Manifest>
     <SignAssembly>False</SignAssembly>

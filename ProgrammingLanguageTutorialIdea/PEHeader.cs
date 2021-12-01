@@ -156,6 +156,9 @@ namespace ProgrammingLanguageTutorialIdea {
     }
 
     public static class PEHeaderFactory {
+
+        public static UInt32 latestDataSectAddr;
+        public const UInt32 dataSectAddr=0x00403000;
 		
 		unsafe static public PEHeader newHdr (List<Byte> opcodes,List<Byte> importOpcodes,UInt32 endMemAddress,Int32 offset,UInt32 importOpcodesVirtualSize,Boolean gui=false) {
 			
@@ -166,7 +169,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				mockOpcodes.Add(0x00);
 			
 			UInt16 sections=(UInt16)((importOpcodes!=null)?2:1);
-            if (Parser.staticInstances.Count()!=0) ++sections; // (Data Section)
+            if (Parser.dataSectBytes.Count()!=0) ++sections; // (Data Section)
 			
 			#region MZ header
 			
@@ -268,16 +271,17 @@ namespace ProgrammingLanguageTutorialIdea {
 
             #region Data section
 
-            if (Parser.staticInstances.Count()!=0) {
+            if (Parser.dataSectBytes.Count()!=0) {
 
                 UInt32 addr=importOpcodesSectSize+opcodesSectSize+dataOpcodesSectSize;
+                latestDataSectAddr=addr+imgBase;
 
                 // (The data section in Sunset is solely used for storing static instances)
                 hdr.dataTableBytes[0]=BitConverter.ToUInt64(Encoding.ASCII.GetBytes(".data").Concat(new Byte[]{0,0,0 }).ToArray(),0);
                 hdr.dataTableBytes[1]=BitConverter.ToUInt64(BitConverter.GetBytes(Parser.dataSectBytes.Count).Concat(BitConverter.GetBytes(addr)).ToArray(),0);
                 while (Parser.dataSectBytes.Count%512!=0)
                     Parser.dataSectBytes.Add(0);
-                hdr.dataTableBytes[2]=BitConverter.GetBytes((UInt32)Parser.dataSectBytes.Count).Concat(BitConverter.GetBytes((UInt32)Marshal.SizeOf(typeof(PEHeader))+mockOpcodes.Count)).ToArray(),0);
+                hdr.dataTableBytes[2]=BitConverter.ToUInt64((BitConverter.GetBytes((UInt32)Parser.dataSectBytes.Count).Concat(BitConverter.GetBytes((UInt32)Marshal.SizeOf(typeof(PEHeader))+mockOpcodes.Count+(importOpcodes==null?0:importOpcodes.Count)))).ToArray(),0);
                 hdr.dataTableBytes[4]=BitConverter.ToUInt64(new Byte[]{0,0,0,0,0x40,0,0,0xC0},0); // Characteristics == 0C0000040h
 
             }
