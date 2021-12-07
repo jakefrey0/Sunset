@@ -1,5 +1,5 @@
 :here
 pause
-programminglanguagetutorialidea "./Untitled-2.txt" -v
+programminglanguagetutorialidea "./Static testing/Main" -v
 
 goto :here

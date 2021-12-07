@@ -45,7 +45,10 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				sender.pushProcessHeapVar();
 			const String HL="HeapAlloc",KERNEL32="KERNEL32.DLL";
 			sender.referenceDll(KERNEL32,HL);
-			sender.referencedFuncPositions[HL].Add((UInt32)(sender.getOpcodesCount()+2));
+			sender.referencedFuncPositions[HL].Add(sender.GetStaticInclusiveOpcodesCount(2));
+            Console.WriteLine("Wrote "+HL+", "+sender.InStaticEnvironment());
+            Console.WriteLine(sender.referencedFuncPositions[HL].Last().type.ToString());
+            Console.ReadKey();
 			sender.addBytes(new Byte[]{0xFF,0x15,0,0,0,0});//CALL FUNC HeapAlloc
 			
 			sender.addByte(0x56);//PUSH ESI

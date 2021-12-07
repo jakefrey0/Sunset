@@ -53,7 +53,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal Dictionary<Class,List<UInt32>> staticClassReferences=new Dictionary<Class,List<UInt32>>();//Name,(Index in the Opcodes List)
 		
 		internal Dictionary<String,List<String>> toImport;//DllName,Functions
-		internal Dictionary<String,List<UInt32>> referencedFuncPositions;//FuncName,Opcode pos
+		internal Dictionary<String,List<OpcodeIndexReference>> referencedFuncPositions;//FuncName,Opcode pos
 		
 		internal Dictionary<Block,UInt32> blocks;//block,end of block mem address
 		internal Dictionary<Block,UInt16> blockBracketBalances;//block,bracket balance
@@ -174,7 +174,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			style=winApp?ArrayStyle.DYNAMIC_MEMORY_HEAP:ArrayStyle.STATIC_MEMORY_BLOCK;
 			this.winApp=winApp;
 			toImport=new Dictionary<String,List<String>>();
-			this.referencedFuncPositions=new Dictionary<String,List<UInt32>>();
+			this.referencedFuncPositions=new Dictionary<String,List<OpcodeIndexReference>>();
 			this.setArrayValueFuncPtrs=new Dictionary<String,UInt32>();
 			this.blocks=new Dictionary<Block,UInt32>();
 			this.blockBracketBalances=new Dictionary<Block,UInt16>();
@@ -1422,7 +1422,7 @@ namespace ProgrammingLanguageTutorialIdea {
 						this.addBytes(new Byte[]{0xBB}.Concat(BitConverter.GetBytes((UInt32)8))); //MOV EBX,08000000 (HEAP_ZERO_MEMORY)
 						this.addByte(0x53);//PUSH EBX
 						this.pushProcessHeapVar();
-						this.referencedFuncPositions[HL].Add((UInt32)(this.opcodes.Count+2));
+						this.referencedFuncPositions[HL].Add(GetStaticInclusiveOpcodesCount(2));
 						this.addBytes(new Byte[]{0xFF,0x15,0,0,0,0});//CALL FUNC HeapAlloc
 	//					Console.WriteLine(this.referencedVariable);
 	//					Console.WriteLine("------------");
@@ -1485,7 +1485,7 @@ namespace ProgrammingLanguageTutorialIdea {
 						this.addBytes(new Byte[]{0x6A,8}); //PUSH 8
 						this.pushProcessHeapVar();
 						
-						this.referencedFuncPositions[HL].Add((UInt32)(this.opcodes.Count+2));
+						this.referencedFuncPositions[HL].Add(GetStaticInclusiveOpcodesCount(2));
 						this.addBytes(new Byte[]{0xFF,0x15,0,0,0,0});//CALL FUNC HeapAlloc
 						if (this.referencedVariableIsLocal) {
 							if (this.getLocalVarHomeBlock(this.referencedVariable)!=this.getCurrentBlock())
@@ -1629,7 +1629,7 @@ namespace ProgrammingLanguageTutorialIdea {
 							this.addBytes(new Byte[]{0xFF,0x35,0,0,0,0});//push pMemory
 							this.addBytes(new Byte[]{0x6A,0});//push Flags
 							this.pushProcessHeapVar();//push hHeap
-							this.referencedFuncPositions[HF].Add((UInt32)this.opcodes.Count+2);
+							this.referencedFuncPositions[HF].Add(GetStaticInclusiveOpcodesCount(2));
 							this.addBytes(new Byte[]{0xFF,0x15,0,0,0,0});//call HeapFree
 							
 						}
@@ -2122,15 +2122,21 @@ namespace ProgrammingLanguageTutorialIdea {
 			foreach (Tuple<String,UInt32>funcMemAddr in funcMemAddrs) {
 				
 				Console.WriteLine(funcMemAddr.Item1);
-				foreach (UInt32 pos in this.referencedFuncPositions[funcMemAddr.Item1]) {
+				foreach (OpcodeIndexReference pos in this.referencedFuncPositions[funcMemAddr.Item1]) {
 					
+                    Console.WriteLine(pos.type.ToString()+", "+funcMemAddr.Item1+", "+pos.index.ToString());
+
 					i=0;
 					memAdd=BitConverter.GetBytes(funcMemAddr.Item2);
 					while (i!=4) {
 						
-						Console.WriteLine("Total opcodes: "+this.opcodes.Count.ToString()+", Writing at: "+(pos+i).ToString());
-						this.opcodes[(Int32)(pos+i)]=memAdd[i];
-						
+						Console.WriteLine("Total opcodes: "+this.opcodes.Count.ToString()+", Writing at: "+(pos.index+i).ToString());
+                        Int32 idx=pos.GetIndexAsInt()+i;
+                        if (pos.type==OpcodeIndexType.CODE_SECT_REFERENCE)
+						    this.opcodes[idx]=memAdd[i];
+						else if (pos.type==OpcodeIndexType.DATA_SECT_REFERENCE) //elseif on these incase I have to add a new var to the enum later (unlikely)
+                            Parser.dataSectBytes[idx]=memAdd[i];
+
 						++i;
 						
 					}
@@ -2160,7 +2166,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					this.toImport[dllName].Add(funcName);
 			
 			if (!(this.referencedFuncPositions.ContainsKey(funcName)))
-				this.referencedFuncPositions.Add(funcName,new List<UInt32>());
+				this.referencedFuncPositions.Add(funcName,new List<OpcodeIndexReference>());
 			
 		}
 		
@@ -2177,7 +2183,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			}
 			
 			this.referenceDll(Parser.KERNEL32,GPH);
-			this.referencedFuncPositions[GPH].Add((UInt32)(this.opcodes.Count+2));
+			this.referencedFuncPositions[GPH].Add(GetStaticInclusiveOpcodesCount(2));
 			this.processHeapVar=new Tuple<UInt32,List<UInt32>>((addEsiToLocalAddresses?0:this.memAddress)+(UInt32)this.appendAfter.Count,new List<UInt32>((addEsiToLocalAddresses?new UInt32[0]:new UInt32[]{(UInt32)(opcodes.Count+7)})));
 			this.appendAfter.AddRange(new Byte[4]);
 			
@@ -3387,7 +3393,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.addBytes(new Byte[]{0xFF,0x35,0,0,0,0});//push pMemory
 				this.addBytes(new Byte[]{0x6A,0});//push Flags
 				this.pushProcessHeapVar();//push hHeap
-				this.referencedFuncPositions[HF].Add((UInt32)this.opcodes.Count+2);
+				this.referencedFuncPositions[HF].Add(GetStaticInclusiveOpcodesCount(2));
 				this.addBytes(new Byte[]{0xFF,0x15,0,0,0,0});
 				doneMemAddrs.Add(array.Value.Item1);
 				
@@ -3502,16 +3508,15 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 				i=0;
 				Int32 addrOfJump;
-                  if (!staticFunc) addrOfJump=BitConverter.ToInt32(new Byte[]{this.opcodes[(Int32)indexAndOffset.Item1],this.opcodes[(Int32)indexAndOffset.Item1+1],this.opcodes[(Int32)indexAndOffset.Item1+2],this.opcodes[(Int32)indexAndOffset.Item1+3]},0);
+                if (!staticFunc) addrOfJump=BitConverter.ToInt32(new Byte[]{this.opcodes[(Int32)indexAndOffset.Item1],this.opcodes[(Int32)indexAndOffset.Item1+1],this.opcodes[(Int32)indexAndOffset.Item1+2],this.opcodes[(Int32)indexAndOffset.Item1+3]},0);
 				else addrOfJump=BitConverter.ToInt32(new Byte[]{dataSectBytes[(Int32)indexAndOffset.Item1],dataSectBytes[(Int32)indexAndOffset.Item1+1],dataSectBytes[(Int32)indexAndOffset.Item1+2],dataSectBytes[(Int32)indexAndOffset.Item1+3]},0);
-                  Byte[]memAddr0=BitConverter.GetBytes((Int32)beforeAppendingMemAddr-(addrOfJump+indexAndOffset.Item2)-4);//minus constant 4 at end to make up for jump opcode length
-				
+                Byte[]memAddr0=BitConverter.GetBytes((Int32)beforeAppendingMemAddr-(addrOfJump+indexAndOffset.Item2)-2);//minus constant 2 at end to jump over XOR EAX,EAX
 				while (i!=4) {
 					
                      if (!staticFunc)
-                        opcodes[(Int32)indexAndOffset.Item1+i]=memAddr[i];
+                        opcodes[(Int32)indexAndOffset.Item1+i]=memAddr0[i];
                      else
-                          dataSectBytes[(Int32)indexAndOffset.Item1+i]=memAddr[i];
+                        dataSectBytes[(Int32)indexAndOffset.Item1+i]=memAddr0[i];
 					++i;
 					
 				}
@@ -3638,7 +3643,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			if (this.functions[functionName].Item4==FunctionType.SUNSET)
 				this.functionReferences[functionName].Add(new Tuple<UInt32,UInt32>((UInt32)opcodes.Count-4,this.memAddress));
 			else
-				this.referencedFuncPositions[functionName].Add((UInt32)opcodes.Count-4);
+				this.referencedFuncPositions[functionName].Add(GetStaticInclusiveOpcodesCount(-4));
 			if (this.functions[functionName].Item5==CallingConvention.Cdecl)
 				this.addBytes(new Byte[]{0x81,0xC4}.Concat(BitConverter.GetBytes((UInt32)this.functions[functionName].Item3*4)));
 			if (restoreEsiCondition) {
@@ -3701,7 +3706,17 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		
-		internal UInt32 getOpcodesCount () { return (UInt32)this.opcodes.Count; }
+        internal UInt32 getOpcodesCount () { return (UInt32)this.opcodes.Count; }
+        internal OpcodeIndexReference GetStaticInclusiveOpcodesCount (Int64 offset) { 
+
+            if (!InStaticEnvironment())
+                return OpcodeIndexReference.NewCodeSectRef((UInt32)(this.opcodes.Count+offset));
+            else
+                return OpcodeIndexReference.NewDataSectRef((UInt32)(Parser.dataSectBytes.Count+offset));
+
+        }
+
+		internal OpcodeIndexReference GetStaticInclusiveOpcodesCount () {  return GetStaticInclusiveOpcodesCount(0); }
 		
 		internal Tuple<String,VarType> getVarType (String value) {
 			
@@ -4428,7 +4443,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			foreach (KeyValuePair<String,List<Int32>>kvp in this.refdFuncsToIncreaseWithOpcodes)
 				foreach (Int32 i in kvp.Value)
-					++this.referencedFuncPositions[kvp.Key][i];
+					++this.referencedFuncPositions[kvp.Key][i].index;
 			
 		}
 		
@@ -4671,8 +4686,6 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal void tryCreateRestoreEsiFunc () {
 		
 			if (addEsiToLocalAddresses&&restoreEsiFuncAddr==0&&opcodes.Count!=0&&!@struct) {
-				
-                    Console.WriteLine(currentMods.ToString()); Console.ReadKey();
 
 				// Create restore esi function
 				this.addBytes(new Byte[]{0x8B,0x44,0x24,4});//MOV EAX,[ESP+4]

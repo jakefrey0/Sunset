@@ -70,8 +70,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				skipCheck:
 				
 //				sender.pseudoStack.printStackDump(true);
-				sender.blockAddrBeforeAppendingReferences[sender.lastFunctionBlock].Add(new Tuple<UInt32,Int16>(sender.getOpcodesCount()+1,0));
-				return new KeywordResult{newOpcodes=new Byte[]{0xE9}.Concat(BitConverter.GetBytes((UInt32)(sender.memAddress+(sender.InStaticEnvironment()?2:1)))).ToArray(),newStatus=ParsingStatus.SEARCHING_NAME};
+				sender.blockAddrBeforeAppendingReferences[sender.lastFunctionBlock].Add(new Tuple<UInt32,Int16>((sender.InStaticEnvironment()?(UInt32)Parser.dataSectBytes.Count():sender.getOpcodesCount())+1,0));
+				return new KeywordResult{newOpcodes=new Byte[]{0xE9}.Concat(BitConverter.GetBytes((UInt32)(sender.GetStaticInclusiveAddress()+1))).ToArray(),newStatus=ParsingStatus.SEARCHING_NAME};
 			
 			}
 				

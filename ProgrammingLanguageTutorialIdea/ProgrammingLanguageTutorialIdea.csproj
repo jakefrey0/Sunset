@@ -136,6 +136,8 @@
     <Compile Include="Keywords\KWStatic.cs" />
     <Compile Include="Keywords\KWConstant.cs" />
     <Compile Include="Keywords\KWExit.cs" />
+    <Compile Include="OpcodeIndexReference.cs" />
+    <Compile Include="OpcodeIndexType.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

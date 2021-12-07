@@ -105,14 +105,16 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				
 			}
 			
-			foreach (KeyValuePair<String,List<UInt32>>kvp in childParser.referencedFuncPositions) {
+			foreach (KeyValuePair<String,List<OpcodeIndexReference>>kvp in childParser.referencedFuncPositions) {
 				
 				if (!sender.referencedFuncPositions.ContainsKey(kvp.Key))
-					sender.referencedFuncPositions.Add(kvp.Key,new List<UInt32>());
+					sender.referencedFuncPositions.Add(kvp.Key,new List<OpcodeIndexReference>());
 				
-				foreach (UInt32 i in kvp.Value) {
+				foreach (OpcodeIndexReference i in kvp.Value) {
 					
-					sender.referencedFuncPositions[kvp.Key].Add((UInt32)(sender.getOpcodesCount()+initialAppendAfterCount+i));
+                    i.index+=(UInt32)initialAppendAfterCount;
+					sender.referencedFuncPositions[kvp.Key].Add(i);
+                    if (i.type!=OpcodeIndexType.CODE_SECT_REFERENCE) continue;
 					if (!sender.refdFuncsToIncreaseWithOpcodes.ContainsKey(kvp.Key))
 						sender.refdFuncsToIncreaseWithOpcodes.Add(kvp.Key,new List<Int32>());
 					sender.refdFuncsToIncreaseWithOpcodes[kvp.Key].Add(sender.referencedFuncPositions[kvp.Key].Count-1);

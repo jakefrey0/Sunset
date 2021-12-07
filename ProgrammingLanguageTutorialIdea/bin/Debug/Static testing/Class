@@ -4,16 +4,21 @@ public static RECT rect
 
 public static func(int x) staticFunc int {
 	
-	nofunct(5)
-	;rect becomes new(RECT)
+	nofunct(2)
+	
+	nofunct(3)
+	rect becomes new(RECT)
+	nofunct(3)
 	rect.left becomes rect.left+x ; should work
-	;nofunct(1)
+	nofunct(3)
 	x becomes 33 ; should work
-	nofunct(1)
+	nofunct(3)
 	test becomes "test" ; should work
-	nofunct(1)
+	nofunct(3)
 	retn(rect.left*x) ; should work
-	;nofunct(1)
+	nofunct(3)
+	
+	nofunct(2)
 	
 }
 
