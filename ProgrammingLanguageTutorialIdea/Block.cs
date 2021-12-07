@@ -53,6 +53,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		/// (Optional as are all non-constructor items)
 		/// </summary>
 		public Byte[] afterBlockClosedOpcodes;
+        public Action afterBlockClosedFunc;
 		
 		public List<String>restoreArraySetValueFuncs;
 		private List<Block>children;

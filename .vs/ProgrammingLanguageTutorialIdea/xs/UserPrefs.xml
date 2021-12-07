@@ -1,46 +1,19 @@
 ﻿<Properties StartupConfiguration="{19D2E25E-77E6-443C-B6EB-2E58499E4104}|Default">
-  <MonoDevelop.Ide.Workbench ActiveDocument="ProgrammingLanguageTutorialIdea/Program.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="ProgrammingLanguageTutorialIdea/Keywords/KWReturn.cs">
     <Files>
-      <File FileName="ProgrammingLanguageTutorialIdea/Parser.cs" Line="70" Column="19" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KeywordMgr.cs" Line="105" Column="1" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Modifier.cs" Line="29" Column="69" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWConstant.cs" Line="22" Column="1" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWPrivate.cs" Line="14" Column="43" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Class.cs" Line="29" Column="203" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Order.cs" Line="1" Column="1" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWImport.cs" Line="48" Column="62" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Program.cs" Line="25" Column="44" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWInteger.cs" Line="1" Column="1" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWDecrease.cs" Line="1" Column="1" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWNew.cs" Line="95" Column="15" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWConstructor.cs" Line="78" Column="3" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWFunction.cs" Line="20" Column="42" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWExit.cs" Line="13" Column="31" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWBreak.cs" Line="22" Column="4" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWReturn.cs" Line="80" Column="26" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWDllReference.cs" Line="17" Column="30" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWAs.cs" Line="8" Column="42" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWAcknowledge.cs" Line="8" Column="50" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KeywordType.cs" Line="15" Column="69" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWStruct.cs" Line="17" Column="52" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWFinishCompiling.cs" Line="1" Column="1" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWExpectedTypes.cs" Line="24" Column="26" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWLengthOf.cs" Line="26" Column="117" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWIf.cs" Line="50" Column="63" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWForeach.cs" Line="69" Column="107" />
-      <File FileName="ProgrammingLanguageTutorialIdea/PEHeader.cs" Line="216" Column="40" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWSwitch.cs" Line="1" Column="1" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWSizeOf.cs" Line="1" Column="1" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWStatic.cs" Line="1" Column="1" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWCrash.cs" Line="1" Column="1" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Parser.cs" Line="3045" Column="5" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWFunction.cs" Line="56" Column="58" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Program.cs" Line="49" Column="51" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWReturn.cs" Line="15" Column="3" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State name="__root__">
           <Node name="ProgrammingLanguageTutorialIdea" expanded="True">
             <Node name="ProgrammingLanguageTutorialIdea" expanded="True">
-              <Node name="Keywords" expanded="True" />
-              <Node name="Program.cs" selected="True" />
+              <Node name="Keywords" expanded="True">
+                <Node name="KWReturn.cs" selected="True" />
+              </Node>
             </Node>
           </Node>
         </State>

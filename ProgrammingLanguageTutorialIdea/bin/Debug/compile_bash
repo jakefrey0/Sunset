@@ -1,3 +1,1 @@
-exec & wine ProgrammingLanguageTutorialIdea.exe "Documentation/Modifiers/source.txt" -dg -st
-# wine "Some Game.exe"
-# wine "olly/OLLYDBG.exe" &> /dev/null
+exec & wine ProgrammingLanguageTutorialIdea.exe "Static testing\Main" -v

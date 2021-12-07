@@ -20,6 +20,8 @@ namespace ProgrammingLanguageTutorialIdea {
 		/// Class Origin,Func,Is origin local
 		/// </summary>
 		public Tuple<IEnumerable<String>,String,Boolean>classFunc;
+        public Tuple<Class,String>externalStaticFunc;
+        public Tuple<String,String,String>internalStaticFunc;
 		
 	}
 	

@@ -20,7 +20,9 @@ namespace ProgrammingLanguageTutorialIdea {
 		public const String NULL_STR="null",THIS_STR="this",PTR_STR="PTR",FUNC_PTR_STR="FUNCPTR";
         public readonly static Tuple<String,VarType>PTR=new Tuple<String,VarType>(PTR_STR,VarType.NATIVE_VARIABLE),FUNC_PTR=new Tuple<String,VarType>(FUNC_PTR_STR,VarType.NATIVE_VARIABLE);
 
-		public static Dictionary<String,Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier>>>staticInstances=new Dictionary<String,Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier>>>();
+	    public static Dictionary<String,Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier,Class>>>staticInstances=new Dictionary<String,Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier,Class>>>();
+        public static Dictionary<String,Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>>> staticFunctions=new Dictionary<String,Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>>>();//Class ID, (Function Name,(Memory Address,(Return Type, Return Var Type),No. of expected parameters,Function Type,Calling Convention,Modifiers))
+        
         public static List<Byte>dataSectBytes=new List<Byte>();
 
 		public readonly String parserName;
@@ -39,9 +41,9 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		public String referencedVariable,rTypeDefinition;
-		public Boolean referencedVariableIsLocal,referencedVariableIsFromClass;
+		public Boolean referencedVariableIsLocal,referencedVariableIsFromClass,referencedVariableIsStatic;
 		
-		internal Boolean lastReferencedVariableIsLocal,lastReferencedVariableIsFromClass;
+		internal Boolean lastReferencedVariableIsLocal,lastReferencedVariableIsFromClass,lastReferencedVariableIsStatic;
 		
 		internal VarType lastReferencedVarType=VarType.NONE,referencedVarType=VarType.NONE;
 		internal String varType;
@@ -87,7 +89,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal readonly Action elseBlockClosed;
 		internal KeywordType[] nextExpectedKeywordTypes=new []{KeywordType.NONE};
 		
-		internal List<UInt32>freeHeapsRefs;
+		internal List<UInt32>freeHeapsRefs,dwordsToIncByOpcodesUntilStaticFuncEnd=new List<UInt32>();
 		internal Dictionary<String,List<Int32>>refdFuncsToIncreaseWithOpcodes;
 		
 		internal Block lastFunctionBlock;
@@ -117,14 +119,15 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal List<Class>importedClasses;
 		internal List<String> defineTimeOrder;
 		internal List<UInt32>esiFuncReferences=new List<UInt32>();
+         internal List<Byte>appendAfterStaticFunc=new List<Byte>();
 		
 		internal Tuple<UInt32,List<UInt32>> processHeapVar;//Mem Addr, References
 		internal Boolean addEsiToLocalAddresses=false;
 		/// <summary>
-		/// Only set if addEsiToLocalAddresses is true
+		/// (esiOffsetFromStart) Only set if addEsiToLocalAddresses is true
 		/// LEA [ESI-esiOffsetFromStart] = Start of Opcodes Mem Address
 		/// </summary>
-		internal UInt32 esiOffsetFromStart=0,compiledBytesFinalNo;
+		internal UInt32 esiOffsetFromStart=0,compiledBytesFinalNo,lastFuncOpcodeStartIndex,lastFuncDataSectOpcodeStartIndex;
 		internal Dictionary<String,UInt32> appendAfterIndex=new Dictionary<String,UInt32>();
 		internal List<String>lastReferencedClassInstance=new List<String>();
 		internal Char nextChar {
@@ -135,7 +138,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal Dictionary<String,Tuple<String,VarType>>acknowledgements=new Dictionary<String,Tuple<String, VarType>>();
          internal Dictionary<String,List<Tuple<UInt32,UInt32>>>labelReferences=new Dictionary<String,List<Tuple<UInt32,UInt32>>>(); // Name of label,(Opcode Index, Mem Address at exact point of Reference before the long jump opcode)
          internal Modifier currentMods=Modifier.NONE;
-        internal Dictionary<String,UInt32>importedClassAppendAfterIndex=new Dictionary<String,UInt32>();//Imported Class (not class instance), start index in appendAfter
+         internal Dictionary<String,UInt32>importedClassAppendAfterIndex=new Dictionary<String,UInt32>();//Imported Class (not class instance), start index in appendAfter
 
 		private List<Byte> opcodes=new List<Byte>(),importOpcodes=null,finalBytes=new List<Byte>(),appendAfter=new List<Byte>();
 		private ParsingStatus status;
@@ -144,9 +147,9 @@ namespace ProgrammingLanguageTutorialIdea {
 		private Dictionary<String,Tuple<UInt32,String,Class,Modifier>> classes=new Dictionary<String,Tuple<UInt32,String,Class,Modifier>>();//Name,(Ptr To Mem Address of Heap Handle,Class type name,Class type),Modifier
 		private List<UInt32>int32sToSubtractByFinalOpcodesCount=new List<UInt32>();
 		private List<String>pvClassInstanceOrigin;
-        private Dictionary<String,UInt32>labels=new Dictionary<String,UInt32>();//Name, Mem Address
-        private Dictionary<String,Tuple<UInt32,Tuple<String,VarType>>>constants=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>>>();//var name,(constant value,(Generic Var Type Tuple))
-        private List<UInt32>dwordsToIncByOpcodes=new List<UInt32>();
+         private Dictionary<String,UInt32>labels=new Dictionary<String,UInt32>();//Name, Mem Address
+         private Dictionary<String,Tuple<UInt32,Tuple<String,VarType>>>constants=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>>>();//var name,(constant value,(Generic Var Type Tuple))
+         private List<UInt32>dwordsToIncByOpcodes=new List<UInt32>();
 
 		private List<Tuple<UInt32,List<UInt32>>>stringsAndRefs; //(Mem Addr,List of References by Opcode Index),Note: Currently the Inner list of Opcode Indexes will only have a length of 1 (6/19/2021 5:19PM)
 		private Dictionary<String,UInt32> setArrayValueFuncPtrs;
@@ -155,7 +158,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		private Int16 sharpbb=0;
 		private UInt32 freeHeapsMemAddr,esiFuncVarIndex=0;
 		private Boolean attemptingClassAccess=false,gettingClassItem=false,clearNextPvOrigin=false;
-        private String constantBeingSet=null,ID;
+         private String constantBeingSet=null,ID;
 		
 		private const String KERNEL32="KERNEL32.DLL";
 		private readonly Char[] mathOperators=new []{'+','-','*','/','%'};
@@ -226,7 +229,10 @@ namespace ProgrammingLanguageTutorialIdea {
             this.fileName=fileName;
             if (className==null) className=KWImport.GetClassName(fileName);
 			ID=KWImport.CreateClassID(fileName,className);
-            staticInstances.Add(ID,new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier>>());
+            if (!staticInstances.ContainsKey(ID))
+                staticInstances.Add(ID,new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier,Class>>());
+            if (!staticFunctions.ContainsKey(ID))
+                staticFunctions.Add(ID,new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>>());
 
 			Console.WriteLine("Parser \""+parserName+"\" skipHdr:"+skipHdr.ToString());
 			
@@ -309,8 +315,11 @@ namespace ProgrammingLanguageTutorialIdea {
     							if (searchingFunctionReturnType) {
     								
     								n+=c;
-    								this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.getVarType(n),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
-    								status=ParsingStatus.SEARCHING_NAME;
+                                    String fn=this.functions.Last().Key;
+    								this.functions[fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.getVarType(n),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+    								if (staticFunctions[ID].ContainsKey(fn))
+                                        staticFunctions[ID][fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.getVarType(n),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+                                    status=ParsingStatus.SEARCHING_NAME;
     								this.setExpectsBlock=1;
     								
     							}
@@ -356,7 +365,6 @@ namespace ProgrammingLanguageTutorialIdea {
 						}
 						else if (this.accessingClass(c)) {
 							
-							this.tryCreateRestoreEsiFunc();
 							this.attemptingClassAccess=true;
 							this.chkName(nameReader.ToString());
 							nameReader.Clear();
@@ -599,12 +607,16 @@ namespace ProgrammingLanguageTutorialIdea {
                                 currentMods=currentMods|Modifier.PRIVATE;
                             if (currentMods.HasFlag(Modifier.PULLABLE)||currentMods.HasFlag(Modifier.CONSTANT))
                                 throw new ParsingError("Pullable and constant are not valid modifiers for functions");
-							this.functions.Add(funcName,new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>((this.nextType== FunctionType.SUNSET)?blocks.Keys.Last().startMemAddr:0,null,(UInt16)this.nextFunctionParamTypes.Length,this.nextType,cl,currentMods));
-							this.functionReferences.Add(funcName,new List<Tuple<UInt32,UInt32>>());
-							status=ParsingStatus.SEARCHING_NAME;
-							if (this.nextType==FunctionType.SUNSET)
-								this.nextExpectedKeywordTypes=new []{KeywordType.TYPE};
-							this.searchingFunctionReturnType=true;
+						
+                            this.functions.Add(funcName,new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>((this.nextType== FunctionType.SUNSET)?blocks.Keys.Last().startMemAddr:0,null,(UInt16)this.nextFunctionParamTypes.Length,this.nextType,cl,currentMods));
+
+                            if (currentMods.HasFlag(Modifier.STATIC))
+                                staticFunctions[ID].Add(functions.Last().Key,functions.Last().Value);
+                           this.functionReferences.Add(funcName,new List<Tuple<UInt32,UInt32>>());
+						status=ParsingStatus.SEARCHING_NAME;
+						if (this.nextType==FunctionType.SUNSET)
+							this.nextExpectedKeywordTypes=new []{KeywordType.TYPE};
+						this.searchingFunctionReturnType=true;
                             currentMods=Modifier.NONE;
 							
 						}
@@ -751,10 +763,8 @@ namespace ProgrammingLanguageTutorialIdea {
 			if (writeImportSection&&importOpcodes!=null) {
 				finalBytes.AddRange(importOpcodes);
 			}
-            if (dataSectBytes.Count!=0) {
-                Console.ReadKey();
-                finalBytes.AddRange(dataSectBytes);
-            }
+                if (dataSectBytes.Count!=0)
+                    finalBytes.AddRange(dataSectBytes);
 			
 			compiledBytesFinalNo=(UInt32)finalBytes.Count;
 			return finalBytes.ToArray();
@@ -768,7 +778,12 @@ namespace ProgrammingLanguageTutorialIdea {
 					throw new ParsingError("A struct is limited to only variable declarations");
 				else return;
 			}
-			
+			else if (InStaticEnvironment()) {
+                this.increaseDataSectDwordsByOpcodes();
+                dataSectBytes.Add(b);
+                return;
+            }
+
 			Dictionary<String,Tuple<UInt32,String,Modifier>> newDict=new Dictionary<String,Tuple<UInt32,String,Modifier>>(this.variables.Count);
 			foreach (KeyValuePair<String,Tuple<UInt32,String,Modifier>> kvp in this.variables) {
 //				Console.WriteLine("For variable: "+kvp.Key+", updating mem address to: "+(kvp.Value.Item1+1).ToString("X"));
@@ -825,7 +840,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			opcodes.Add(b);
 			++memAddress;
 			this.increaseRefdFuncsToIncreaseWithOpcodes();
-            this.increaseDwordsByOpcodes();
+             this.increaseDwordsByOpcodes();
 			
 		}
 		
@@ -872,7 +887,24 @@ namespace ProgrammingLanguageTutorialIdea {
 				return;
 				
 			}
-			
+
+              if (staticFunctions[ID].ContainsKey(name)) {
+                
+                lastReferencedVariableIsLocal=false;
+                
+                if (staticFunctions[ID][name].Item3!=0) {
+                    
+                    status=(this.beginsParameters(this.nextChar))?ParsingStatus.READING_PARAMETERS:ParsingStatus.SEARCHING_PARAMETERS;
+                    roundBracketBalance=1;
+                    sharpbb=0;
+                    this.waitingToExecute=new Executor(){internalStaticFunc=new Tuple<String,String,String>(ID,fileName,name)};
+
+                }
+                else this.CallStaticClassFunc(ID,fileName,name,new String[0]);
+                return;
+                
+             }
+
 			if (this.functions.ContainsKey(name)) {
 				
 				Console.WriteLine("PARAM CT: "+this.functions[name].Item3.ToString());
@@ -914,14 +946,31 @@ namespace ProgrammingLanguageTutorialIdea {
 				return;
 				
 			}
+            
+              if (staticInstances[ID].ContainsKey(name)) {
+                    
+                    this.lastReferencedVariable=name;
+                    this.lastReferencedVariableIsLocal=false;
+                    var instance=staticInstances[ID][name];
+                    this.lastReferencedVarType=instance.Item2.Item2;
+                    this.status=ParsingStatus.SEARCHING_NAME;
+                    this.nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT,KeywordType.INCREMENT,KeywordType.DECREMENT};
+                    
+                    return;
+                      
+              }
 			
 			checkKeywords:
 			
 			if (!this.pvtNull()&&this.pvtContainsKey(name)) {
 				
 				if (wasSearchingFuncReturnType) {
-					this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.pvtGet(name),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
-					status=ParsingStatus.SEARCHING_NAME;
+                        String fn=this.functions.Last().Key;
+					 this.functions[fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.pvtGet(name),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+    				     if (staticFunctions[ID].ContainsKey(fn))
+                            staticFunctions[ID][fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.pvtGet(name),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+                                    
+                       status=ParsingStatus.SEARCHING_NAME;
 					this.setExpectsBlock=1;
 					return;
 				}
@@ -946,7 +995,10 @@ namespace ProgrammingLanguageTutorialIdea {
             else if (this.acknowledgements.ContainsKey(name)) {
                 
                 if (wasSearchingFuncReturnType) {
+                    String fn=this.functions.Last().Key;
                     this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.acknowledgements[name],functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+                    if (staticFunctions[ID].ContainsKey(fn))
+                            staticFunctions[ID][fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.acknowledgements[name],functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
                     status=ParsingStatus.SEARCHING_NAME;
                     this.setExpectsBlock=1;
                     return;
@@ -986,8 +1038,11 @@ namespace ProgrammingLanguageTutorialIdea {
 				status=ParsingStatus.SEARCHING_VARIABLE_NAME;
 				
 				if (wasSearchingFuncReturnType) {
-					this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,new Tuple<String,VarType>(this.varType,VarType.CLASS),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
-					status=ParsingStatus.SEARCHING_NAME;
+                      String fn=this.functions.Last().Key;
+					this.functions[fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,new Tuple<String,VarType>(this.varType,VarType.CLASS),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+					if (staticFunctions[ID].ContainsKey(fn))
+                            staticFunctions[ID][fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,new Tuple<String,VarType>(this.varType,VarType.CLASS),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+                       status=ParsingStatus.SEARCHING_NAME;
 					this.setExpectsBlock=1;
 				}
 				lastReferencedVariableIsLocal=false;
@@ -996,11 +1051,14 @@ namespace ProgrammingLanguageTutorialIdea {
 			}
 			else if (attemptingClassAccess) {
 				
+                  Boolean homeStatic=staticInstances[ID].ContainsKey(name)&&staticInstances[ID][name].Item2.Item2==VarType.CLASS;
+                  if(!homeStatic)
+                    this.tryCreateRestoreEsiFunc();
 				this.attemptingClassAccess=false;
 				
 				if (lastReferencedClassInstance.Count!=0) {
 					
-					if (this.getOriginFinalClass(lastReferencedClassInstance,lastReferencedVariableIsLocal).classes.ContainsKey(name)) {
+					if (this.getOriginFinalClass(lastReferencedClassInstance,lastReferencedVariableIsLocal).classes.ContainsKey(name)||(lastReferencedClassInstance.Count==1&&isImportedClass(lastReferencedClassInstance.First())&&staticInstances[getImportedClass(lastReferencedClassInstance.First()).classID].Where(x=>x.Key==name&&x.Value.Item2.Item2==VarType.CLASS).Count()!=0)) {
 						
 						this.lastReferencedClassInstance.Add(name);
 						gettingClassItem=true;
@@ -1011,7 +1069,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					else throw new ParsingError("\""+name+"\" does not exist in \""+merge(lastReferencedClassInstance,".")+'"');
 					
 				}
-				else if (this.classes.ContainsKey(name)||this.importedClasses.Select(x=>x.className).Contains(name)) {
+				else if (this.classes.ContainsKey(name)||this.importedClasses.Select(x=>x.className).Contains(name)||homeStatic) {
 					
 					this.lastReferencedVariable=name;
 					this.status=ParsingStatus.SEARCHING_NAME;
@@ -1036,10 +1094,44 @@ namespace ProgrammingLanguageTutorialIdea {
 			}
 			else if (gettingClassItem) {
 				
-				gettingClassItem=false;
-				lastReferencedVariableIsFromClass=true;
-				Class cl=this.getOriginFinalClass(lastReferencedClassInstance,lastReferencedVariableIsLocal);
-				if (cl.variables.ContainsKey(name)) {
+                Boolean isExternalStatic=lastReferencedClassInstance.Count==1&&isImportedClass(lastReferencedClassInstance.First());
+			   gettingClassItem=false;
+			   lastReferencedVariableIsFromClass=!isExternalStatic;
+			   Class cl=this.getOriginFinalClass(lastReferencedClassInstance,lastReferencedVariableIsLocal);
+                if (isExternalStatic) {
+
+                    lastReferencedVariableIsStatic=true;
+                    this.lastReferencedVariable=name;
+                    this.status=ParsingStatus.SEARCHING_NAME;
+                    String scName=lastReferencedClassInstance.First();
+                    if (!staticInstances[cl.classID].ContainsKey(name)) {
+                        if (staticFunctions[cl.classID].ContainsKey(name)) {
+                            this.status=ParsingStatus.SEARCHING_NAME;
+                            if (staticFunctions[cl.classID][name].Item3!=0) {
+                                
+                                status=(this.beginsParameters(this.nextChar))?ParsingStatus.READING_PARAMETERS:ParsingStatus.SEARCHING_PARAMETERS;
+                                roundBracketBalance=1;
+                                sharpbb=0;
+                                this.waitingToExecute=new Executor(){externalStaticFunc=new Tuple<Class,String>(cl,name)};
+                                
+                            }
+                            else {
+
+                                this.CallStaticClassFunc(cl,name,new String[0]);
+                                this.lastReferencedClassInstance.Clear();
+                                
+                            }
+                            lastReferencedVariableIsLocal=false;
+                            return;
+
+                        }
+                        throw new ParsingError(scName+" does not contain the static instance \""+name+'"');
+                    }
+                    this.lastReferencedVarType=staticInstances[cl.classID][name].Item2.Item2;
+                    return;
+
+                }
+		        else if (cl.variables.ContainsKey(name)) {
 					
 					this.lastReferencedVariable=name;
 					Console.WriteLine("LRV:"+this.lastReferencedVariable);
@@ -1130,8 +1222,11 @@ namespace ProgrammingLanguageTutorialIdea {
 						this.execKeyword(kw,new String[0]);
 					
 					if (wasSearchingFuncReturnType) {
-						this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,new Tuple<String,VarType>(this.varType,this.lastReferencedVarType),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
-						status=ParsingStatus.SEARCHING_NAME;
+                           String fn=this.functions.Last().Key;
+						this.functions[fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,new Tuple<String,VarType>(this.varType,this.lastReferencedVarType),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+						if (staticFunctions[ID].ContainsKey(fn))
+                            staticFunctions[ID][fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,new Tuple<String,VarType>(this.varType,this.lastReferencedVarType),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+                           status=ParsingStatus.SEARCHING_NAME;
 						this.setExpectsBlock=1;
 					}
                     else if (!(String.IsNullOrEmpty(rTypeDefinition))&&kwt!=typeof(KWAs)) {
@@ -1219,7 +1314,7 @@ namespace ProgrammingLanguageTutorialIdea {
             Tuple<String,VarType> vt=new Tuple<String,VarType>(this.varType,VarType.NATIVE_VARIABLE);
             if (currentMods.HasFlag(Modifier.STATIC)) {
                 
-                staticInstances[ID].Add(varName,new Tuple<UInt32,Tuple<String,VarType>,Modifier>((UInt32)dataSectBytes.Count,vt,currentMods));
+                staticInstances[ID].Add(varName,new Tuple<UInt32,Tuple<String,VarType>,Modifier,Class>((UInt32)dataSectBytes.Count,vt,currentMods,null));
                 dataSectBytes.AddRange(new Byte[vtbs]);
 
             }
@@ -1250,16 +1345,27 @@ namespace ProgrammingLanguageTutorialIdea {
 		private void processValue (String value) {
 			
 			Console.WriteLine("------------ processValue ------------");
-			Console.WriteLine("is local: "+this.referencedVariableIsLocal.ToString()+", var name: "+this.referencedVariable+", referenced var type: "+this.referencedVarType.ToString());
+			Console.WriteLine("is local: "+this.referencedVariableIsLocal.ToString()+", is static: "+this.referencedVariableIsStatic+", var name: "+this.referencedVariable+", referenced var type: "+this.referencedVarType.ToString());
 			String type;
             Modifier mods;
+                Class cl=null;
 			if (this.referencedVariableIsFromClass) {
-                Class cl=getOriginFinalClass(this.lastReferencedClassInstance,referencedVariableIsLocal);
+
+                cl=getOriginFinalClass(this.lastReferencedClassInstance,referencedVariableIsLocal);
                 mods=getClassOriginItemMod(lastReferencedClassInstance,referencedVariable,this.referencedVarType,this.referencedVariableIsLocal);
 				throwIfCantAccess(mods,referencedVariable,cl.path,false);
                 type=cl.getVarType(this.referencedVariable).Item1;
             } 
-            if (staticInstances[ID].ContainsKey(referencedVariable)) {
+            else if (this.referencedVariableIsStatic) {
+
+                Console.WriteLine("~ Static start (type/mods)");
+                cl=getOriginFinalClass(this.lastReferencedClassInstance,referencedVariableIsLocal);
+                type=staticInstances[cl.classID][referencedVariable].Item2.Item1;
+                mods=staticInstances[cl.classID][referencedVariable].Item3;
+                Console.WriteLine("~ Static finish (type/mods)");
+
+            }
+            else if (staticInstances[ID].ContainsKey(referencedVariable)) {
                 type=staticInstances[ID][referencedVariable].Item2.Item1;
                 mods=staticInstances[ID][referencedVariable].Item3;
             }
@@ -1272,6 +1378,9 @@ namespace ProgrammingLanguageTutorialIdea {
                 mods=Modifier.NONE;
             }
 			
+                Console.WriteLine("-- processValue: successfully set mods and type ("+mods.ToString()+", "+type+')');
+            ThrowIfInstRefFromStaticEnv(referencedVariable);
+
             if(constantBeingSet!=null) {
 
                 UInt32 constantValue;
@@ -1665,8 +1774,10 @@ namespace ProgrammingLanguageTutorialIdea {
 					this.addBytes(new Byte[]{0x8F,0x45,this.pseudoStack.getVarEbpOffset(this.referencedVariable)}); //POP [EBP+-OFFSET]
 				}
 				else {
-					
-					if (addEsiToLocalAddresses)
+
+				     if (mods.HasFlag(Modifier.STATIC))
+                                this.addBytes(new Byte[]{0x8F,5,}.Concat(BitConverter.GetBytes((UInt32)(PEHeaderFactory.dataSectAddr+staticInstances[referencedVariableIsStatic?cl.classID:ID][this.referencedVariable].Item1)))); // POP DWORD [PTR]
+					else if (addEsiToLocalAddresses)
 						this.addBytes(new Byte[]{0x8F,0x86}.Concat(BitConverter.GetBytes(this.appendAfterIndex[this.referencedVariable]))); //POP DWORD [MEM ADDR+ESI]
 					else {
 						this.classReferences[this.referencedVariable].Add((UInt32)(this.opcodes.Count+2));
@@ -1747,13 +1858,11 @@ namespace ProgrammingLanguageTutorialIdea {
 					}
 					
 					else if (type==KWInteger.constName||type==KWString.constName) {
-						
-                        if (mods.HasFlag(Modifier.STATIC)) {
 
-                            // TODO:: UNDONE (NEED TO REPLACE dataSectAddr WITH REFERENCE, SET TO WHATEVER DATA SECT ADDRESS ENDS UP BEING,NAME IT DATA SECT MEMORY ADDRESSES)
-                            this.addBytes(new Byte[]{0x8F,5,}.Concat(BitConverter.GetBytes((UInt32)(PEHeaderFactory.dataSectAddr+staticInstances[ID][this.referencedVariable].Item1))));
-
-                        }
+                                if (mods.HasFlag(Modifier.STATIC)) {
+                                    // TODO:: UNDONE (NEED TO REPLACE dataSectAddr WITH REFERENCE, SET TO WHATEVER DATA SECT ADDRESS ENDS UP BEING,NAME IT DATA SECT MEMORY ADDRESSES)
+                                    this.addBytes(new Byte[]{0x8F,5,}.Concat(BitConverter.GetBytes((UInt32)(PEHeaderFactory.dataSectAddr+staticInstances[referencedVariableIsStatic?cl.classID:ID][this.referencedVariable].Item1)))); // POP DWORD [PTR]
+                                }
 
 						else if (this.addEsiToLocalAddresses)
 							this.addBytes(new Byte[]{0x8F,0x86}.Concat(BitConverter.GetBytes(this.appendAfterIndex[this.referencedVariable]))); //POP DWORD [PTR+ESI]																								   //SUBTRACT 4 FROM APPENDAFTER COUNT BECAUSE THAT'S BYTESIZE OF VAR
@@ -1773,9 +1882,9 @@ namespace ProgrammingLanguageTutorialIdea {
 			}
 			
             done:
-		    status=ParsingStatus.SEARCHING_NAME;
+		   status=ParsingStatus.SEARCHING_NAME;
             constantBeingSet=null;
-		    this.lastReferencedClassInstance.Clear();
+		   this.lastReferencedClassInstance.Clear();
 			
 		}
 		
@@ -1883,8 +1992,15 @@ namespace ProgrammingLanguageTutorialIdea {
                 currentMods=currentMods|Modifier.PRIVATE;
 
 			this.tryIncreaseBlockVarCount();
-			
-			if (this.blocks.Count==0) {
+
+                var vt=new Tuple<Tuple<String,VarType>>(new Tuple<String,VarType>(this.varType,VarType.NATIVE_ARRAY));
+    			if (currentMods.HasFlag(Modifier.STATIC)) {
+                    
+                    staticInstances[ID].Add(arrayName,new Tuple<UInt32,Tuple<String,VarType>,Modifier,Class>((UInt32)dataSectBytes.Count,vt.Item1,currentMods,null));
+                    dataSectBytes.AddRange(new Byte[4]);
+
+                }
+			else if (this.blocks.Count==0) {
 				this.defineTimeOrder.Add(arrayName);
 				this.arrays.Add(arrayName,new Tuple<UInt32,String,ArrayStyle,Modifier>(this.memAddress+(UInt32)(appendAfter.Count),this.varType,this.style,currentMods));
 				this.appendAfterIndex.Add(arrayName,(UInt32)appendAfter.Count);
@@ -1895,7 +2011,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			}
 			else {//should be local var
 				this.pseudoStack.push(new LocalVar(arrayName));
-				this.getCurrentBlock().localVariables.Add(arrayName,new Tuple<Tuple<String,VarType>>(new Tuple<String,VarType>(this.varType,VarType.NATIVE_ARRAY)));
+				this.getCurrentBlock().localVariables.Add(arrayName,vt);
 				this.lastReferencedVariableIsLocal=true;
 				this.offsetEBPs(4);
 			}
@@ -2659,6 +2775,18 @@ namespace ProgrammingLanguageTutorialIdea {
 				return new Tuple<String,VarType>(this.arrays[value].Item2,VarType.NATIVE_ARRAY);
 				
 			}
+             else if (staticInstances[ID].ContainsKey(value)) {
+                
+                var instance=staticInstances[ID][value];
+                UInt32 sAddr=PEHeaderFactory.dataSectAddr+instance.Item1;
+                if (gettingAddr) {
+                    this.addBytes(new Byte[]{0x68 }.Concat(BitConverter.GetBytes(sAddr))); // PUSH DWORD
+                    return PTR;
+                }
+                this.addBytes(new Byte[]{0xFF,0x35 }.Concat(BitConverter.GetBytes(sAddr))); // PUSH DWORD [PTR]
+                return instance.Item2;
+                       
+             }
 			else if (this.indicatesMathOperation(value)) {
 				
 				Console.WriteLine(" ! value: "+value);
@@ -2676,6 +2804,19 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 				String funcName=value.Split('(')[0];
 				
+                  if (staticFunctions[ID].ContainsKey(funcName)) {
+
+                    var function=staticFunctions[ID][funcName];
+                    if (function.Item2==null)
+                        throw new ParsingError("Function \""+funcName+"\" has no return value, therefore its return value can't be obtained");
+
+                    String unparsedParams0=value.Substring(value.IndexOf('(')+1);
+                    List<String>@params0=parseParameters(unparsedParams0);
+                    this.CallStaticClassFunc(ID,fileName,funcName,@params0.ToArray());
+                    this.addByte(0x50); //PUSH EAX
+                    return function.Item2;
+                    
+                  }
 				if (functions[funcName].Item2==null)
 					throw new ParsingError("Function \""+funcName+"\" has no return value, therefore its return value can't be obtained");
 				
@@ -2686,6 +2827,20 @@ namespace ProgrammingLanguageTutorialIdea {
 				return this.functions[funcName].Item2;
 				
 			}
+             else if (staticFunctions[ID].ContainsKey(value)) {
+
+                var function=staticFunctions[ID][value];
+                if (gettingAddr) {
+                    this.addBytes(new Byte[]{0xB8 }.Concat(BitConverter.GetBytes(function.Item1)));
+                    return FUNC_PTR;
+                }
+                if (function.Item2==null)
+                    throw new ParsingError("Function \""+value+"\" has no return value, therefore its return value can't be obtained");
+                CallStaticClassFunc(ID,fileName,value,new String[0]);
+                this.addByte(0x50); //PUSH EAX
+                return function.Item2;
+
+             }
 			else if (functions.ContainsKey(value)) {
 				
 				if (gettingAddr) {
@@ -2701,7 +2856,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					
 				}
 				
-				String funcName=value.Split('(')[0];
+				String funcName=value;
 				
 				if (functions[funcName].Item2==null)
 					throw new ParsingError("Function \""+funcName+"\" has no return value, therefore its return value can't be obtained");
@@ -2789,7 +2944,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.throwIfAddr(gettingAddr,value);
 				
 				String innerText=value.Substring(1,value.Length-2);
-				Byte[]chars=new Byte[innerText.Length+1];//+1 = Null Byte
+				Byte[]chars=new Byte[innerText.Length+1];//+1 = Null Terminator Byte
 				UInt16 i=0;
 				foreach (Byte ch in innerText.Select(x=>(Byte)x)) {
 					
@@ -2799,7 +2954,13 @@ namespace ProgrammingLanguageTutorialIdea {
 					
 				}
 				
-				if (addEsiToLocalAddresses) {
+                  if (InStaticEnvironment()) {
+                    this.addBytes(new Byte[]{0xB8 }.Concat(BitConverter.GetBytes((UInt32)(PEHeaderFactory.dataSectAddr+dataSectBytes.Count+5)))); // MOV EAX,DWORD
+                    dwordsToIncByOpcodesUntilStaticFuncEnd.Add((UInt32)dataSectBytes.Count()-4);
+                    this.addByte(0x50); //PUSH EAX
+                    appendAfterStaticFunc.AddRange(chars);
+                  }
+				else if (addEsiToLocalAddresses) {
 					
 					this.addBytes(new Byte[]{0x8D,0x86,}.Concat(BitConverter.GetBytes((UInt32)(this.appendAfter.Count)))); //LEA EAX,DWORD [ESI+OFFSET]
 					this.addByte(0x50);//PUSH EAX
@@ -2817,8 +2978,8 @@ namespace ProgrammingLanguageTutorialIdea {
 				return new Tuple<String,VarType>(KWString.constName,VarType.NATIVE_VARIABLE);
 				
 			}
-			else if (value.Any(x=>this.accessingClass(x))&&(this.classes.ContainsKey(value.Split(Parser.accessorChar).First())||(this.isALocalVar(value.Split(Parser.accessorChar).First()))||this.pvClassInstanceOrigin.Contains(value.Split(Parser.accessorChar).First()))) {
-
+			else if (value.Any(x=>this.accessingClass(x))&&(this.classes.ContainsKey(value.Split(Parser.accessorChar).First())||(this.isALocalVar(value.Split(Parser.accessorChar).First()))||this.pvClassInstanceOrigin.Contains(value.Split(Parser.accessorChar).First())||this.isImportedClass(value.Split(Parser.accessorChar).First())||staticInstances[ID].ContainsKey(value.Split(Parser.accessorChar).First()))) {
+                    
 				if (clearNextPvOrigin) pvClassInstanceOrigin.Clear();
 				
 				//HACK:: sub parsing
@@ -2857,7 +3018,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				Class initialClass;
 				this.writeStrOpcodes("Test");
 				
-				Boolean local=false;
+				Boolean local=false,imported=this.isImportedClass(first),staticHome=staticInstances[ID].ContainsKey(first);
 				if (this.isALocalVar(first)) {
 					
 					local=true;
@@ -2867,15 +3028,20 @@ namespace ProgrammingLanguageTutorialIdea {
 					initialClass=this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(first).localVariables[first].Item1.Item1).First();
 					
 				}
+                    else if (imported)
+                        initialClass=this.importedClasses.Where(x=>x.className==first).First();
 				else if (this.pvClassInstanceOrigin.Count>1) {
 					local=this.isALocalVar(pvClassInstanceOrigin.First());
 					initialClass=this.moveClassOriginIntoEax(pvClassInstanceOrigin,local);
 				}
+                  else if (staticHome) initialClass=staticInstances[ID][first].Item4;
 				else initialClass=this.classes[first].Item3;
-				
+                    
 				String pValue=accessors[1];
 				Boolean classOriginRecursor=accessors.Count>2&&initialClass.classes.ContainsKey(pValue);
 				clearNextPvOrigin=!classOriginRecursor&&pvClassInstanceOrigin.Count==0;
+                
+                    Console.WriteLine("clearNextPvOrigin: "+clearNextPvOrigin);
 				
 				if (clearNextPvOrigin)
 					pvClassInstanceOrigin=new List<String>(new String[]{first});
@@ -2886,9 +3052,20 @@ namespace ProgrammingLanguageTutorialIdea {
 					this.addBytes(new Byte[]{0x8B,0x45,this.pseudoStack.getVarEbpOffset(first)}); //MOV [EBP+-OFFSET],EAX
 					
 				}
+                    else if (imported) {
+                        if (staticInstances[initialClass.classID].ContainsKey(pValue))
+                            this.addBytes(new Byte[]{0xA1}.Concat(BitConverter.GetBytes((UInt32)(PEHeaderFactory.dataSectAddr+staticInstances[initialClass.classID][pValue].Item1)))); // MOV EAX,[PTR]
+                        else if (!staticFunctions[initialClass.classID].ContainsKey(pValue)&&!isFuncWithParams(pValue,initialClass,true))
+                            throw new ParsingError("Does not exist in \""+initialClass.className+"\": "+pValue);
+                    }
+                    else if (staticHome) {
+                        this.addBytes(new Byte[]{0xA1}.Concat(BitConverter.GetBytes((UInt32)(PEHeaderFactory.dataSectAddr+staticInstances[ID][first].Item1)))); // MOV EAX,[PTR]
+                   
+
+                    }
 				else if (this.pvClassInstanceOrigin.Count<2&&!classOriginRecursor) {
 					
-					if (addEsiToLocalAddresses)
+                          if (addEsiToLocalAddresses)
 						this.addBytes(new Byte[]{0x8B,0x86}.Concat(BitConverter.GetBytes(this.appendAfterIndex[first])));//MOV EAX,DWORD[PTR+ESI]
 					else  {
 						this.addByte(0xA1);//MOV EAX,DWORD[FOLLOWING PTR]
@@ -2897,7 +3074,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					}
 					
 				}
-				
+
 				if (classOriginRecursor) {
 					
 					if (pvClassInstanceOrigin.Count==0)
@@ -2909,37 +3086,127 @@ namespace ProgrammingLanguageTutorialIdea {
 					return retVal;
 					
 				}
+                  else if (imported&&staticInstances[initialClass.classID].ContainsKey(pValue)) {
+                        
+                        var inst=staticInstances[initialClass.classID][pValue];
+
+                        throwIfCantAccess(inst.Item3,pValue,initialClass.path,true);
+                        this.addBytes(new Byte[]{0xBF}.Concat(BitConverter.GetBytes(PEHeaderFactory.dataSectAddr+inst.Item1))); // MOV EDI,DWORD
+                        UInt32 sz=this.keywordMgr.getVarTypeByteSize(inst.Item2.Item1);
+                        
+                        this.addBytes(sz==1?
+                                  new Byte[]{0x31,0xC0, //XOR EAX,EAX
+                                    0x8A,7, //MOV AL,[EDI]
+                                    0x50}: //PUSH EAX
+                                  sz==2?
+                                  new Byte[]{0x31,0xC0, //XOR EAX,EAX
+                                    0x66,0x8B,7, //MOV AX,[EDI]
+                                    0x50}: //PUSH EAX
+                                  new Byte[]{0xFF,0x37}/*PUSH DWORD[EDI]*/);
+                        return inst.Item2;
+
+                  }
+                  else if (imported&&staticFunctions[initialClass.classID].ContainsKey(pValue)) {
+
+                    var function=staticFunctions[initialClass.classID][pValue];
+                    throwIfCantAccess(function.Item6,pValue,initialClass.path,true);
+                    if (gettingAddr) {
+                    
+                        this.addByte(5);//ADD EAX,FOLLOWING DWORD
+                        this.addBytes(BitConverter.GetBytes(function.Item1)); //DWORD HERE
+                        return FUNC_PTR;
+                        
+                    }
+                    Tuple<String,VarType>retType=function.Item2;
+                    if (retType==null)
+                        throw new ParsingError("Function \""+pValue+"\" has no return value, therefore its return value can't be obtained");
+                    Console.WriteLine("ORIGIN: "+merge(pvClassInstanceOrigin,"."));
+                    
+                    this.CallStaticClassFunc(initialClass,pValue,new String[0]);
+                    this.addByte(0x50);//PUSH EAX
+                    
+                    return retType;
+
+                  }
+                  else if (imported&&isFuncWithParams(pValue,initialClass,true)) {
+
+                    String funcName=pValue.Split('(')[0];
+                    var function=staticFunctions[initialClass.classID][funcName];
+                    throwIfCantAccess(function.Item6,pValue,initialClass.path,true);
+                    this.throwIfAddr(gettingAddr,value);
+                    
+                    if (function.Item2==null)
+                        throw new ParsingError("Function \""+funcName+"\" has no return value, therefore its return value can't be obtained");
+                    
+                    String unparsedParams=pValue.Substring(pValue.IndexOf('(')+1);
+                    Byte roundBracketBalance=1,sharpBracketBalance=0;
+                    List<String>@params=new List<String>();
+                    StringBuilder paramBuilder=new StringBuilder();
+                    //HACK:: sub parsing
+                    inQuotes=false;
+                    foreach (Char c in unparsedParams) {
+                        
+                        if (c=='"') inQuotes=!inQuotes;
+                        
+                        if (!inQuotes) {
+                            if (c=='(') ++roundBracketBalance;
+                            else if (c==')') --roundBracketBalance;
+                            else if (c=='<') ++sharpBracketBalance;
+                            else if (c=='>') --sharpBracketBalance;
+                            else if (c==','&&roundBracketBalance==1&&sharpBracketBalance==0) {
+
+                                @params.Add(paramBuilder.ToString());
+                                paramBuilder.Clear();
+                                
+                            }
+                        }
+                        
+                        if (roundBracketBalance==0) {
+                            @params.Add(paramBuilder.ToString());
+                            break;
+                        }
+                        else if (!(c==','&&roundBracketBalance==1&&sharpBracketBalance==0)) paramBuilder.Append(c);
+                        
+                    }
+                    Console.WriteLine("unparsedParams: \""+unparsedParams+'"');
+                    Console.WriteLine("3");
+                    this.CallStaticClassFunc(initialClass,funcName,@params.ToArray());
+                    this.addByte(0x50); //PUSH EAX
+                    return function.Item2;
+
+                  }
 				else if (initialClass.variables.ContainsKey(pValue)) {
 
-                    throwIfCantAccess(initialClass.variables[pValue].Item3,pValue,initialClass.path,true);
-                    throwIfStatic(initialClass.variables[pValue].Item3,pValue);
-				  if (initialClass.constants.ContainsKey(pValue)) {
-                
-                       this.addBytes(new Byte[]{0x68 }.Concat(BitConverter.GetBytes(initialClass.constants[pValue].Item1)));
-                       return initialClass.constants[pValue].Item2;
 
-                    }
-					this.addByte(5);//ADD EAX,FOLLOWING DWORD
-					this.addBytes(BitConverter.GetBytes(initialClass.variables[pValue].Item1+initialClass.opcodePortionByteSize)); //DWORD HERE
-					
-					this.addBytes(new Byte[]{0x8B,0xF8}); //MOV EDI,EAX
-					UInt32 sz=this.keywordMgr.getVarTypeByteSize(initialClass.variables[pValue].Item2);
-					if (gettingAddr) {
-						this.addByte(0x57);//PUSH EDI
-                        return PTR;
-                    }
-					this.addBytes(sz==1?
-					              new Byte[]{0x31,0xC0, //XOR EAX,EAX
-					              	0x8A,7, //MOV AL,[EDI]
-					              	0x50}: //PUSH EAX
-					              sz==2?
-					              new Byte[]{0x31,0xC0, //XOR EAX,EAX
-					              	0x66,0x8B,7, //MOV AX,[EDI]
-					              	0x50}: //PUSH EAX
-					              new Byte[]{0xFF,0x37}/*PUSH DWORD[EDI]*/);
-				
-					UInt32 size=keywordMgr.getVarTypeByteSize(varType);
-					return new Tuple<String,VarType>(initialClass.variables[pValue].Item2,VarType.NATIVE_VARIABLE);
+                        throwIfCantAccess(initialClass.variables[pValue].Item3,pValue,initialClass.path,true);
+                        throwIfStatic(initialClass.variables[pValue].Item3,pValue);
+    				  if (initialClass.constants.ContainsKey(pValue)) {
+                    
+                           this.addBytes(new Byte[]{0x68 }.Concat(BitConverter.GetBytes(initialClass.constants[pValue].Item1))); // PUSH DWORD
+                           return initialClass.constants[pValue].Item2;
+
+                        }
+    					this.addByte(5);//ADD EAX,FOLLOWING DWORD
+    					this.addBytes(BitConverter.GetBytes(initialClass.variables[pValue].Item1+initialClass.opcodePortionByteSize)); //DWORD HERE
+    					
+    					this.addBytes(new Byte[]{0x8B,0xF8}); //MOV EDI,EAX
+    					UInt32 sz=this.keywordMgr.getVarTypeByteSize(initialClass.variables[pValue].Item2);
+    					if (gettingAddr) {
+    						this.addByte(0x57);//PUSH EDI
+                            return PTR;
+                        }
+    					this.addBytes(sz==1?
+    					              new Byte[]{0x31,0xC0, //XOR EAX,EAX
+    					              	0x8A,7, //MOV AL,[EDI]
+    					              	0x50}: //PUSH EAX
+    					              sz==2?
+    					              new Byte[]{0x31,0xC0, //XOR EAX,EAX
+    					              	0x66,0x8B,7, //MOV AX,[EDI]
+    					              	0x50}: //PUSH EAX
+    					              new Byte[]{0xFF,0x37}/*PUSH DWORD[EDI]*/);
+    				
+    					UInt32 size=keywordMgr.getVarTypeByteSize(varType);
+    					return new Tuple<String,VarType>(initialClass.variables[pValue].Item2,VarType.NATIVE_VARIABLE);
 					
 				}
 				else if (initialClass.classes.ContainsKey(pValue)) {
@@ -3083,7 +3350,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					
 					
 				}
-				else throw new ParsingError("Item \""+value+"\" is not accessible and may not exist from \""+initialClass.className+'"');
+				else throw new ParsingError("Item \""+pValue+"\" is not accessible and may not exist from \""+initialClass.className+'"');
 				
 			}
 			
@@ -3094,7 +3361,6 @@ namespace ProgrammingLanguageTutorialIdea {
 			}
 			
 			else throw new ParsingError("Invalid value: \""+value+'"');
-			
 		}
 		
 		private void freeHeaps () {
@@ -3143,7 +3409,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		
-		internal void addBlock (Block block,Byte setExpectsBlock=1) {
+		internal void addBlock (Block block,Byte setExpectsBlock=1,Boolean staticIncl=false) {
 			
 			block.nestedLevel=this.nestedLevel;
 			if (this.blocks.Count!=0)
@@ -3157,7 +3423,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			this.setExpectsBlock=setExpectsBlock;
 			//NOTE:: first param to ENTER is a word(short), second one is a byte
 			if (block.addEnterAutomatically)
-				this.enterBlock(block);
+				this.enterBlock(block,0,staticIncl);
 			
 			Console.WriteLine("Blocks count: "+this.blocks.Count.ToString());
 			++this.nestedLevel;
@@ -3170,9 +3436,11 @@ namespace ProgrammingLanguageTutorialIdea {
 			Console.WriteLine("Mem addr @ start of onBlockClosed: "+this.memAddress.ToString());
 			
 			this.lastBlockClosed=block;
+              Boolean staticFunc=InStaticEnvironment();
+              UInt32 endAddress=GetStaticInclusiveAddress();
 			
 			if (block.shouldXOREAX) this.addBytes(new Byte[]{0x31,0xC0}); //XOR EAX,EAX
-			UInt32 beforeAppendingMemAddr=this.memAddress;
+			UInt32 beforeAppendingMemAddr=endAddress;
 			
 			this.addByte(0xC9); // LEAVE
 			this.pseudoStack.pop((UInt16)(1+block.localVariables.Count));//pseudo pop ebp and local vars
@@ -3180,13 +3448,14 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			if (block.onBlockEnd!=null)
 				block.onBlockEnd.Invoke();
+              endAddress=GetStaticInclusiveAddress(staticFunc);
 			
-			this.blocks[block]=memAddress;
-			Console.WriteLine("onBlockClosed: "+memAddress.ToString("X")+','+block.startMemAddr.ToString("X"));
-			Console.WriteLine(memAddress.ToString("X")+'-'+block.startMemAddr.ToString("X")+'='+(memAddress-block.startMemAddr).ToString());
-			Byte[] memAddr=BitConverter.GetBytes((Int32)memAddress-(Int32)block.startMemAddr);
+			this.blocks[block]=endAddress;
+			Console.WriteLine("onBlockClosed: "+endAddress.ToString("X")+','+block.startMemAddr.ToString("X"));
+			//Console.WriteLine(memAddress.ToString("X")+'-'+block.startMemAddr.ToString("X")+'='+(memAddress-block.startMemAddr).ToString());
+			Byte[] memAddr=BitConverter.GetBytes((Int32)endAddress-(Int32)block.startMemAddr);
 			Byte i;
-			foreach (Block b in this.blocks.Select(x=>x.Key)) {
+             foreach (Block b in this.blocks.Select(x=>x.Key)) {
 				
 				Console.WriteLine("Found block: "+b.startMemAddr.ToString("X")+" (This block: "+block.startMemAddr.ToString("X")+')');
 				
@@ -3194,41 +3463,55 @@ namespace ProgrammingLanguageTutorialIdea {
 			foreach (UInt32 index in block.blockMemPositions) {
 				
 				Console.WriteLine("Block Mem Pos @ "+index.ToString());
+                  Console.WriteLine("Data sect bytes #: "+dataSectBytes.Count);
 				
 				i=0;
 				
 				while (i!=4) {
 					
-					opcodes[(Int32)index+i]=memAddr[i];
-					++i;
+                        if (!staticFunc)
+					    opcodes[(Int32)index+i]=memAddr[i];
+					 else
+                          dataSectBytes[(Int32)index+i]=memAddr[i];
+                       ++i;
 					
 				}
 				
 				
 			}
+              Console.WriteLine("RVA positions ... ");
 			foreach (Tuple<UInt32,UInt32>RVAindex in block.blockRVAPositions) {
 				
-				memAddr=BitConverter.GetBytes((Int32)memAddress-(Int32)RVAindex.Item2);
+				memAddr=BitConverter.GetBytes((Int32)GetStaticInclusiveAddress(staticFunc)-(Int32)RVAindex.Item2);
 				
 				i=0;
 				
 				while (i!=4) {
-					
-					opcodes[(Int32)RVAindex.Item1+i]=memAddr[i];
+
+					if (!staticFunc)
+                        opcodes[(Int32)RVAindex.Item1+i]=memAddr[i];
+                     else
+                          dataSectBytes[(Int32)RVAindex.Item1+i]=memAddr[i];
 					++i; 
 					
 				}
 				
 			}
+              Console.WriteLine("Indexes and offsets ... ");
 			foreach (Tuple<UInt32,Int16>indexAndOffset in this.blockAddrBeforeAppendingReferences[block]) {
 				
 				i=0;
-				Int32 addrOfJump=BitConverter.ToInt32(new Byte[]{this.opcodes[(Int32)indexAndOffset.Item1],this.opcodes[(Int32)indexAndOffset.Item1+1],this.opcodes[(Int32)indexAndOffset.Item1+2],this.opcodes[(Int32)indexAndOffset.Item1+3]},0);
-				Byte[]memAddr0=BitConverter.GetBytes((Int32)beforeAppendingMemAddr-(addrOfJump+indexAndOffset.Item2)-4);//minus constant 4 at end to make up for jump opcode length
+				Int32 addrOfJump;
+                  if (!staticFunc) addrOfJump=BitConverter.ToInt32(new Byte[]{this.opcodes[(Int32)indexAndOffset.Item1],this.opcodes[(Int32)indexAndOffset.Item1+1],this.opcodes[(Int32)indexAndOffset.Item1+2],this.opcodes[(Int32)indexAndOffset.Item1+3]},0);
+				else addrOfJump=BitConverter.ToInt32(new Byte[]{dataSectBytes[(Int32)indexAndOffset.Item1],dataSectBytes[(Int32)indexAndOffset.Item1+1],dataSectBytes[(Int32)indexAndOffset.Item1+2],dataSectBytes[(Int32)indexAndOffset.Item1+3]},0);
+                  Byte[]memAddr0=BitConverter.GetBytes((Int32)beforeAppendingMemAddr-(addrOfJump+indexAndOffset.Item2)-4);//minus constant 4 at end to make up for jump opcode length
 				
 				while (i!=4) {
 					
-					opcodes[(Int32)indexAndOffset.Item1+i]=memAddr0[i];
+                     if (!staticFunc)
+                        opcodes[(Int32)indexAndOffset.Item1+i]=memAddr[i];
+                     else
+                          dataSectBytes[(Int32)indexAndOffset.Item1+i]=memAddr[i];
 					++i;
 					
 				}
@@ -3244,8 +3527,14 @@ namespace ProgrammingLanguageTutorialIdea {
 			}
 			this.blockBracketBalances.Remove(block);
 			Byte[]varCt=BitConverter.GetBytes((UInt16)(this.blockVariablesCount[block]*4));
-			this.opcodes[(Int32)this.enterPositions[block]]=varCt[0];
-			this.opcodes[(Int32)this.enterPositions[block]+1]=varCt[1];
+             if (staticFunc) {
+                Parser.dataSectBytes[(Int32)this.enterPositions[block]]=varCt[0];
+                Parser.dataSectBytes[(Int32)this.enterPositions[block]+1]=varCt[1];
+             }
+             else {
+			    this.opcodes[(Int32)this.enterPositions[block]]=varCt[0];
+			    this.opcodes[(Int32)this.enterPositions[block]+1]=varCt[1];
+             }
 			this.blockVariablesCount.Remove(block);
 			this.enterPositions.Remove(block);
 			this.blocksClosed.Remove(block);
@@ -3265,6 +3554,9 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			if (block.afterBlockClosedOpcodes!=null)
 				this.addBytes(block.afterBlockClosedOpcodes);
+
+              if (block.afterBlockClosedFunc!=null)
+                  block.afterBlockClosedFunc();
 			
 			Console.WriteLine("Mem addr @ end of onBlockClosed: "+this.memAddress.ToString("X"));
 //			this.debugLine("block start addr:"+block.startMemAddr.ToString("X"));
@@ -3486,6 +3778,12 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.callClassFunc(executor.classFunc,@params);
 				this.lastReferencedClassInstance.Clear();
 			}
+              else if (executor.externalStaticFunc!=null) {
+                   this.CallStaticClassFunc(executor.externalStaticFunc.Item1,executor.externalStaticFunc.Item2,@params);
+                   this.lastReferencedClassInstance.Clear();
+              }
+              else if (executor.internalStaticFunc!=null)
+                   this.CallStaticClassFunc(executor.internalStaticFunc.Item1,executor.internalStaticFunc.Item2,executor.internalStaticFunc.Item3,@params);
 			
 		}
 		
@@ -3566,17 +3864,25 @@ namespace ProgrammingLanguageTutorialIdea {
                     currentMods=currentMods|Modifier.PRIVATE;
 
 			this.tryIncreaseBlockVarCount();
-			
-			if (this.blocks.Count==0) {//not local var
+    			
+                var vt=new Tuple<Tuple<String,VarType>>(new Tuple<String,VarType>(this.varType,VarType.CLASS));
+                Class cl=this.importedClasses.Where(x=>x.className==this.varType).First();
+                if (currentMods.HasFlag(Modifier.STATIC)) {
+                    
+                    staticInstances[ID].Add(varName,new Tuple<UInt32,Tuple<String,VarType>,Modifier,Class>((UInt32)dataSectBytes.Count,vt.Item1,currentMods,cl));
+                    dataSectBytes.AddRange(new Byte[4]);
+
+                }
+			else if (this.blocks.Count==0) {//not local var
 				this.defineTimeOrder.Add(varName);
-				this.classes.Add(varName,new Tuple<UInt32,String,Class,Modifier>(memAddress+(UInt32)appendAfter.Count,this.varType,this.importedClasses.Where(x=>x.className==this.varType).First(),currentMods));
+				this.classes.Add(varName,new Tuple<UInt32,String,Class,Modifier>(memAddress+(UInt32)appendAfter.Count,this.varType,cl,currentMods));
 				this.appendAfterIndex.Add(varName,(UInt32)appendAfter.Count);
 				this.appendAfter.AddRange(new Byte[4]);
 				this.classReferences.Add(varName,new List<UInt32>());
 			}
 			else {//should be local var
 				this.pseudoStack.push(new LocalVar(varName));
-				this.getCurrentBlock().localVariables.Add(varName,new Tuple<Tuple<String,VarType>>(new Tuple<String,VarType>(this.varType,VarType.CLASS)));
+				this.getCurrentBlock().localVariables.Add(varName,vt);
 				this.lastReferencedVariableIsLocal=true;
 				this.offsetEBPs(4);
 			}
@@ -3601,10 +3907,16 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		internal Block getCurrentBlock () { return this.blocks.Last().Key; }
 		
-		private void enterBlock (Block block,Int32 offset=0) {
+		private void enterBlock (Block block,Int32 offset=0,Boolean staticIncl=false) {
 			
-			this.enterPositions.Add(block,(UInt32)(this.opcodes.Count+1+offset));
-			this.addBytes(new Byte[]{0xC8,0,0,0}); //ENTER 0,0 (first parameter 0 should be overwritten later if local variables are introduced)
+              if (staticIncl) {
+                this.enterPositions.Add(block,(UInt32)(Parser.dataSectBytes.Count+1+offset));
+                dataSectBytes.AddRange(new Byte[]{0xC8,0,0,0 });
+              }
+			else {
+                this.enterPositions.Add(block,(UInt32)(this.opcodes.Count+1+offset));
+                this.addBytes(new Byte[]{0xC8,0,0,0}); //ENTER 0,0 (first parameter 0 should be overwritten later if local variables are introduced)
+              }
 			this.pseudoStack.push(new PreservedEBP());
 			
 		}
@@ -4155,9 +4467,9 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		#endif
 		
-		internal Boolean isFuncWithParams (String value,Class sendingClass=null) {
-			
-			return value.Contains('(')&&(sendingClass==null?functions.ContainsKey(value.Split('(')[0]):sendingClass.functions.ContainsKey(value.Split('(')[0]))&&value.Contains(')')&&!value.Substring(value.LastIndexOf(')')+1).Any(x=>this.isMathOperator(x))&&!this.hasClassAccessorOutsideParentheses(value);
+		internal Boolean isFuncWithParams (String value,Class sendingClass=null,Boolean sendingClassStatic=false) {
+
+			return value.Contains('(')&&(sendingClass==null?functions.ContainsKey(value.Split('(')[0]):sendingClassStatic?staticFunctions[sendingClass.classID].ContainsKey(value.Split('(')[0])&&value.Contains(')')&&!value.Substring(value.LastIndexOf(')')+1).Any(x=>this.isMathOperator(x))&&!this.hasClassAccessorOutsideParentheses(value):sendingClass.functions.ContainsKey(value.Split('(')[0]))&&value.Contains(')')&&!value.Substring(value.LastIndexOf(')')+1).Any(x=>this.isMathOperator(x))&&!this.hasClassAccessorOutsideParentheses(value);
 			
 		}
 		
@@ -4197,14 +4509,24 @@ namespace ProgrammingLanguageTutorialIdea {
 		}
 		
 		private void moveClassItemAddrIntoEax (String classInstance,String item,VarType vt,Boolean classInstanceAlreadyInEax=false,Class cl=null) {
-			if (!classInstanceAlreadyInEax)
+
+                Boolean imported=isImportedClass(classInstance);
+
+			if (!classInstanceAlreadyInEax&&!imported)
 				this.moveClassInstanceIntoEax(classInstance);
 			
 			if (cl==null)
 				cl=this.getClassFromInstanceName(classInstance);
 				
-			this.addByte(5);//ADD EAX,FOLLOWING DWORD
+                if (imported) this.addByte(0xB8); // MOV EAX,FOLLOWING DWORD
+			 else this.addByte(5);//ADD EAX,FOLLOWING DWORD
 			
+                Console.WriteLine("Class instance: "+classInstance+", item: "+item+", imported: "+imported);
+                
+               if (imported) {
+                    this.addBytes(BitConverter.GetBytes(PEHeaderFactory.dataSectAddr+staticInstances[cl.classID][item].Item1));
+                    return;
+                }
 			switch (vt) {
 					
 				case VarType.NATIVE_VARIABLE:
@@ -4255,11 +4577,10 @@ namespace ProgrammingLanguageTutorialIdea {
 
 			if (!(this.isALocalVar(classInstance))) {
 				
-				if (addEsiToLocalAddresses) {
-					
+                  if (staticInstances[ID].ContainsKey(classInstance))
+                       this.addBytes(new Byte[]{0xA1 }.Concat(BitConverter.GetBytes(PEHeaderFactory.dataSectAddr+staticInstances[ID][classInstance].Item1))); // MOV EAX,DWORD [PTR]
+                  else if (addEsiToLocalAddresses)
 					this.addBytes(new Byte[]{0x8B,0x86}.Concat(BitConverter.GetBytes(this.appendAfterIndex[classInstance])));//MOV EAX,DWORD[PTR+ESI]
-					
-				}
 				else {
 					this.addByte(0xA1);//MOV EAX,DWORD[FOLLOWING PTR]
 					this.classReferences[classInstance].Add(this.getOpcodesCount());
@@ -4351,6 +4672,8 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 			if (addEsiToLocalAddresses&&restoreEsiFuncAddr==0&&opcodes.Count!=0&&!@struct) {
 				
+                    Console.WriteLine(currentMods.ToString()); Console.ReadKey();
+
 				// Create restore esi function
 				this.addBytes(new Byte[]{0x8B,0x44,0x24,4});//MOV EAX,[ESP+4]
 //				this.addBytes(new Byte[]{0x8D,0x44,0x24,4});//LEA EAX,[ESP+4]
@@ -4409,7 +4732,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			String fc=origin.First();
 			this.moveClassInstanceIntoEax(fc);
 			Console.WriteLine(originLocal.ToString());
-			Class pc=isImportedClass(fc)?getImportedClass(fc):(originLocal)?this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(fc).localVariables[fc].Item1.Item1).First():this.classes[fc].Item3;
+			Class pc=GetClassByName(fc,originLocal);
 			foreach (String s in origin.Skip(1)) {
 				
 				this.moveClassItemAddrIntoEax(null,s,VarType.CLASS,true,pc);
@@ -4426,7 +4749,13 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			String fc=origin.First();
 			Console.WriteLine("Fc: "+fc+", originLocal: "+originLocal.ToString()+", origin.Count(): "+origin.Count().ToString());
-			Class pc=isImportedClass(fc)?getImportedClass(fc):(originLocal)?this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(fc).localVariables[fc].Item1.Item1).First():this.classes[fc].Item3;
+                Boolean fcImported=isImportedClass(fc);
+			Class pc=GetClassByName(fc,originLocal);
+            if (origin.Count()==1) return pc;
+                if (fcImported) {
+                    origin=origin.Skip(1);
+                    pc=staticInstances[pc.classID][origin.First()].Item4;
+                }
 			foreach (String s in origin.Skip(1))
 				pc=pc.classes[s].Item3;
 			return pc;
@@ -4437,13 +4766,22 @@ namespace ProgrammingLanguageTutorialIdea {
 		public Class moveClassOriginItemAddrIntoEax (List<String>origin,String item,VarType vt,Boolean originLocal,Boolean originAlreadyInEax=false) {
 			
 			String fc=origin.First();
+                Boolean fcImported=isImportedClass(fc);
 			Class pc;
 			if (!originAlreadyInEax) {
-				this.moveClassInstanceIntoEax(fc);
+                     Int32 skipCount=1;
+				pc=GetClassByName(fc,originLocal);
+                    if (!fcImported) this.moveClassInstanceIntoEax(fc);
+                    else {
+
+                        ++skipCount;
+                        this.moveClassItemAddrIntoEax(fc,origin[1],VarType.NONE,false,pc);
+                        if (origin.Count!=1) pc=staticInstances[pc.classID][origin[1]].Item4;
+
+                    }
 				Console.WriteLine(originLocal.ToString());
-				pc=isImportedClass(fc)?getImportedClass(fc):(originLocal)?this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(fc).localVariables[fc].Item1.Item1).First():this.classes[fc].Item3;
 				if (origin.Count!=1) {
-					foreach (String s in origin.Skip(1).Take(origin.Count-1)) {
+					foreach (String s in origin.Skip(skipCount).Take(origin.Count-1)) {
 						
 						this.moveClassItemAddrIntoEax(null,s,VarType.CLASS,true,pc);
 						this.addBytes(new Byte[]{0x8B,0,}); //MOV EAX,[EAX]
@@ -4654,16 +4992,20 @@ namespace ProgrammingLanguageTutorialIdea {
         /// <param name="vt">Should be CLASS || FUNCTION || NATIVE_ARRAY || NATIVE_VARIABLE</param>
         public Modifier getClassOriginItemMod (List<String>origin,String item,VarType vt,Boolean originLocal) {
             
-            String fc=origin.First();
-            Class pc=isImportedClass(fc)?getImportedClass(fc):(originLocal)?this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(fc).localVariables[fc].Item1.Item1).First():this.classes[fc].Item3;
-            if (origin.Count!=1)
-                foreach (String s in origin.Skip(1).Take(origin.Count-1))
-                    pc=pc.classes[s].Item3;
+            String prevC,fc=prevC=origin.First();
+            Class pc=GetClassByName(fc,originLocal);
+            if (origin.Count!=1) {
+                foreach (String s in origin.Skip(1).Take(origin.Count-1)) {
+                    pc=isImportedClass(prevC)?staticInstances[pc.classID][s].Item4:pc.classes[s].Item3; 
+                    prevC=s;
+                }
+            }
             else pc=this.getOriginFinalClass(origin,originLocal);
 
+            if (isImportedClass(origin.Last())) return staticInstances[pc.classID][item].Item3;
             switch (vt) {
 
-                case VarType.CLASS:
+                case VarType.CLASS: 
                     return pc.classes[item].Item4;
                 case VarType.FUNCTION:
                     return pc.functions[item].Item6;
@@ -4706,7 +5048,7 @@ namespace ProgrammingLanguageTutorialIdea {
                 
                 constValue=0;
                 return new Tuple<String,VarType>(KWBoolean.constName,VarType.NATIVE_VARIABLE);
-                
+
             }
             else if (value==KWBoolean.constTrue) {
                 
@@ -4785,12 +5127,80 @@ namespace ProgrammingLanguageTutorialIdea {
 
         }
 
+        private void increaseDataSectDwordsByOpcodes () {
+
+            Byte i;
+
+            foreach (UInt32 index in this.dwordsToIncByOpcodesUntilStaticFuncEnd) {
+
+                Console.WriteLine(":::::: "+index.ToString()+','+dataSectBytes.Count.ToString());
+
+                Byte[] arr=new Byte[4];
+                i=0;
+                while (i!=4) {
+                    arr[i]=dataSectBytes[(Int32)(i+index)];
+                    ++i;
+                }
+                arr=BitConverter.GetBytes(BitConverter.ToUInt32(arr,0)+1);
+                i=0;
+                while (i!=4) {
+                    dataSectBytes[(Int32)(i+index)]=arr[i];
+                    ++i;
+                }
+
+            }
+
+        }
+
         private String trimCurrentPath (String path) {
 
             return path.StartsWith(Environment.CurrentDirectory)?path.Substring(Environment.CurrentDirectory.Length+1):path;
 
         }
+        
+        /// <param name="varName">Variable name of variable trying to be referenced.</param>
+        private void ThrowIfInstRefFromStaticEnv (String varName) {
 
+            if (InStaticEnvironment()&&this.variables.ContainsKey(varName)&&!this.variables[varName].Item3.HasFlag(Modifier.STATIC))
+                throw new ParsingError("Tried to access non-static instance variable \""+varName+"\" from a static environment");
+
+        }
+
+        private Class GetClassByName (String fc,Boolean originLocal) {
+
+            return isImportedClass(fc)?getImportedClass(fc):(originLocal)?this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(fc).localVariables[fc].Item1.Item1).First():this.classes.ContainsKey(fc)?this.classes[fc].Item3:staticInstances[ID][fc].Item4;
+
+        }
+
+        internal Boolean InStaticEnvironment () {
+            return this.inFunction&&this.functions.Last().Value.Item6.HasFlag(Modifier.STATIC);
+        }
+
+        internal UInt32 GetStaticInclusiveAddress (Boolean inStaticEnvironment) {
+            return inStaticEnvironment?(UInt32)(PEHeaderFactory.dataSectAddr+dataSectBytes.Count()):memAddress;
+        }
+        internal UInt32 GetStaticInclusiveAddress () {
+            return GetStaticInclusiveAddress(InStaticEnvironment());
+        }
+
+        private void CallStaticClassFunc (String _ID,String path,String funcName,String[]parameters) {
+
+            var function=staticFunctions[_ID][funcName];
+            Modifier mods=function.Item6;
+            throwIfCantAccess(mods,funcName,path,false);
+
+            if (function.Item3!=parameters.Length)
+                throw new ParsingError("Expected \""+function.Item3+"\" parameters for \""+funcName+"\", got \""+parameters.Length+'"');
+            
+            foreach (String s in parameters.Reverse())
+                this.pushValue(s); //FIXME:: tryConvertVars here
+
+            this.addBytes(new Byte[]{0xE8 }.Concat(BitConverter.GetBytes((Int32)function.Item1-(Int32)GetStaticInclusiveAddress()-5)));
+            status=ParsingStatus.SEARCHING_NAME;
+
+        }
+
+        private void CallStaticClassFunc (Class cl,String funcName,String[]parameters) { CallStaticClassFunc(cl.classID,cl.path,funcName,parameters); }
 
         #region Character parsing helpers
         //TODO:: make all this static

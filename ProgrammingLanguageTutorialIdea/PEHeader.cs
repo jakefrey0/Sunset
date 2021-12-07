@@ -141,15 +141,9 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		#endregion
 		
-		#region Import table
+		#region Import/data table
 		
-		public fixed UInt64 importTableBytes[5];
-
-        #endregion
-
-        #region Data table
-
-        public fixed UInt64 dataTableBytes[7];
+		public fixed UInt64 tableBytes[12];
 
         #endregion
 
@@ -159,6 +153,12 @@ namespace ProgrammingLanguageTutorialIdea {
 
         public static UInt32 latestDataSectAddr;
         public const UInt32 dataSectAddr=0x00403000;
+        // ^ when fixing this
+        // when a child parser is done compiling, give the index of
+        // opcodes that need to be changed to the actual data sect
+        // address. Update the index relative to the main parser,
+        // and update all opcode indexes to be set to the valid data sect addr
+        // plus the old original value.
 		
 		unsafe static public PEHeader newHdr (List<Byte> opcodes,List<Byte> importOpcodes,UInt32 endMemAddress,Int32 offset,UInt32 importOpcodesVirtualSize,Boolean gui=false) {
 			
@@ -228,8 +228,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			hdr.sizeOfImage=opcodesSectSize+alignment;//+aligment at end to account for header
 			if (importOpcodes!=null) {
 				importOpcodesSectSize=(UInt32)(((importOpcodes.Count-(importOpcodes.Count%alignment)+alignment)));
-                dataOpcodesSectSize=(UInt32)(Parser.dataSectBytes.Count-(Parser.dataSectBytes.Count%alignment)+alignment);
-				hdr.sizeOfImage+=importOpcodesSectSize+dataOpcodesSectSize;
+				hdr.sizeOfImage+=importOpcodesSectSize;
 			}
 			hdr.sizeOfHeaders=(UInt32)Marshal.SizeOf(typeof(PEHeader));
 			hdr.subSystem=(UInt16)((gui)?2:3);//IMAGE_SUBSYSTEM_WINDOWS_GUI,IMAGE_SUBSYSTEM_WINDOWS_CUI
@@ -248,23 +247,29 @@ namespace ProgrammingLanguageTutorialIdea {
 			hdr.sizeOfRawData=(UInt32)mockOpcodes.Count;
 			hdr.pointerToRawData=512;
 			hdr.characteristics_0=0xE0000060;
-			
-			#endregion
-			
-			#region Import section
-			
-			if (importOpcodes!=null) {
+
+            #endregion
+
+            #region Sections
+
+            offset=0;
+            
+            #region Import section
+
+            if (importOpcodes!=null) {
 				
 				UInt32 addr=importOpcodesSectSize+opcodesSectSize;
 				
 				hdr.dir[2]=addr;
 				hdr.dir[3]=importOpcodesVirtualSize;
-				hdr.importTableBytes[0]=BitConverter.ToUInt64(Encoding.ASCII.GetBytes(".idata").Concat(new Byte[]{0,0}).ToArray(),0);
-				hdr.importTableBytes[1]=BitConverter.ToUInt64(BitConverter.GetBytes(importOpcodesVirtualSize).Concat(BitConverter.GetBytes(addr)).ToArray(),0);
+				hdr.tableBytes[0]=BitConverter.ToUInt64(Encoding.ASCII.GetBytes(".idata").Concat(new Byte[]{0,0}).ToArray(),0);
+                hdr.tableBytes[1]=BitConverter.ToUInt64(BitConverter.GetBytes(importOpcodesVirtualSize).Concat(BitConverter.GetBytes(addr)).ToArray(),0);
 				//importTableBytes[2] - First UInt32: Size of Import Section Raw Data, Second UInt32: Pointer to Import Section Raw Data (The amount of bytes until the import section)
-				hdr.importTableBytes[2]=BitConverter.ToUInt64(BitConverter.GetBytes((UInt32)importOpcodes.Count).Concat(BitConverter.GetBytes((UInt32)Marshal.SizeOf(typeof(PEHeader))+mockOpcodes.Count)).ToArray(),0);
-				hdr.importTableBytes[4]=BitConverter.ToUInt64(new Byte[]{0,0,0,0,0x40,0,0,0xC0},0); // Characteristics == 0C0000040h
+				hdr.tableBytes[2]=BitConverter.ToUInt64(BitConverter.GetBytes((UInt32)importOpcodes.Count).Concat(BitConverter.GetBytes((UInt32)Marshal.SizeOf(typeof(PEHeader))+mockOpcodes.Count)).ToArray(),0);
+				hdr.tableBytes[4]=BitConverter.ToUInt64(new Byte[]{0,0,0,0,0x40,0,0,0xC0},0); // Characteristics == 0C0000040h
 				
+                offset=5;
+
 			}
 
             #endregion
@@ -272,19 +277,24 @@ namespace ProgrammingLanguageTutorialIdea {
             #region Data section
 
             if (Parser.dataSectBytes.Count()!=0) {
+                
+                dataOpcodesSectSize=(UInt32)(Parser.dataSectBytes.Count-(Parser.dataSectBytes.Count%alignment)+alignment);
+                hdr.sizeOfImage+=dataOpcodesSectSize;
 
                 UInt32 addr=importOpcodesSectSize+opcodesSectSize+dataOpcodesSectSize;
                 latestDataSectAddr=addr+imgBase;
 
                 // (The data section in Sunset is solely used for storing static instances)
-                hdr.dataTableBytes[0]=BitConverter.ToUInt64(Encoding.ASCII.GetBytes(".data").Concat(new Byte[]{0,0,0 }).ToArray(),0);
-                hdr.dataTableBytes[1]=BitConverter.ToUInt64(BitConverter.GetBytes(Parser.dataSectBytes.Count).Concat(BitConverter.GetBytes(addr)).ToArray(),0);
+                hdr.tableBytes[0+offset]=BitConverter.ToUInt64(Encoding.ASCII.GetBytes(".data").Concat(new Byte[]{0,0,0 }).ToArray(),0);
+                hdr.tableBytes[1+offset]=BitConverter.ToUInt64(BitConverter.GetBytes(Parser.dataSectBytes.Count).Concat(BitConverter.GetBytes(addr)).ToArray(),0);
                 while (Parser.dataSectBytes.Count%512!=0)
                     Parser.dataSectBytes.Add(0);
-                hdr.dataTableBytes[2]=BitConverter.ToUInt64((BitConverter.GetBytes((UInt32)Parser.dataSectBytes.Count).Concat(BitConverter.GetBytes((UInt32)Marshal.SizeOf(typeof(PEHeader))+mockOpcodes.Count+(importOpcodes==null?0:importOpcodes.Count)))).ToArray(),0);
-                hdr.dataTableBytes[4]=BitConverter.ToUInt64(new Byte[]{0,0,0,0,0x40,0,0,0xC0},0); // Characteristics == 0C0000040h
+                hdr.tableBytes[2+offset]=BitConverter.ToUInt64((BitConverter.GetBytes((UInt32)Parser.dataSectBytes.Count).Concat(BitConverter.GetBytes((UInt32)Marshal.SizeOf(typeof(PEHeader))+mockOpcodes.Count+(importOpcodes==null?0:importOpcodes.Count)))).ToArray(),0);
+                hdr.tableBytes[4+offset]=BitConverter.ToUInt64(new Byte[]{0,0,0,0,0x40,0,0,0xC0},0); // Characteristics == 0C0000040h
 
             }
+
+            #endregion
 
             #endregion
 

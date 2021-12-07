@@ -1,0 +1,27 @@
+import(Windows/RECT)
+public static str test
+public static RECT rect
+
+public static func(int x) staticFunc int {
+	
+	nofunct(5)
+	;rect becomes new(RECT)
+	rect.left becomes rect.left+x ; should work
+	;nofunct(1)
+	x becomes 33 ; should work
+	nofunct(1)
+	test becomes "test" ; should work
+	nofunct(1)
+	retn(rect.left*x) ; should work
+	;nofunct(1)
+	
+}
+
+
+; TODO:: 
+
+;  --> Add an alternative to each if(addEsiToLocalAddresses) { ... } for static functions
+;  --> Add an alternative to each memAddress (use Parser#GetStaticInclusiveAdddress) and to each opcodes/memAddress reference (many should be eliminated by default due to the nature of static contexts)
+
+; initialization for static variables (i.e public static int i becomes 100 does not initialize until new non-static class instance is created), add it to data section immediately, throw error if initialization value is not constant or a different static/constant variable. Include support for strings
+; See PEHeaderFactory -> dataSectAddr -> comments underneath

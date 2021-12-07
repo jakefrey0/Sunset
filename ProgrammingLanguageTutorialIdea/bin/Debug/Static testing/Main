@@ -1,0 +1,6 @@
+import(Static testing/Class)
+import(Windows/RECT)
+dllref(User32,int,str,str,int) stdcall:MessageBoxA int
+
+Class.rect becomes new(RECT)
+retn(Class.staticFunc(3))

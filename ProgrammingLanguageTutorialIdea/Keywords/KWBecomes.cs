@@ -25,6 +25,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			sender.referencedVarType=sender.lastReferencedVarType;
 			sender.referencedVariableIsLocal=sender.lastReferencedVariableIsLocal;
 			sender.referencedVariableIsFromClass=sender.lastReferencedVariableIsFromClass;
+            sender.referencedVariableIsStatic=sender.lastReferencedVariableIsStatic;
+            sender.lastReferencedVariableIsStatic=false;
 			Console.WriteLine("Becomes: referencedVariableIsLocal: "+sender.referencedVariableIsLocal.ToString());
 			
 			Byte[] newOpcodes=new Byte[0];

@@ -13,6 +13,8 @@ using ProgrammingLanguageTutorialIdea.Stack;
 
 namespace ProgrammingLanguageTutorialIdea.Keywords {
 	
+    // TODO:: look into Block->blockMemPositions, maybe add a function Block#addMemPosition that is static inclusive, same for blockRVAPositions and this.blockAddrBeforeAppendingReferences[block] and enterPositions etc.. (also every dictionary in Parser with a Block key)
+
 	public class KWFunction : Keyword {
 		
 		public const String constName="func";
@@ -24,20 +26,39 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			if (sender.inFunction)
 				throw new ParsingError("Tried to make a function inside of a function");
 			
-			sender.tryCreateRestoreEsiFunc();
+            Modifier currentMods=sender.currentMods;
+            sender.lastFuncOpcodeStartIndex=sender.getOpcodesCount();
+            sender.lastFuncDataSectOpcodeStartIndex=(UInt32)Parser.dataSectBytes.Count();
+            Boolean staticFunc=currentMods.HasFlag(Modifier.STATIC),shouldAddEsi=sender.addEsiToLocalAddresses&&!staticFunc;
+            if (!staticFunc)
+		        sender.tryCreateRestoreEsiFunc();
 			
 			UInt32 pos=sender.getOpcodesCount()+1;
-			sender.addBytes(new Byte[]{0xE9,0,0,0,0});
+            if (!staticFunc)
+			    sender.addBytes(new Byte[]{0xE9,0,0,0,0});
 //			Byte[]newOpcodes=new Byte[]{0xE9,0,0,0,0}; //JMP TO MEM ADDR
 			Byte[] newOpcodes=new Byte[0],endOpcodes=(@params.Length==0)?new Byte[]{0xC3}/*RET*/:new Byte[]{0xC2/*RET SHORT:(STACK RESTORATION AMOUNT)*/}.Concat(BitConverter.GetBytes((UInt16)(@params.Length*4))).ToArray();
 			
-			if (sender.addEsiToLocalAddresses)
+			if (shouldAddEsi)
 				endOpcodes=new Byte[]{0x5E/*POP ESI*/}.Concat(endOpcodes).ToArray();
 			
-			Block functionBlock=new Block(delegate{sender.inFunction=false;if(sender.addEsiToLocalAddresses)sender.pseudoStack.pop();sender.pseudoStack.pop();},sender.memAddress,endOpcodes,true);
+			Block functionBlock=new Block(delegate{ 
+                sender.inFunction=false;
+                if(shouldAddEsi)
+                    sender.pseudoStack.pop();
+                sender.pseudoStack.pop();
+             },sender.GetStaticInclusiveAddress(currentMods.HasFlag(Modifier.STATIC)),endOpcodes,true);
 			
+            if (staticFunc) {
+                functionBlock.afterBlockClosedFunc=delegate {
+                    sender.dwordsToIncByOpcodesUntilStaticFuncEnd.Clear();
+                    Parser.dataSectBytes.AddRange(sender.appendAfterStaticFunc);
+                    sender.appendAfterStaticFunc.Clear();
+                };
+            }
+
 			//For information on this, see KWNew -> Extra esi dword var on classes information
-			if (sender.addEsiToLocalAddresses&&!sender.currentMods.HasFlag(Modifier.STATIC)) {
+			if (shouldAddEsi) {
 				sender.addByte(0x56);//PUSH ESI
 				sender.esiFuncReferences.Add(sender.getOpcodesCount()+1);
 				sender.addBytes(new Byte[]{0xE8}.Concat(BitConverter.GetBytes(sender.memAddress))); //CALL DWORD RELATIVE ADDRESS
@@ -63,10 +84,11 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				
 			}
 			sender.pseudoStack.push(new ReturnPtr());
-			if (sender.addEsiToLocalAddresses)
+			if (shouldAddEsi)
 				sender.pseudoStack.push(new EsiPtr());
-			sender.addBlock(functionBlock,0);
-			functionBlock.blockMemPositions.Add(pos);
+			sender.addBlock(functionBlock,0,staticFunc);
+            if (!staticFunc)
+			    functionBlock.blockMemPositions.Add(pos);
 			sender.inFunction=true;
 			sender.nextFunctionParamsCount=(UInt16)@params.Length; 
 			sender.lastFunctionBlock=functionBlock;

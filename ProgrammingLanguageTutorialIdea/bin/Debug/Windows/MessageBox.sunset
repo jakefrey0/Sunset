@@ -1,24 +1,31 @@
 dllref(User32,int,str,str,int) MessageBoxA int
 dllref(User32,str,str,int) cdecl:wsprintfA int
 
-str emptyString becomes ""
+private static str emptyString becomes ""
 
-func(str msg) simpleMbox int { retn(MessageBoxA(0,msg,emptyString,0)) }
-func(int num) mboxNumber int {
+; MessageBox with no title
+public static func(str msg) mboxMessage int { retn(MessageBoxA(0,msg,emptyString,0)) }
+
+; MessageBox with a number
+public static func(int num) mboxNumber int {
 	
-	str buffer becomes "-############"
+	str buffer becomes "-############" ; 32 bit number buffer
 	str format becomes "%d"
 	wsprintfA(buffer,format,num)
-	MessageBoxA(0,buffer,emptyString,0)
+	MessageBoxA(null,buffer,emptyString,0)
 	
 }
-func(str msg,str title) mbox int {
-	
-	retn(MessageBoxA(0,msg,title,0))
-	
-}
-func(int handle,str msg,str title,int flags) nativeMbox int {
+
+; MessageBox with native functionality
+public static func(int handle,str msg,str title,int flags) mboxNative int {
 	
 	retn(MessageBoxA(handle,msg,title,flags))
+	
+}
+
+; standard MessageBox with message and title
+public static func(str msg,str title) mbox int {
+	
+	retn(MessageBoxA(null,msg,title,0))
 	
 }
