@@ -37,8 +37,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				throw new ParsingError("Expected 3 or 1 necessary parameters for \""+constName+'"');
 			
 			List<Byte>newOpcodes=new List<Byte>();
-			Block ifBlock=new Block(delegate{sender.setExpectsElse=1;},sender.memAddress,new Byte[0],false,false);
-			UInt32 opcodesCountAtStart=sender.getOpcodesCount();
+			Block ifBlock=new Block(delegate{sender.setExpectsElse=1;},sender.GetStaticInclusiveAddress(),new Byte[0],false,false);
+			UInt32 opcodesCountAtStart=sender.GetStaticInclusiveOpcodesCount().index;
 			
 			if (@params.Length==3) {
 				
@@ -67,43 +67,43 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 					  6 Bytes
 					*/
 					
-					ifBlock.blockMemPositions.Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
+					ifBlock.blockMemPositions.Add(sender.GetStaticInclusiveOpcodesCount((UInt32)newOpcodes.Count+2));
 					newOpcodes.AddRange(new Byte[]{0x0F,0x8E,0,0,0,0});//JNG
 					
 				}
 				else if (boolOp==KWIf.BOOL_OP_GREATER_THAN_OR_EQUAL_TO||boolOp==String.Concat(KWIf.BOOL_OP_GREATER_THAN_OR_EQUAL_TO.Reverse())) {
 					
-					ifBlock.blockMemPositions.Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
+					ifBlock.blockMemPositions.Add(sender.GetStaticInclusiveOpcodesCount((UInt32)newOpcodes.Count+2));
 					newOpcodes.AddRange(new Byte[]{0x0F,0x8C,0,0,0,0});//JNGE
 					
 				}
 				else if (boolOp==KWIf.BOOL_OP_LESS_THAN) {
 					
-					ifBlock.blockMemPositions.Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
+					ifBlock.blockMemPositions.Add(sender.GetStaticInclusiveOpcodesCount((UInt32)newOpcodes.Count+2));
 					newOpcodes.AddRange(new Byte[]{0x0F,0x8D,0,0,0,0});//JNL
 					
 				}
 				else if (boolOp==KWIf.BOOL_OP_LESS_THAN_OR_EQUAL_TO||boolOp==String.Concat(KWIf.BOOL_OP_LESS_THAN_OR_EQUAL_TO.Reverse())) {
 					
-					ifBlock.blockMemPositions.Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
+					ifBlock.blockMemPositions.Add(sender.GetStaticInclusiveOpcodesCount((UInt32)newOpcodes.Count+2));
 					newOpcodes.AddRange(new Byte[]{0x0F,0x8F,0,0,0,0});//JNLE
 					
 				}
 				else if (boolOp==KWIf.BOOL_OP_EQUAL_TO) {
 					
-					ifBlock.blockMemPositions.Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
+					ifBlock.blockMemPositions.Add(sender.GetStaticInclusiveOpcodesCount((UInt32)newOpcodes.Count+2));
 					newOpcodes.AddRange(new Byte[]{0x0F,0x85,0,0,0,0});//JNZ
 					
 				}
 				else if (boolOp==KWIf.BOOL_OP_NOT_EQUAL_TO) {
 					
-					ifBlock.blockMemPositions.Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
+					ifBlock.blockMemPositions.Add(sender.GetStaticInclusiveOpcodesCount((UInt32)newOpcodes.Count+2));
 					newOpcodes.AddRange(new Byte[]{0x0F,0x84,0,0,0,0});//JZ
 					
 				}
 				else throw new ParsingError("Invalid boolean operator \""+boolOp+'"');
 				
-				ifBlock.startMemAddr+=(UInt32)newOpcodes.Count+(sender.getOpcodesCount()-opcodesCountAtStart);
+				ifBlock.startMemAddr+=(UInt32)(newOpcodes.Count+(sender.GetStaticInclusiveOpcodesCount().GetIndexAsInt()-opcodesCountAtStart));
 				newOpcodes.AddRange(sender.getEnterBlockOpcodes(ifBlock,newOpcodes.Count));
 				return new KeywordResult(){newOpcodes=newOpcodes.ToArray(),newStatus=ParsingStatus.SEARCHING_NAME};
 				
@@ -126,12 +126,12 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				
 				newOpcodes.Add(0x58);//POP EAX
 				newOpcodes.AddRange(new Byte[]{0x84,0xC0});//TEST AL,AL
-				ifBlock.blockMemPositions.Add(sender.getOpcodesCount()+((UInt32)newOpcodes.Count+2));
+				ifBlock.blockMemPositions.Add(sender.GetStaticInclusiveOpcodesCount((UInt32)newOpcodes.Count+2));
 				newOpcodes.AddRange((meansNot)
 				    ?new Byte[]{0x0F,0x85,0,0,0,0}  //JNE (DISTANCE AS SIGNED INTEGER)          
 				    :new Byte[]{0x0F,0x84,0,0,0,0});//JE  (DISTANCE AS SIGNED INTEGER)
 				
-				ifBlock.startMemAddr+=(UInt32)newOpcodes.Count+(sender.getOpcodesCount()-opcodesCountAtStart);
+				ifBlock.startMemAddr+=(UInt32)(newOpcodes.Count+(sender.GetStaticInclusiveOpcodesCount().GetIndexAsInt()-opcodesCountAtStart));
 				newOpcodes.AddRange(sender.getEnterBlockOpcodes(ifBlock,newOpcodes.Count));
 				return new KeywordResult(){newOpcodes=newOpcodes.ToArray(),newStatus=ParsingStatus.SEARCHING_NAME};
 				

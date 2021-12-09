@@ -1,4 +1,4 @@
-dllref(User32,int,str,str,int) MessageBoxA int
+dllref(User32,int,str,str,int) stdcall:MessageBoxA int
 dllref(User32,str,str,int) cdecl:wsprintfA int
 
 private static str emptyString becomes ""

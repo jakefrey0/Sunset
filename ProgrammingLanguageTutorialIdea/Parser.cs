@@ -187,9 +187,10 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 				Byte i;
 				
-				foreach (UInt32 index in lastBlockClosed.pairedBlock.blockMemPositions) {
+				foreach (OpcodeIndexReference @ref in lastBlockClosed.pairedBlock.blockMemPositions) {
 					
-					Int32 prevNum=BitConverter.ToInt32(new []{opcodes[(Int32)index],opcodes[(Int32)index+1],opcodes[(Int32)index+2],opcodes[(Int32)index+3]},0);
+                    Int32 index=@ref.GetIndexAsInt();
+					Int32 prevNum=(@ref.type==OpcodeIndexType.CODE_SECT_REFERENCE?BitConverter.ToInt32(new []{opcodes[index],opcodes[index+1],opcodes[index+2],opcodes[index+3]},0):BitConverter.ToInt32(new []{dataSectBytes[index],dataSectBytes[index+1],dataSectBytes[index+2],dataSectBytes[index+3]},0));
 					Byte[]newNum=BitConverter.GetBytes(prevNum+5);//5 because the opcodes are 0xE9,Integer.... (See KWElse -> JMP TO MEM ADDR)
 					
 					Console.WriteLine("Updating index: "+index+" (Calculated Mem Addr: "+(0x00401000+index).ToString("X")+") to "+(prevNum+5));
@@ -197,7 +198,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					i=0;
 					while (i!=4) {
 						
-						opcodes[(Int32)index+i]=newNum[i];
+                        SetStaticInclusiveByte(@ref,newNum[i],i);
 						++i;
 						
 					}
@@ -869,7 +870,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.status=ParsingStatus.SEARCHING_NAME;
 				this.nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT,KeywordType.INCREMENT,KeywordType.DECREMENT};
 				this.lastReferencedVarType=VarType.NATIVE_VARIABLE;
-				lastReferencedVariableIsLocal=false;
+				lastReferencedVariableIsLocal=lastReferencedVariableIsStatic=false;
 				return;
 				
 			}
@@ -880,14 +881,14 @@ namespace ProgrammingLanguageTutorialIdea {
 				this.lastReferencedVarType=VarType.NATIVE_ARRAY;
 				this.status=ParsingStatus.SEARCHING_NAME;
 				this.nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT,KeywordType.INCREMENT,KeywordType.DECREMENT};
-				lastReferencedVariableIsLocal=false;
+				lastReferencedVariableIsLocal=lastReferencedVariableIsStatic=false;
 				return;
 				
 			}
 
               if (staticFunctions[ID].ContainsKey(name)) {
                 
-                lastReferencedVariableIsLocal=false;
+                lastReferencedVariableIsLocal=lastReferencedVariableIsStatic=false;
                 
                 if (staticFunctions[ID][name].Item3!=0) {
                     
@@ -923,7 +924,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			if (this.classes.ContainsKey(name)) {
 				
-				lastReferencedVariableIsLocal=false;
+				lastReferencedVariableIsLocal=lastReferencedVariableIsStatic=false;
 				this.lastReferencedVarType=VarType.CLASS;
 				this.status=ParsingStatus.SEARCHING_NAME;
 				this.nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT,KeywordType.INCREMENT,KeywordType.DECREMENT};
@@ -937,6 +938,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				Console.WriteLine("Local Var Detected");
 				this.lastReferencedVariable=name;
 				this.lastReferencedVariableIsLocal=true;
+                this.lastReferencedVariableIsStatic=false;
 				this.lastReferencedVarType=this.getLocalVarHomeBlock(name).localVariables[name].Item1.Item2;
 				this.status=ParsingStatus.SEARCHING_NAME;
 				this.nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT,KeywordType.INCREMENT,KeywordType.DECREMENT};
@@ -948,6 +950,7 @@ namespace ProgrammingLanguageTutorialIdea {
                     
                     this.lastReferencedVariable=name;
                     this.lastReferencedVariableIsLocal=false;
+                    this.lastReferencedVariableIsStatic=false;
                     var instance=staticInstances[ID][name];
                     this.lastReferencedVarType=instance.Item2.Item2;
                     this.status=ParsingStatus.SEARCHING_NAME;
@@ -1234,7 +1237,7 @@ namespace ProgrammingLanguageTutorialIdea {
                         status=ParsingStatus.SEARCHING_NAME;
 
                     }
-                    lastReferencedVariableIsLocal=false;
+                    lastReferencedVariableIsLocal=lastReferencedVariableIsStatic=false;
 					if (kw.type==KeywordType.INCREMENT||kw.type==KeywordType.DECREMENT)
 						this.lastReferencedClassInstance.Clear();
 					return;
@@ -1353,6 +1356,10 @@ namespace ProgrammingLanguageTutorialIdea {
 				throwIfCantAccess(mods,referencedVariable,cl.path,false);
                 type=cl.getVarType(this.referencedVariable).Item1;
             } 
+            else if (staticInstances[ID].ContainsKey(referencedVariable)) {
+                type=staticInstances[ID][referencedVariable].Item2.Item1;
+                mods=staticInstances[ID][referencedVariable].Item3;
+            }
             else if (this.referencedVariableIsStatic) {
 
                 Console.WriteLine("~ Static start (type/mods)");
@@ -1361,10 +1368,6 @@ namespace ProgrammingLanguageTutorialIdea {
                 mods=staticInstances[cl.classID][referencedVariable].Item3;
                 Console.WriteLine("~ Static finish (type/mods)");
 
-            }
-            else if (staticInstances[ID].ContainsKey(referencedVariable)) {
-                type=staticInstances[ID][referencedVariable].Item2.Item1;
-                mods=staticInstances[ID][referencedVariable].Item3;
             }
             else if (!(this.referencedVariableIsLocal)) {
 				type=(this.referencedVarType==VarType.NATIVE_ARRAY||this.referencedVarType==VarType.NATIVE_ARRAY_INDEXER)?this.arrays[this.referencedVariable].Item2:(this.referencedVarType==VarType.CLASS?this.classes[this.referencedVariable].Item2:this.variables[this.referencedVariable].Item2);
@@ -1987,7 +1990,7 @@ namespace ProgrammingLanguageTutorialIdea {
 
 			if (!(currentMods.hasAccessorModifier()))
                 currentMods=currentMods|Modifier.PRIVATE;
-
+            lastReferencedVariableIsStatic=false;
 			this.tryIncreaseBlockVarCount();
 
                 var vt=new Tuple<Tuple<String,VarType>>(new Tuple<String,VarType>(this.varType,VarType.NATIVE_ARRAY));
@@ -2215,7 +2218,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 				if (this.isALocalVar(arrayName)) {
 					
-					this.setArrayValueFuncPtrs.Add(arrayName,memAddress+2);
+					this.setArrayValueFuncPtrs.Add(arrayName,GetStaticInclusiveAddress()+2);
 					
 //					this.localVarEBPPositions[this.getLocalVarHomeBlock(arrayName)][arrayName].Add((UInt32)(this.opcodes.Count+8));
 					
@@ -2240,7 +2243,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 					
 					if (addEsiToLocalAddresses) {
-						this.setArrayValueFuncPtrs.Add(arrayName,memAddress+2);
+						this.setArrayValueFuncPtrs.Add(arrayName,GetStaticInclusiveAddress()+2);
 						this.addBytes(new Byte[] {
 					              		
 							            0xEB,0x0D, // JMP 14 BYTES
@@ -2260,7 +2263,7 @@ namespace ProgrammingLanguageTutorialIdea {
 						
 						UInt32 sMemAddr=this.memAddress,opcodesCtPtr=(UInt32)this.opcodes.Count+1;
 						this.addBytes(new Byte[]{0xE9,0,0,0,0});
-						this.setArrayValueFuncPtrs.Add(arrayName,memAddress);
+						this.setArrayValueFuncPtrs.Add(arrayName,GetStaticInclusiveAddress());
 						this.moveClassOriginItemAddrIntoEax(this.lastReferencedClassInstance,arrayName,VarType.NATIVE_ARRAY,lastReferencedVariableIsFromClass);
 						this.addBytes(new Byte[]{0x8B,0}); //MOV EAX,[EAX]
 						this.addBytes(new Byte[]{3,0x44,0x24,8});//ADD EAX,[ESP+8]
@@ -2279,7 +2282,7 @@ namespace ProgrammingLanguageTutorialIdea {
 						
 					}
 					else {
-						this.setArrayValueFuncPtrs.Add(arrayName,memAddress+2);
+						this.setArrayValueFuncPtrs.Add(arrayName,GetStaticInclusiveAddress()+2);
 						this.arrayReferences[arrayName].Add((UInt32)(this.opcodes.Count+8));
 						this.addBytes(new Byte[] {
 						              	
@@ -2300,7 +2303,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			}
 			
 			Console.WriteLine("Calling setArrayValue: memAddress: "+memAddress.ToString("X")+", setArrayValueFuncPtrs[arrayName]: "+setArrayValueFuncPtrs[arrayName].ToString("X"));
-			this.addBytes(new Byte[]{0xE8}.Concat(BitConverter.GetBytes((Int32)setArrayValueFuncPtrs[arrayName]-(Int32)memAddress-5)));
+			this.addBytes(new Byte[]{0xE8}.Concat(BitConverter.GetBytes((Int32)setArrayValueFuncPtrs[arrayName]-(Int32)GetStaticInclusiveAddress()-5)));
 			
 		}
 		
@@ -3439,7 +3442,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				Console.WriteLine("Found block: "+b.startMemAddr.ToString("X")+" (This block: "+block.startMemAddr.ToString("X")+')');
 				
 			}
-			foreach (UInt32 index in block.blockMemPositions) {
+			foreach (OpcodeIndexReference index in block.blockMemPositions) {
 				
 				Console.WriteLine("Block Mem Pos @ "+index.ToString());
                   Console.WriteLine("Data sect bytes #: "+dataSectBytes.Count);
@@ -3448,11 +3451,8 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 				while (i!=4) {
 					
-                        if (!staticFunc)
-					    opcodes[(Int32)index+i]=memAddr[i];
-					 else
-                          dataSectBytes[(Int32)index+i]=memAddr[i];
-                       ++i;
+                     SetStaticInclusiveByte(index,memAddr[i],i);
+                     ++i;
 					
 				}
 				
@@ -3574,6 +3574,8 @@ namespace ProgrammingLanguageTutorialIdea {
 				throw new ParsingError("Function does not exist: \""+functionName+'"');
 			
 			Boolean restoreEsiCondition=functions[functionName].Item4==FunctionType.DLL_REFERENCED&&addEsiToLocalAddresses&&inFunction;
+            if (!functions[functionName].Item6.HasFlag(Modifier.STATIC)&&InStaticEnvironment()&&functions[functionName].Item4!=FunctionType.DLL_REFERENCED)
+                throw new ParsingError("Can't access non-static function from a static environment (\""+functionName+"\" was called)");
 			
 			Console.WriteLine(" == callFunction: "+functionName+" == ");
 			foreach (String str in @params)
@@ -3948,7 +3950,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		internal void writeJump (UInt32 gotoMemAddr) {
 			
-			this.addBytes(new Byte[]{0xE9}.Concat(BitConverter.GetBytes((Int32)gotoMemAddr-(Int32)(this.memAddress+5))));
+			this.addBytes(new Byte[]{0xE9}.Concat(BitConverter.GetBytes((Int32)gotoMemAddr-(Int32)(GetStaticInclusiveAddress()+5))));
 			
 		}
 		
@@ -4960,7 +4962,7 @@ namespace ProgrammingLanguageTutorialIdea {
             instanceName=this.trimCurrentPath(instanceName);
             classFilePath=this.trimCurrentPath(classFilePath);
 
-            if (mods.HasFlag(Modifier.PRIVATE)||(mods.HasFlag(Modifier.LOCAL)&&((classFilePath.Contains('\\')||classFilePath.Contains('/'))&&merge(fileName.Split(arr).allButLast(),"/")!=merge(classFilePath.Split(arr).allButLast(),"/")))||(mods.HasFlag(Modifier.PULLABLE)&&!getting))
+            if ((mods.HasFlag(Modifier.PRIVATE)&&classFilePath!=fileName)||(mods.HasFlag(Modifier.LOCAL)&&((classFilePath.Contains('\\')||classFilePath.Contains('/'))&&merge(fileName.Split(arr).allButLast(),"/")!=merge(classFilePath.Split(arr).allButLast(),"/")))||(mods.HasFlag(Modifier.PULLABLE)&&!getting))
                 throw new ParsingError("Can't access \""+instanceName+"\" from \""+classFilePath.Split(arr).Last()+"\": exists, but inaccessible due to its modifiers. \n\nCalling path: "+merge(fileName.Split(new []{'/','\\' }).allButLast(),"/")+"\nCalled path: "+merge(classFilePath.Split(new []{'/','\\' }).allButLast(),"/")+'\n');
             
         }

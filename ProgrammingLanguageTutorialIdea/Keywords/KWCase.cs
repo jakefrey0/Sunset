@@ -27,7 +27,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				sender.pushValue(@params[0]);
 				sender.addByte(0x58); //POP EAX
 				sender.addBytes(new Byte[]{0x3B,0x45,sender.pseudoStack.getLatestSwitchVarOffset()}); //CMP EAX,[EBP+-OFFSET]
-				caseBlock.blockMemPositions.Add(sender.getOpcodesCount()+2);
+				caseBlock.blockMemPositions.Add(sender.GetStaticInclusiveOpcodesCount(2));
 				sender.addBytes(new Byte[]{0x0F,0x85,0,0,0,0});//JNZ
 				caseBlock.startMemAddr=sender.memAddress;
 				sender.addBlock(caseBlock,0);
@@ -47,7 +47,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 					++i;
 					
 				}
-				caseBlock.blockMemPositions.Add(sender.getOpcodesCount()+1);
+				caseBlock.blockMemPositions.Add(sender.GetStaticInclusiveOpcodesCount(1));
 				sender.addBytes(new Byte[]{0xE9,0,0,0,0});//JMP
 				Byte[]memAddr;
 				

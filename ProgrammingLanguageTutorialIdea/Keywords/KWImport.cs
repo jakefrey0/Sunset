@@ -60,25 +60,29 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 					throw new ParsingError("Invalid param for \""+constName+"\", should be a valid filepath! (Got \""+fp+"\")");
 				
 			}
-			
+
 			String className=GetClassName(fp);
             Int32 initialDataSectBytesCount=Parser.dataSectBytes.Count;
 			Parser childParser=new Parser("Child parser",fp,false,true,true,false,false){addEsiToLocalAddresses=true,gui=sender.gui,className=className};
-			childParser.keywordMgr.classWords=classWords;
-            foreach (String cw_name in classWords)
-                childParser.importedClasses.AddRange(sender.importedClasses.Where(x=>x.className==cw_name));
-			if (passedTypes!=null)
-				childParser.passedVarTypes=passedTypes;
-			Byte[]data=childParser.parse(File.ReadAllText(fp));
-			if (childParser.toggledGui)
-				sender.gui=childParser.gui;
+            
             if (!String.IsNullOrEmpty(passingTypesUnparsed))
                 className+='<'+passingTypesUnparsed+'>';
             className=className.Contains("\\")?className.Split('\\').Last():className;
             String path=Path.GetFullPath(fp),id=CreateClassID(fp,className);
+			childParser.keywordMgr.classWords=classWords;
+
             if (!Parser.classSkeletons.ContainsKey(id)) {
+
+                foreach (String cw_name in classWords)
+                    childParser.importedClasses.AddRange(sender.importedClasses.Where(x=>x.className==cw_name));
+			    if (passedTypes!=null)
+				    childParser.passedVarTypes=passedTypes;
+			    Byte[]data=childParser.parse(File.ReadAllText(fp));
+			    if (childParser.toggledGui)
+				    sender.gui=childParser.gui;
 			    Parser.dataSectBytes.AddRange(data.Take((Int32)childParser.byteCountBeforeDataSect));
                 Parser.classSkeletons.Add(id,(UInt32)initialDataSectBytesCount);
+
             }
 			
 			if (childParser.toImport!=null&&!sender.winApp) {

@@ -30,7 +30,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		public UInt16 nestedLevel=0;
 		
-		public List<UInt32>blockMemPositions;
+		public List<OpcodeIndexReference>blockMemPositions;
 		public List<Tuple<UInt32,UInt32>>blockRVAPositions;
 		
 		public Boolean isLoopOrSwitchBlock=false,switchBlock=false,caseOrDefaultBlock=false,hasParentheses=true;
@@ -66,7 +66,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			this.localVariables=new Dictionary<String,Tuple<Tuple<String,VarType>>>();
 			this.shouldXOREAX=xorEax;
 			this.addEnterAutomatically=addEnterAutomatically;
-			this.blockMemPositions=new List<UInt32>();
+			this.blockMemPositions=new List<OpcodeIndexReference>();
 			this.blockRVAPositions=new List<Tuple<UInt32,UInt32>>();
 			this.restoreArraySetValueFuncs=new List<String>();
 			this.children=new List<Block>();

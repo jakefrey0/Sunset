@@ -34,13 +34,13 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
             sender.addByte(0x51);//PUSH ECX
             sender.pseudoStack.push(new PreservedECX());
             sender.addBytes(new Byte[]{0x31,0xC9}); //XOR ECX,ECX
-            UInt32 cMemAddr=sender.memAddress;
+            UInt32 cMemAddr=sender.GetStaticInclusiveAddress();
             Block foreachBlock=new Block(delegate {sender.writeJump(cMemAddr);sender.pseudoStack.pop(2);},0,new Byte[]{0x59,0x83,0xC4,(Byte)(@params.Length*2)}/*POP ECX,ADD ESP,(@params.Length/2)*4*/,false,false){isLoopOrSwitchBlock=true,continueAddress=cMemAddr};
             foreachBlock.continueInstructions=foreachBlock.breakInstructions=foreachBlock.opcodesToAddOnBlockEnd;
             foreachBlock.afterBlockClosedOpcodes=new Byte[]{0x83,0xC4,4 }; // ADD ESP,4 to remove the preserved ecx
 
             sender.addBytes(new Byte[]{0x3B,0x0C,0x24 }); //CMP ECX,[ESP]
-            foreachBlock.blockMemPositions.Add(sender.getOpcodesCount()+2);
+            foreachBlock.blockMemPositions.Add(sender.GetStaticInclusiveOpcodesCount(2));
             sender.addBytes(new Byte[]{0x0F,0x84,0,0,0,0});//JZ
             foreachBlock.startMemAddr=sender.memAddress;
 

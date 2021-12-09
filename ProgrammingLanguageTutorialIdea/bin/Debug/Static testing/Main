@@ -6,4 +6,5 @@ int num becomes Class.staticFunc(4)
 
 MessageBox.mboxNumber(num)
 
+
 ; make 2d rpg game after done static

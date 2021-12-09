@@ -33,7 +33,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
             if (!staticFunc)
 		        sender.tryCreateRestoreEsiFunc();
 			
-			UInt32 pos=sender.getOpcodesCount()+1;
+			OpcodeIndexReference pos=sender.GetStaticInclusiveOpcodesCount(1);
             if (!staticFunc)
 			    sender.addBytes(new Byte[]{0xE9,0,0,0,0});
 //			Byte[]newOpcodes=new Byte[]{0xE9,0,0,0,0}; //JMP TO MEM ADDR

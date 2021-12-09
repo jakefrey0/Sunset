@@ -22,7 +22,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			if (@params.Length!=2)
 				throw new ParsingError("Expected 2 parameters for \""+constName+"\" (NAME OF ITEM,ARRAY NAME)");
 			sender.addBytes(new Byte[]{0x31,0xC9}); //XOR ECX,ECX
-			UInt32 cMemAddr=sender.memAddress;
+			UInt32 cMemAddr=sender.GetStaticInclusiveAddress();
 			Block foreachBlock=new Block(delegate {sender.writeJump(cMemAddr);sender.pseudoStack.pop();},0,new Byte[]{0x59,0x83,0xC4,4}/*POP ECX,ADD ESP,4*/,false,false){isLoopOrSwitchBlock=true,continueAddress=cMemAddr};
 			foreachBlock.continueInstructions=foreachBlock.breakInstructions=new Byte[]{0x59,0x83,0xC4,4};//POP ECX && ADD ESP,4
 			String arrName=@params[1],varName=@params[0];
@@ -38,9 +38,9 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			sender.addByte(0x59);//POP ECX
 			if (vt.Item2==VarType.NATIVE_ARRAY) {
 				sender.addBytes(new Byte[]{0x3B,0x0B}); //CMP ECX,[EBX]
-				foreachBlock.blockMemPositions.Add(sender.getOpcodesCount()+2);
+				foreachBlock.blockMemPositions.Add(sender.GetStaticInclusiveOpcodesCount(2));
 				sender.addBytes(new Byte[]{0x0F,0x84,0,0,0,0});//JZ
-				foreachBlock.startMemAddr=sender.memAddress;
+				foreachBlock.startMemAddr=sender.GetStaticInclusiveAddress();
 				sender.addBytes(new Byte[]{0x8B,0x43,4}); //MOV EAX,[EBX+4]
 				sender.addBytes(new Byte[]{0xF7,0xE1}); //MUL ECX
 				sender.addBytes(new Byte[]{1,0xD8}); //ADD EAX,EBX
@@ -75,7 +75,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			}
 			if (vt.Item2==VarType.NATIVE_VARIABLE&&vt.Item1==KWString.constName) {
 				sender.addBytes(new Byte[]{0x80,0x3C,0x19,0}); //CMP BYTE [ECX+EBX],0
-				foreachBlock.blockMemPositions.Add(sender.getOpcodesCount()+2);
+				foreachBlock.blockMemPositions.Add(sender.GetStaticInclusiveOpcodesCount(2));
 				sender.addBytes(new Byte[]{0x0F,0x84,0,0,0,0});//JZ
 				foreachBlock.startMemAddr=sender.memAddress;
 				sender.addBytes(new Byte[]{0x33,0xD2}); //XOR EDX,EDX

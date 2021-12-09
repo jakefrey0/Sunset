@@ -1,6 +1,33 @@
 import(Windows/RECT)
+import(Windows/MessageBox)
 public static str test
 public static RECT rect
+
+private static func tes3t { 
+	
+	MessageBox.mbox("abc","you")
+	int# arr becomes #7
+	MessageBox.mboxNumber(lengthof(arr))
+	MessageBox.mboxNumber(sizeof(arr))
+	MessageBox.mboxNumber(Tsizeof(int))
+	foreach (num,arr) {
+		;MessageBox.mboxNumber(num)	
+	}
+	;retn
+	bool condition becomes true
+	if (condition) {
+		MessageBox.mbox("Was","true")
+		condition becomes false
+	}
+	else { MessageBox.mbox("Shouldnt","be here") }
+	crash
+	if (condition) { MessageBox.mbox("Shouldnt","be here") }
+	else {
+		MessageBox.mbox("Was","false")
+	}
+
+	
+}
 
 public static func(int x) staticFunc int {
 	
@@ -8,6 +35,7 @@ public static func(int x) staticFunc int {
 	rect.left becomes rect.left+x ; should work
 	x becomes 33 ; should work
 	test becomes "test" ; should work
+	tes3t
 	retn(rect.left*x) ; should work
 	
 }
