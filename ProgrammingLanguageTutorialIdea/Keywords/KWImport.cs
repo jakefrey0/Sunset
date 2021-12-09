@@ -62,8 +62,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			}
 			
 			String className=GetClassName(fp);
-			Int32 initialAppendAfterCount=sender.getAppendAfterCount();
-			UInt32 startMemAddr=(UInt32)(sender.memAddress+initialAppendAfterCount);
+            Int32 initialDataSectBytesCount=Parser.dataSectBytes.Count;
 			Parser childParser=new Parser("Child parser",fp,false,true,true,false,false){addEsiToLocalAddresses=true,gui=sender.gui,className=className};
 			childParser.keywordMgr.classWords=classWords;
             foreach (String cw_name in classWords)
@@ -73,8 +72,14 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			Byte[]data=childParser.parse(File.ReadAllText(fp));
 			if (childParser.toggledGui)
 				sender.gui=childParser.gui;
-			if (!sender.@struct)
-				sender.addBlockToAppendAfter(data);
+            if (!String.IsNullOrEmpty(passingTypesUnparsed))
+                className+='<'+passingTypesUnparsed+'>';
+            className=className.Contains("\\")?className.Split('\\').Last():className;
+            String path=Path.GetFullPath(fp),id=CreateClassID(fp,className);
+            if (!Parser.classSkeletons.ContainsKey(id)) {
+			    Parser.dataSectBytes.AddRange(data.Take((Int32)childParser.byteCountBeforeDataSect));
+                Parser.classSkeletons.Add(id,(UInt32)initialDataSectBytesCount);
+            }
 			
 			if (childParser.toImport!=null&&!sender.winApp) {
 				
@@ -111,8 +116,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 					sender.referencedFuncPositions.Add(kvp.Key,new List<OpcodeIndexReference>());
 				
 				foreach (OpcodeIndexReference i in kvp.Value) {
-					
-                    i.index+=(UInt32)initialAppendAfterCount;
+
 					sender.referencedFuncPositions[kvp.Key].Add(i);
                     if (i.type!=OpcodeIndexType.CODE_SECT_REFERENCE) continue;
 					if (!sender.refdFuncsToIncreaseWithOpcodes.ContainsKey(kvp.Key))
@@ -131,21 +135,16 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
                     sender.acknowledgements.Add(kvp.Key,kvp.Value);
             }
 
-			if (!String.IsNullOrEmpty(passingTypesUnparsed))
-				className+='<'+passingTypesUnparsed+'>';
-			className=className.Contains("\\")?className.Split('\\').Last():className;
 			if (sender.importedClasses.Select(x=>x.className).Contains(className))
 				throw new ParsingError("Class (with same name) already imported: \""+className+'"');
-            String path=Path.GetFullPath(childParser.fileName),id=CreateClassID(childParser.fileName,className);
-            UInt32 startAddr=(UInt32)(sender.memAddress+initialAppendAfterCount);
                 
-		    Class cl=new Class(className,path,(UInt32)data.Length,childParser.@struct?ClassType.STRUCT:ClassType.NORMAL,startMemAddr,childParser,childParser.memAddress,(UInt32)initialAppendAfterCount,(UInt32)childParser.getAppendAfterCount(),id);
+		    Class cl=new Class(className,path,childParser.byteCountBeforeDataSect,childParser.@struct?ClassType.STRUCT:ClassType.NORMAL,childParser,childParser.memAddress,(UInt32)initialDataSectBytesCount,(UInt32)childParser.getAppendAfterCount(),id);
 			sender.importedClasses.Add(cl);
-			sender.staticClassReferences.Add(cl,new List<UInt32>());
+			sender.staticClassReferences.Add(cl,new List<OpcodeIndexReference>());
 			
 			if (!sender.keywordMgr.classWords.Contains(className))
 				sender.keywordMgr.classWords.Add(className);
-            
+
 			return base.execute(sender, @params);
 			
 		}

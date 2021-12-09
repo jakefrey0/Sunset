@@ -12,7 +12,7 @@ public static func(int num) mboxNumber int {
 	str buffer becomes "-############" ; 32 bit number buffer
 	str format becomes "%d"
 	wsprintfA(buffer,format,num)
-	MessageBoxA(null,buffer,emptyString,0)
+	MessageBoxA(null,buffer,"",0)
 	
 }
 

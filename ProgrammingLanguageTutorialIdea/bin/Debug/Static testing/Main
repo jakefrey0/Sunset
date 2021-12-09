@@ -1,5 +1,9 @@
-import(Static testing/Class)
-dllref(User32,int,str,str,int) stdcall:MessageBoxA int
 setpheapvar
+import(Static testing/Class)
+import(Windows/MessageBox)
 
-retn(Class.staticFunc(3))
+int num becomes Class.staticFunc(4)
+
+MessageBox.mboxNumber(num)
+
+; make 2d rpg game after done static

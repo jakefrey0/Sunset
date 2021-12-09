@@ -36,7 +36,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			if (sender.addEsiToLocalAddresses)
 				endOpcodes=new Byte[]{0x5E/*POP ESI*/}.Concat(endOpcodes).ToArray();
 			
-			Block constructorBlock=new Block(delegate{sender.inFunction=false;if(sender.addEsiToLocalAddresses)sender.pseudoStack.pop();sender.pseudoStack.pop();},sender.memAddress,endOpcodes,true);
+			Block constructorBlock=new Block(delegate{sender.inFunction=false;sender.inConstructor=false;if(sender.addEsiToLocalAddresses)sender.pseudoStack.pop();sender.pseudoStack.pop();},sender.memAddress,endOpcodes,true);
 			
 			//For information on this, see KWNew -> Extra esi dword var on classes information
 			if (sender.addEsiToLocalAddresses) {
@@ -70,6 +70,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			sender.addBlock(constructorBlock,1);
 			constructorBlock.blockMemPositions.Add(pos);
 			sender.inFunction=true;
+            sender.inConstructor=true;
 			sender.constructor=new Tuple<UInt32,List<Tuple<String,VarType>>>(constructorBlock.startMemAddr,paramTypes);
 			return base.execute(sender, @params);
 			

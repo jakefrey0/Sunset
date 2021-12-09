@@ -25,7 +25,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				throw new ParsingError("Expected at least 1 parameter for native call \""+constName+'"');
 			
 			Boolean setProcessHeapVar=false;
-			if (sender.processHeapVar==null) {
+			if (Parser.processHeapVar==UInt32.MaxValue) {
 				
 				sender.setProcessHeapVar();
 				setProcessHeapVar=true;
@@ -46,25 +46,18 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			const String HL="HeapAlloc",KERNEL32="KERNEL32.DLL";
 			sender.referenceDll(KERNEL32,HL);
 			sender.referencedFuncPositions[HL].Add(sender.GetStaticInclusiveOpcodesCount(2));
+
             Console.WriteLine("Wrote "+HL+", "+sender.InStaticEnvironment());
             Console.WriteLine(sender.referencedFuncPositions[HL].Last().type.ToString());
-            Console.ReadKey();
 			sender.addBytes(new Byte[]{0xFF,0x15,0,0,0,0});//CALL FUNC HeapAlloc
-			
+
 			sender.addByte(0x56);//PUSH ESI
 			sender.addByte(0xB9);//MOV FOLLOWING DWORD INTO ECX
 			sender.addBytes(BitConverter.GetBytes(cl.byteSize));
 			
-			if (sender.addEsiToLocalAddresses) {
-				sender.addBytes(new Byte[]{0x8B,0x34,0x24,//MOV ESI,[ESP]
-				                	0x81,0xC6}.Concat(BitConverter.GetBytes(cl.initialAppendAfterCount)));//ADD ESI,DWORD
-				
-			}
-			else {
-				sender.addByte(0xBE);//MOV FOLLOWING DWORD INTO ESI
-				sender.staticClassReferences[cl].Add(sender.getOpcodesCount());
-				sender.addBytes(new Byte[]{0,0,0,0}); //DWORD
-			}
+			sender.addByte(0xBE);//MOV FOLLOWING DWORD INTO ESI
+			sender.staticClassReferences[cl].Add(sender.GetStaticInclusiveOpcodesCount());
+			sender.addBytes(new Byte[]{0,0,0,0}); //DWORD
 			sender.addBytes(new Byte[]{0x89,0xC7}); //MOV EDI,EAX
 			sender.addBytes(new Byte[]{0xF3,0xA4}); //REP MOVS BYTE PTR ES:[EDI],BYTE PTR DS:[ESI]
 			if (cl.classType==ClassType.NORMAL) {

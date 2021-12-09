@@ -1,10 +1,11 @@
 ﻿<Properties StartupConfiguration="{19D2E25E-77E6-443C-B6EB-2E58499E4104}|Default">
-  <MonoDevelop.Ide.Workbench ActiveDocument="ProgrammingLanguageTutorialIdea/Keywords/KWReturn.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="ProgrammingLanguageTutorialIdea/Keywords/KWConstructor.cs">
     <Files>
-      <File FileName="ProgrammingLanguageTutorialIdea/Parser.cs" Line="3045" Column="5" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWFunction.cs" Line="56" Column="58" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Program.cs" Line="49" Column="51" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWReturn.cs" Line="15" Column="3" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Parser.cs" Line="5187" Column="44" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWNew.cs" Line="56" Column="4" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWImport.cs" Line="145" Column="49" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Class.cs" Line="30" Column="56" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWConstructor.cs" Line="72" Column="17" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
@@ -12,7 +13,7 @@
           <Node name="ProgrammingLanguageTutorialIdea" expanded="True">
             <Node name="ProgrammingLanguageTutorialIdea" expanded="True">
               <Node name="Keywords" expanded="True">
-                <Node name="KWReturn.cs" selected="True" />
+                <Node name="KWConstructor.cs" selected="True" />
               </Node>
             </Node>
           </Node>

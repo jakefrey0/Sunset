@@ -22,8 +22,11 @@ namespace ProgrammingLanguageTutorialIdea {
 
 	    public static Dictionary<String,Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier,Class>>>staticInstances=new Dictionary<String,Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier,Class>>>();
         public static Dictionary<String,Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>>> staticFunctions=new Dictionary<String,Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>>>();//Class ID, (Function Name,(Memory Address,(Return Type, Return Var Type),No. of expected parameters,Function Type,Calling Convention,Modifiers))
+        public static Dictionary<String,UInt32>classSkeletons=new Dictionary<String,UInt32>(); // The default copy of a class with nothing modified. (Class ID, Index in dataSectBytes)
         
         public static List<Byte>dataSectBytes=new List<Byte>();
+
+        public static UInt32 processHeapVar=UInt32.MaxValue;//Mem Addr, References
 
 		public readonly String parserName;
 		
@@ -42,6 +45,8 @@ namespace ProgrammingLanguageTutorialIdea {
 		}
 		public String referencedVariable,rTypeDefinition;
 		public Boolean referencedVariableIsLocal,referencedVariableIsFromClass,referencedVariableIsStatic;
+
+        public UInt32 byteCountBeforeDataSect;
 		
 		internal Boolean lastReferencedVariableIsLocal,lastReferencedVariableIsFromClass,lastReferencedVariableIsStatic;
 		
@@ -50,10 +55,11 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal Dictionary<String,List<UInt32>> variableReferences=new Dictionary<String,List<UInt32>>(),//Name,(Index in the Opcodes List)
 												 arrayReferences=new Dictionary<String,List<UInt32>>(),//Name,(Index in the Opcodes List)
 												 classReferences=new Dictionary<String,List<UInt32>>();//Name,(Index in the Opcodes List)
-		internal Dictionary<Class,List<UInt32>> staticClassReferences=new Dictionary<Class,List<UInt32>>();//Name,(Index in the Opcodes List)
+		internal Dictionary<Class,List<OpcodeIndexReference>> staticClassReferences=new Dictionary<Class,List<OpcodeIndexReference>>();//Name,(Index in the Opcodes List)
 		
 		internal Dictionary<String,List<String>> toImport;//DllName,Functions
 		internal Dictionary<String,List<OpcodeIndexReference>> referencedFuncPositions;//FuncName,Opcode pos
+        internal List<OpcodeIndexReference>procHeapVarRefs=new List<OpcodeIndexReference>();
 		
 		internal Dictionary<Block,UInt32> blocks;//block,end of block mem address
 		internal Dictionary<Block,UInt16> blockBracketBalances;//block,bracket balance
@@ -76,7 +82,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		
-		internal Boolean expectsBlock=false,expectsElse=false,searchingFunctionReturnType=false,inFunction=false,@struct=false;
+		internal Boolean expectsBlock=false,expectsElse=false,searchingFunctionReturnType=false,inFunction=false,@struct=false,inConstructor=false;
 		internal Byte setExpectsElse=0,setExpectsBlock=0;
 		
 		internal Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>> functions;//Function Name,(Memory Address,(Return Type, Return Var Type),No. of expected parameters,Function Type,Calling Convention,Modifiers)
@@ -119,9 +125,8 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal List<Class>importedClasses;
 		internal List<String> defineTimeOrder;
 		internal List<UInt32>esiFuncReferences=new List<UInt32>();
-         internal List<Byte>appendAfterStaticFunc=new List<Byte>();
+        internal List<Byte>appendAfterStaticFunc=new List<Byte>();
 		
-		internal Tuple<UInt32,List<UInt32>> processHeapVar;//Mem Addr, References
 		internal Boolean addEsiToLocalAddresses=false;
 		/// <summary>
 		/// (esiOffsetFromStart) Only set if addEsiToLocalAddresses is true
@@ -218,7 +223,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			this.writeImportSection=writeImportSection;
 			importedClasses=new List<Class>();
 			classes=new Dictionary<String,Tuple<UInt32,String,Class,Modifier>>();
-			staticClassReferences=new Dictionary<Class,List<UInt32>>();
+			staticClassReferences=new Dictionary<Class,List<OpcodeIndexReference>>();
 			defineTimeOrder=new List<String>();
 			pvClassInstanceOrigin=new List<String>();
 			blocksClosed=new Dictionary<Block,List<Block>>();
@@ -763,8 +768,9 @@ namespace ProgrammingLanguageTutorialIdea {
 			if (writeImportSection&&importOpcodes!=null) {
 				finalBytes.AddRange(importOpcodes);
 			}
-                if (dataSectBytes.Count!=0)
-                    finalBytes.AddRange(dataSectBytes);
+            byteCountBeforeDataSect=(UInt32)finalBytes.Count;
+            if (dataSectBytes.Count!=0)
+                finalBytes.AddRange(dataSectBytes);
 			
 			compiledBytesFinalNo=(UInt32)finalBytes.Count;
 			return finalBytes.ToArray();
@@ -818,9 +824,6 @@ namespace ProgrammingLanguageTutorialIdea {
 				}
 			}
 			
-			foreach (Class cl in this.importedClasses)
-				++cl.memAddr;
-			
 			this.classes=new Dictionary<String,Tuple<UInt32,String,Class,Modifier>>(newDict1);
 			
 			List<Tuple<UInt32,List<UInt32>>>newList=new List<Tuple<UInt32,List<UInt32>>>(this.stringsAndRefs.Count);
@@ -830,12 +833,6 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 			}
 			this.stringsAndRefs=new List<Tuple<UInt32,List<UInt32>>>(newList);
-			
-			if (processHeapVar!=null&&!addEsiToLocalAddresses){
-				
-				this.processHeapVar=new Tuple<UInt32,List<UInt32>>(this.processHeapVar.Item1+1,this.processHeapVar.Item2);
-				
-			}
 
 			opcodes.Add(b);
 			++memAddress;
@@ -1348,7 +1345,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			Console.WriteLine("is local: "+this.referencedVariableIsLocal.ToString()+", is static: "+this.referencedVariableIsStatic+", var name: "+this.referencedVariable+", referenced var type: "+this.referencedVarType.ToString());
 			String type;
             Modifier mods;
-                Class cl=null;
+            Class cl=null;
 			if (this.referencedVariableIsFromClass) {
 
                 cl=getOriginFinalClass(this.lastReferencedClassInstance,referencedVariableIsLocal);
@@ -1378,7 +1375,7 @@ namespace ProgrammingLanguageTutorialIdea {
                 mods=Modifier.NONE;
             }
 			
-                Console.WriteLine("-- processValue: successfully set mods and type ("+mods.ToString()+", "+type+')');
+            Console.WriteLine("-- processValue: successfully set mods and type ("+mods.ToString()+", "+type+')');
             ThrowIfInstRefFromStaticEnv(referencedVariable);
 
             if(constantBeingSet!=null) {
@@ -1409,7 +1406,7 @@ namespace ProgrammingLanguageTutorialIdea {
 						
 						this.addByte(0x51); //PUSH ECX
 						
-						if (this.processHeapVar==null)
+						if (Parser.processHeapVar==UInt32.MaxValue)
 							this.setProcessHeapVar();
 						
 						this.pushValue(adjustedValue);
@@ -1939,29 +1936,29 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 			}
 			
-			foreach (KeyValuePair<Class,List<UInt32>>references in this.staticClassReferences) {
+			foreach (KeyValuePair<Class,List<OpcodeIndexReference>>references in this.staticClassReferences) {
 				
-				foreach (UInt32 index in references.Value) {
+				foreach (OpcodeIndexReference index in references.Value) {
 				
-					Byte[]memAddrBytes=BitConverter.GetBytes(references.Key.memAddr);
+					Byte[]memAddrBytes=BitConverter.GetBytes(references.Key.skeletonIndex+PEHeaderFactory.dataSectAddr);
 					
 					Byte i=0;
 					while (i!=4) {
-						this.opcodes[(Int32)index+i]=memAddrBytes[i];
+						SetStaticInclusiveByte(index:index,b:memAddrBytes[i],indexOffset:i);
 						++i;
 					}
 				}
 				
 			}
 			
-			if (processHeapVar!=null) {
-				foreach (UInt32 index in this.processHeapVar.Item2) {
+			if (processHeapVar!=UInt32.MaxValue) {
+				foreach (OpcodeIndexReference index in this.procHeapVarRefs) {
 					
-					Byte[]memAddrBytes=BitConverter.GetBytes(this.processHeapVar.Item1);
+					Byte[]memAddrBytes=BitConverter.GetBytes(processHeapVar+PEHeaderFactory.dataSectAddr);
 					
 					Byte i=0;
 					while (i!=4) {
-						this.opcodes[(Int32)index+i]=memAddrBytes[i];
+						SetStaticInclusiveByte(index,memAddrBytes[i],i);
 						++i;
 					}
 					
@@ -2131,11 +2128,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					while (i!=4) {
 						
 						Console.WriteLine("Total opcodes: "+this.opcodes.Count.ToString()+", Writing at: "+(pos.index+i).ToString());
-                        Int32 idx=pos.GetIndexAsInt()+i;
-                        if (pos.type==OpcodeIndexType.CODE_SECT_REFERENCE)
-						    this.opcodes[idx]=memAdd[i];
-						else if (pos.type==OpcodeIndexType.DATA_SECT_REFERENCE) //elseif on these incase I have to add a new var to the enum later (unlikely)
-                            Parser.dataSectBytes[idx]=memAdd[i];
+                        SetStaticInclusiveByte(pos,memAdd[i],i);
 
 						++i;
 						
@@ -2173,59 +2166,39 @@ namespace ProgrammingLanguageTutorialIdea {
 		internal void setProcessHeapVar () {
 			
 			const String GPH="GetProcessHeap";
-			
-			if (blocks.Count!=0) {
-				
-				//TODO:: insert set process heap var at start of application
-				
-				return;
-				
-			}
+
+            if (blocks.Count!=0) {
+
+                // TODO:: set pheapvar at start
+                return;
+
+            }
 			
 			this.referenceDll(Parser.KERNEL32,GPH);
 			this.referencedFuncPositions[GPH].Add(GetStaticInclusiveOpcodesCount(2));
-			this.processHeapVar=new Tuple<UInt32,List<UInt32>>((addEsiToLocalAddresses?0:this.memAddress)+(UInt32)this.appendAfter.Count,new List<UInt32>((addEsiToLocalAddresses?new UInt32[0]:new UInt32[]{(UInt32)(opcodes.Count+7)})));
-			this.appendAfter.AddRange(new Byte[4]);
-			
-			if (addEsiToLocalAddresses) {
+			Parser.processHeapVar=(UInt32)Parser.dataSectBytes.Count;
+            this.procHeapVarRefs.Add(GetStaticInclusiveOpcodesCount(7));
+			Parser.dataSectBytes.AddRange(new Byte[4]);
 				
-				this.addBytes(new Byte[]{
-				              	
-				              	0xFF,0x15, //CALL FUNC
-				              	0,0,0,0, //MEM ADDR TO GetProcessHeap
-				              	
-				              	0x89,0x86 //MOV EAX TO [PTR + ESI]
-				              }.Concat(BitConverter.GetBytes((UInt32)(appendAfter.Count-4))));
-				
-			}
-			
-			else {
-				
-				this.addBytes(new Byte[]{
-				              	
-				              	0xFF,0x15, //CALL FUNC
-				              	0,0,0,0, //MEM ADDR TO GetProcessHeap
-				              	
-				              	0xA3, //MOV EAX TO
-				              	0,0,0,0 //MEM ADDR TO processHeapVar
-				              	
-				              });
-				
-			}
+			this.addBytes(new Byte[]{
+			              	
+			              	0xFF,0x15, //CALL FUNC
+			              	0,0,0,0, //MEM ADDR TO GetProcessHeap
+			              	
+			              	0xA3, //MOV EAX TO
+			              	0,0,0,0 //MEM ADDR TO processHeapVar
+			              	
+			              });
 			
 		}
 		
 		internal void pushProcessHeapVar () {
 			
-			if (processHeapVar==null)
+			if (processHeapVar==UInt32.MaxValue)
 				setProcessHeapVar();
 			
-			if (addEsiToLocalAddresses)
-				this.addBytes(new Byte[]{0xFF,0xB6}.Concat(BitConverter.GetBytes((UInt32)this.processHeapVar.Item1)));
-			else {
-				this.processHeapVar.Item2.Add((UInt32)(this.opcodes.Count+2));
-				this.addBytes(new Byte[]{0xFF,0x35,0,0,0,0});
-			}
+			this.procHeapVarRefs.Add(GetStaticInclusiveOpcodesCount(2));
+			this.addBytes(new Byte[]{0xFF,0x35,0,0,0,0}); //PUSH DWORD [PTR]
 			
 		}
 		
@@ -2961,7 +2934,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				}
 				
                   if (InStaticEnvironment()) {
-                    this.addBytes(new Byte[]{0xB8 }.Concat(BitConverter.GetBytes((UInt32)(PEHeaderFactory.dataSectAddr+dataSectBytes.Count+5)))); // MOV EAX,DWORD
+                    this.addBytes(new Byte[]{0xB8 }.Concat(BitConverter.GetBytes((UInt32)(PEHeaderFactory.dataSectAddr+dataSectBytes.Count+appendAfterStaticFunc.Count+5)))); // MOV EAX,DWORD
                     dwordsToIncByOpcodesUntilStaticFuncEnd.Add((UInt32)dataSectBytes.Count()-4);
                     this.addByte(0x50); //PUSH EAX
                     appendAfterStaticFunc.AddRange(chars);
@@ -4440,7 +4413,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		}
 		
 		private void increaseRefdFuncsToIncreaseWithOpcodes () {
-			
+
 			foreach (KeyValuePair<String,List<Int32>>kvp in this.refdFuncsToIncreaseWithOpcodes)
 				foreach (Int32 i in kvp.Value)
 					++this.referencedFuncPositions[kvp.Key][i].index;
@@ -5186,7 +5159,7 @@ namespace ProgrammingLanguageTutorialIdea {
         }
 
         internal Boolean InStaticEnvironment () {
-            return this.inFunction&&this.functions.Last().Value.Item6.HasFlag(Modifier.STATIC);
+            return this.inFunction&&!this.inConstructor&&this.functions.Count>0&&this.functions.Last().Value.Item6.HasFlag(Modifier.STATIC);
         }
 
         internal UInt32 GetStaticInclusiveAddress (Boolean inStaticEnvironment) {
@@ -5214,6 +5187,15 @@ namespace ProgrammingLanguageTutorialIdea {
         }
 
         private void CallStaticClassFunc (Class cl,String funcName,String[]parameters) { CallStaticClassFunc(cl.classID,cl.path,funcName,parameters); }
+
+        private void SetStaticInclusiveByte (OpcodeIndexReference index,Byte b,Int32 indexOffset=0) {
+
+            Int32 idx=index.GetIndexAsInt();
+            if (index.type==OpcodeIndexType.CODE_SECT_REFERENCE) this.opcodes[idx+indexOffset]=b;
+            else if (index.type==OpcodeIndexType.DATA_SECT_REFERENCE) Parser.dataSectBytes[idx+indexOffset]=b;
+            // ^ else if for the off chance a new OpcodeIndexType is introduced
+
+        }
 
         #region Character parsing helpers
         //TODO:: make all this static

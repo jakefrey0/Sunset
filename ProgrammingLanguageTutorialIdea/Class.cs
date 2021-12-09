@@ -15,9 +15,8 @@ namespace ProgrammingLanguageTutorialIdea {
 	public class Class {
 		
 		public readonly String className,path,classID;
-		public readonly UInt32 byteSize,opcodePortionByteSize,initialAppendAfterCount,classAppendAfterCount,bytesToReserve;
+		public readonly UInt32 byteSize,opcodePortionByteSize,skeletonIndex,classAppendAfterCount,bytesToReserve;
 		public readonly ClassType classType;
-		public UInt32 memAddr;
 		public Dictionary<String,Tuple<UInt32,String,Modifier>>variables;
 		public Dictionary<String,Tuple<UInt32,String,Class,Modifier>>classes;//Name,(Offset To Mem Address of Heap Handle,Class type name,Class type)
 		public Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>>functions;
@@ -26,19 +25,18 @@ namespace ProgrammingLanguageTutorialIdea {
         public Dictionary<String,Tuple<UInt32,Tuple<String,VarType>>>constants=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>>>();//var name,(constant value,(Generic Var Type Tuple))		
         private List<String>defineTimeOrder;
 		
-		public Class (String className,String path,UInt32 byteSize,ClassType classType,UInt32 memAddr,Parser parserUsed,UInt32 opcodePortionByteSize,UInt32 initialAppendAfterCount,UInt32 classAppendAfterCount,String classID) {
+		public Class (String className,String path,UInt32 byteSize,ClassType classType,Parser parserUsed,UInt32 opcodePortionByteSize,UInt32 skeletonIndex,UInt32 classAppendAfterCount,String classID) {
 			
-			this.bytesToReserve=parserUsed.compiledBytesFinalNo;
+			this.bytesToReserve=parserUsed.byteCountBeforeDataSect;
 			this.className=className;
 			this.byteSize=byteSize;
 			this.classType=classType;
-			this.memAddr=memAddr;
 			this.variables=new Dictionary<String,Tuple<UInt32,String,Modifier>>();
 			this.classes=new Dictionary<String,Tuple<UInt32,String,Class,Modifier>>();
 			this.functions=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>>();
 			this.defineTimeOrder=new List<String>(parserUsed.defineTimeOrder);
 			this.opcodePortionByteSize=opcodePortionByteSize;
-			this.initialAppendAfterCount=initialAppendAfterCount;
+			this.skeletonIndex=skeletonIndex;
 			this.classAppendAfterCount=classAppendAfterCount;
 			foreach (KeyValuePair<String,Tuple<UInt32,String,Modifier>>kvp in parserUsed.getVariables())
 				this.variables.Add(kvp.Key,new Tuple<UInt32,String,Modifier>(kvp.Value.Item1-parserUsed.memAddress,kvp.Value.Item2,kvp.Value.Item3));
