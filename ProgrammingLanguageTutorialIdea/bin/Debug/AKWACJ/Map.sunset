@@ -1,0 +1,5 @@
+import(AKWACJ/Area)
+import(List<Area>)
+
+private List<Area> innerMap becomes new(List<Area>)
+
