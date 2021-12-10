@@ -19,7 +19,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		public override KeywordResult execute(Parser sender,String[]@params) {
 			
 			KWCase.checkForCaseFallThrough(sender);
-			Block defaultBlock=new Block(null,sender.memAddress,new Byte[0]){caseOrDefaultBlock=true,hasParentheses=false};
+			Block defaultBlock=new Block(null,sender.GetStaticInclusiveAddress(),new Byte[0]){caseOrDefaultBlock=true,hasParentheses=false};
 			sender.addBlock(defaultBlock,0);
 			return new KeywordResult(){newOpcodes=new Byte[0],newStatus=(sender.isColon(sender.nextChar)?ParsingStatus.SEARCHING_NAME:ParsingStatus.SEARCHING_COLON)};
 			

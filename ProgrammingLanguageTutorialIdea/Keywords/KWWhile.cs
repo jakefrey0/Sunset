@@ -25,8 +25,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			
 			List<Byte>newOpcodes=new List<Byte>();
 			UInt32 cMemAddr=sender.GetStaticInclusiveAddress();
-			Block whileBlock=new Block(delegate {sender.writeJump(cMemAddr);},sender.memAddress,new Byte[0],false,false){isLoopOrSwitchBlock=true,continueAddress=sender.memAddress};
-			UInt32 opcodesCountAtStart=sender.getOpcodesCount();
+			Block whileBlock=new Block(delegate {sender.writeJump(cMemAddr);},sender.GetStaticInclusiveAddress(),new Byte[0],false,false){isLoopOrSwitchBlock=true,continueAddress=sender.GetStaticInclusiveAddress()};
+			UInt32 opcodesCountAtStart=sender.GetStaticInclusiveOpcodesCount().index;
 			if (@params.Length==3) {
 				
 				//maybe I should make a getPushValueBytes method, instead of doing this, but w.e
@@ -89,7 +89,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				}
 				else throw new ParsingError("Invalid boolean operator \""+boolOp+'"');
 				
-				whileBlock.startMemAddr+=(UInt32)newOpcodes.Count+(sender.getOpcodesCount()-opcodesCountAtStart);
+				whileBlock.startMemAddr+=(UInt32)newOpcodes.Count+(sender.GetStaticInclusiveOpcodesCount().index-opcodesCountAtStart);
 				newOpcodes.AddRange(sender.getEnterBlockOpcodes(whileBlock,newOpcodes.Count));
 				return new KeywordResult(){newOpcodes=newOpcodes.ToArray(),newStatus=ParsingStatus.SEARCHING_NAME};
 				
@@ -117,7 +117,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				    ?new Byte[]{0x0F,0x85,0,0,0,0}  //JNE (DISTANCE AS SIGNED INTEGER)          
 				    :new Byte[]{0x0F,0x84,0,0,0,0});//JE  (DISTANCE AS SIGNED INTEGER)
 				
-				whileBlock.startMemAddr+=(UInt32)newOpcodes.Count+(sender.getOpcodesCount()-opcodesCountAtStart);
+				whileBlock.startMemAddr+=(UInt32)newOpcodes.Count+(sender.GetStaticInclusiveOpcodesCount().index-opcodesCountAtStart);
 				newOpcodes.AddRange(sender.getEnterBlockOpcodes(whileBlock,newOpcodes.Count));
 				return new KeywordResult(){newOpcodes=newOpcodes.ToArray(),newStatus=ParsingStatus.SEARCHING_NAME};
 				

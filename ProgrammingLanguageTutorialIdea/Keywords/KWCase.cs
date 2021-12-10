@@ -22,14 +22,14 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			if (sender.blocks.Keys.Where(x=>x.switchBlock).Count()==0) throw new ParsingError("Can't \""+constName+"\" outside of a \""+KWSwitch.constName+"\" block.");
 			KWCase.checkForCaseFallThrough(sender);
 			Block caseBlock=null;
-			caseBlock=new Block(null,sender.memAddress,new Byte[0],false){caseOrDefaultBlock=true,hasParentheses=false};
+			caseBlock=new Block(null,sender.GetStaticInclusiveAddress(),new Byte[0],false){caseOrDefaultBlock=true,hasParentheses=false};
 			if (@params.Length==1) {
 				sender.pushValue(@params[0]);
 				sender.addByte(0x58); //POP EAX
 				sender.addBytes(new Byte[]{0x3B,0x45,sender.pseudoStack.getLatestSwitchVarOffset()}); //CMP EAX,[EBP+-OFFSET]
 				caseBlock.blockMemPositions.Add(sender.GetStaticInclusiveOpcodesCount(2));
 				sender.addBytes(new Byte[]{0x0F,0x85,0,0,0,0});//JNZ
-				caseBlock.startMemAddr=sender.memAddress;
+				caseBlock.startMemAddr=sender.GetStaticInclusiveAddress();
 				sender.addBlock(caseBlock,0);
 			}
 			else {
@@ -42,7 +42,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 					sender.pushValue(@params[i]);
 					sender.addByte(0x58); //POP EAX
 					sender.addBytes(new Byte[]{0x3B,0x45,sender.pseudoStack.getLatestSwitchVarOffset()}); //CMP EAX,[EBP+-OFFSET]
-					toBlockStart[i]=new Tuple<UInt32,UInt32>(sender.getOpcodesCount()+2,sender.memAddress);
+					toBlockStart[i]=new Tuple<UInt32,UInt32>(sender.GetStaticInclusiveOpcodesCount().index+2,sender.GetStaticInclusiveAddress());
 					sender.addBytes(new Byte[]{0x0F,0x84,0,0,0,0});//JZ
 					++i;
 					
@@ -53,19 +53,20 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				
 				foreach (Tuple<UInt32,UInt32>tpl in toBlockStart) {
 					
-					memAddr=BitConverter.GetBytes((Int32)sender.memAddress-(Int32)tpl.Item2-6);
+					memAddr=BitConverter.GetBytes((Int32)sender.GetStaticInclusiveAddress()-(Int32)tpl.Item2-6);
 					i=0;
 					
 					while (i!=4) {
 						
-						sender.setByte(tpl.Item1+i,memAddr[i]);
+                        if (sender.InStaticEnvironment()) Parser.dataSectBytes[(Int32)(tpl.Item1+i)]=memAddr[i];
+						else sender.setByte(tpl.Item1+i,memAddr[i]);
 						++i;
 						
 					}
 					
 					
 				}
-				caseBlock.startMemAddr=sender.memAddress;
+				caseBlock.startMemAddr=sender.GetStaticInclusiveAddress();
 				sender.addBlock(caseBlock,0);
 				
 				

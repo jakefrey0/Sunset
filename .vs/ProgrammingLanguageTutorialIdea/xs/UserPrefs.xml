@@ -1,20 +1,20 @@
 ﻿<Properties StartupConfiguration="{19D2E25E-77E6-443C-B6EB-2E58499E4104}|Default">
-  <MonoDevelop.Ide.Workbench ActiveDocument="ProgrammingLanguageTutorialIdea/Keywords/KWConstructor.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="ProgrammingLanguageTutorialIdea/Parser.cs">
     <Files>
-      <File FileName="ProgrammingLanguageTutorialIdea/Parser.cs" Line="5187" Column="44" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWNew.cs" Line="56" Column="4" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWImport.cs" Line="145" Column="49" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Class.cs" Line="30" Column="56" />
-      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWConstructor.cs" Line="72" Column="17" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Parser.cs" Line="5195" Column="9" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWContinue.cs" Line="40" Column="6" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWBreak.cs" Line="17" Column="41" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWSwitch.cs" Line="26" Column="100" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWCase.cs" Line="61" Column="24" />
+      <File FileName="ProgrammingLanguageTutorialIdea/Keywords/KWDefault.cs" Line="31" Column="1" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State name="__root__">
           <Node name="ProgrammingLanguageTutorialIdea" expanded="True">
             <Node name="ProgrammingLanguageTutorialIdea" expanded="True">
-              <Node name="Keywords" expanded="True">
-                <Node name="KWConstructor.cs" selected="True" />
-              </Node>
+              <Node name="Keywords" expanded="True" />
+              <Node name="Parser.cs" selected="True" />
             </Node>
           </Node>
         </State>

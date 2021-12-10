@@ -23,7 +23,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			
 			sender.pushValue(@params[0]);
 			sender.pseudoStack.push(new SwitchVar());
-			sender.addBlock(new Block(delegate{sender.pseudoStack.pop();},sender.memAddress,new Byte[0]/*ADD ESP,4*/){isLoopOrSwitchBlock=true,switchBlock=true,afterBlockClosedOpcodes=new Byte[]{0x83,0xC4,4}});
+			sender.addBlock(new Block(delegate{sender.pseudoStack.pop();},sender.GetStaticInclusiveAddress(),new Byte[0]/*ADD ESP,4*/){isLoopOrSwitchBlock=true,switchBlock=true,afterBlockClosedOpcodes=new Byte[]{0x83,0xC4,4}});
 			
 			return base.execute(sender,@params);
 			

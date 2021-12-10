@@ -59,7 +59,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		internal Dictionary<String,List<String>> toImport;//DllName,Functions
 		internal Dictionary<String,List<OpcodeIndexReference>> referencedFuncPositions;//FuncName,Opcode pos
-        internal List<OpcodeIndexReference>procHeapVarRefs=new List<OpcodeIndexReference>();
+         internal List<OpcodeIndexReference>procHeapVarRefs=new List<OpcodeIndexReference>();
 		
 		internal Dictionary<Block,UInt32> blocks;//block,end of block mem address
 		internal Dictionary<Block,UInt16> blockBracketBalances;//block,bracket balance
@@ -3479,13 +3479,15 @@ namespace ProgrammingLanguageTutorialIdea {
               Console.WriteLine("Indexes and offsets ... ");
 			foreach (Tuple<UInt32,Int16>indexAndOffset in this.blockAddrBeforeAppendingReferences[block]) {
 				
-				i=0;
-				Int32 addrOfJump;
-                if (!staticFunc) addrOfJump=BitConverter.ToInt32(new Byte[]{this.opcodes[(Int32)indexAndOffset.Item1],this.opcodes[(Int32)indexAndOffset.Item1+1],this.opcodes[(Int32)indexAndOffset.Item1+2],this.opcodes[(Int32)indexAndOffset.Item1+3]},0);
-				else addrOfJump=BitConverter.ToInt32(new Byte[]{dataSectBytes[(Int32)indexAndOffset.Item1],dataSectBytes[(Int32)indexAndOffset.Item1+1],dataSectBytes[(Int32)indexAndOffset.Item1+2],dataSectBytes[(Int32)indexAndOffset.Item1+3]},0);
+			  i=0;
+		      Int32 addrOfJump;
+               if (!staticFunc) addrOfJump=BitConverter.ToInt32(new Byte[]{this.opcodes[(Int32)indexAndOffset.Item1],this.opcodes[(Int32)indexAndOffset.Item1+1],this.opcodes[(Int32)indexAndOffset.Item1+2],this.opcodes[(Int32)indexAndOffset.Item1+3]},0);
+			  else addrOfJump=BitConverter.ToInt32(new Byte[]{dataSectBytes[(Int32)indexAndOffset.Item1],dataSectBytes[(Int32)indexAndOffset.Item1+1],dataSectBytes[(Int32)indexAndOffset.Item1+2],dataSectBytes[(Int32)indexAndOffset.Item1+3]},0);
                 Byte[]memAddr0=BitConverter.GetBytes((Int32)beforeAppendingMemAddr-(addrOfJump+indexAndOffset.Item2)-2);//minus constant 2 at end to jump over XOR EAX,EAX
 				while (i!=4) {
 					
+
+                     //SetStaticInclusiveByte(index
                      if (!staticFunc)
                         opcodes[(Int32)indexAndOffset.Item1+i]=memAddr0[i];
                      else

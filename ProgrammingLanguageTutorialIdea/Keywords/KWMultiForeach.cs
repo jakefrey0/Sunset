@@ -42,7 +42,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
             sender.addBytes(new Byte[]{0x3B,0x0C,0x24 }); //CMP ECX,[ESP]
             foreachBlock.blockMemPositions.Add(sender.GetStaticInclusiveOpcodesCount(2));
             sender.addBytes(new Byte[]{0x0F,0x84,0,0,0,0});//JZ
-            foreachBlock.startMemAddr=sender.memAddress;
+            foreachBlock.startMemAddr=sender.GetStaticInclusiveAddress();
 
             foreach (Tuple<String,String>pair in pairs) {
                 String arrName=pair.Item2,varName=pair.Item1;

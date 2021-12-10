@@ -28,7 +28,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			
 			List<Byte>newOpcodes=new List<Byte>(new Byte[]{0xC9,0xE9,0,0,0,0});
 			if (sender.blocks.Keys.Where(x=>x.isLoopOrSwitchBlock).Count()==0) {
-				block.blockRVAPositions.Add(new Tuple<UInt32,UInt32>((UInt32)(sender.getOpcodesCount()+2+(block.breakInstructions==null?0:block.breakInstructions.Length)),(UInt32)(sender.memAddress+6+(block.breakInstructions==null?0:block.breakInstructions.Length))));
+				block.blockRVAPositions.Add(new Tuple<UInt32,UInt32>((UInt32)(sender.GetStaticInclusiveOpcodesCount().index+2+(block.breakInstructions==null?0:block.breakInstructions.Length)),(UInt32)(sender.GetStaticInclusiveAddress()+6+(block.breakInstructions==null?0:block.breakInstructions.Length))));
 				if (block.breakInstructions!=null)
 					newOpcodes.InsertRange(1,block.breakInstructions);
 			}
@@ -53,7 +53,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 					
 				}
 				newOpcodes.InsertRange(0,leaves);
-				sender.blocks.Keys.Where(x=>x.isLoopOrSwitchBlock).Last().blockRVAPositions.Add(new Tuple<UInt32,UInt32>((UInt32)(sender.getOpcodesCount()+2+bonusLeaves+(block.breakInstructions==null?0:block.breakInstructions.Length)),(UInt32)(sender.memAddress+6+bonusLeaves+(block.breakInstructions==null?0:block.breakInstructions.Length))));
+				sender.blocks.Keys.Where(x=>x.isLoopOrSwitchBlock).Last().blockRVAPositions.Add(new Tuple<UInt32,UInt32>((UInt32)(sender.GetStaticInclusiveOpcodesCount().index+2+bonusLeaves+(block.breakInstructions==null?0:block.breakInstructions.Length)),(UInt32)(sender.GetStaticInclusiveAddress()+6+bonusLeaves+(block.breakInstructions==null?0:block.breakInstructions.Length))));
 				
 				if (block.breakInstructions!=null)
 					newOpcodes.InsertRange((Int32)bonusLeaves+1,block.breakInstructions);

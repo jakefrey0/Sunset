@@ -48,7 +48,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			if (block.continueInstructions!=null)
 				newOpcodes.InsertRange(0,block.continueInstructions);
 			
-			return new KeywordResult(){newOpcodes=newOpcodes.Concat(BitConverter.GetBytes((Int32)block.continueAddress-(Int32)(sender.memAddress+newOpcodes.Count+4))).ToArray(),newStatus=ParsingStatus.SEARCHING_NAME};
+			return new KeywordResult(){newOpcodes=newOpcodes.Concat(BitConverter.GetBytes((Int32)block.continueAddress-(Int32)(sender.GetStaticInclusiveAddress()+newOpcodes.Count+4))).ToArray(),newStatus=ParsingStatus.SEARCHING_NAME};
 			
 		}
 	

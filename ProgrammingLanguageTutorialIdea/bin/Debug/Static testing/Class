@@ -10,22 +10,21 @@ private static func tes3t {
 	MessageBox.mboxNumber(lengthof(arr))
 	MessageBox.mboxNumber(sizeof(arr))
 	MessageBox.mboxNumber(Tsizeof(int))
-	foreach (num,arr) {
-		;MessageBox.mboxNumber(num)	
+	int b becomes 33
+	str c becomes "Valid"
+	switch (b) {
+		case(33):
+		case(44):
+			MessageBox.mbox("Invalid","Invalid")
+			break
+		case(99):
+			MessageBox.mbox(c,c)
+			break
+		default:
+			MessageBox.mbox("Default case","Default case")
+			break
+		
 	}
-	;retn
-	bool condition becomes true
-	if (condition) {
-		MessageBox.mbox("Was","true")
-		condition becomes false
-	}
-	else { MessageBox.mbox("Shouldnt","be here") }
-	crash
-	if (condition) { MessageBox.mbox("Shouldnt","be here") }
-	else {
-		MessageBox.mbox("Was","false")
-	}
-
 	
 }
 

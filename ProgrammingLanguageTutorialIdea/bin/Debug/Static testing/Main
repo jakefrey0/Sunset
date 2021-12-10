@@ -2,6 +2,22 @@ setpheapvar
 import(Static testing/Class)
 import(Windows/MessageBox)
 
+int b becomes 33
+str c becomes "Valid"
+switch (b) {
+	case(33):
+	case(44):
+		MessageBox.mbox("Invalid","Invalid")
+		break
+	case(99):
+		MessageBox.mbox(c,c)
+		break
+	default:
+		MessageBox.mbox("Default case","Default case")
+		break
+	
+}
+
 int num becomes Class.staticFunc(4)
 
 MessageBox.mboxNumber(num)

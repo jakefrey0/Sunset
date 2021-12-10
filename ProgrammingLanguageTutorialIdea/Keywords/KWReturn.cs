@@ -25,16 +25,16 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 					throw new ParsingError("Expected return value");
 				
 				if (sender.inFunction) {
-					UInt16 blocksToExit=(UInt16)(sender.blocks.Count-sender.blocks.Keys.ToList().IndexOf(sender.lastFunctionBlock));//UNDONE::
-					sender.blockAddrBeforeAppendingReferences[sender.lastFunctionBlock].Add(new Tuple<UInt32,Int16>(sender.getOpcodesCount()+1,0));
-					return new KeywordResult{newOpcodes=new Byte[]{0xE9,0,0,0,0},newStatus=ParsingStatus.SEARCHING_NAME};
+					exitBlocks(sender);
+					sender.blockAddrBeforeAppendingReferences[sender.lastFunctionBlock].Add(new Tuple<UInt32,Int16>(sender.GetStaticInclusiveOpcodesCount().index+1,0));
+					return new KeywordResult{newOpcodes=new Byte[]{0xE9,}.Concat(BitConverter.GetBytes((UInt32)(sender.GetStaticInclusiveAddress()+1))).ToArray(),newStatus=ParsingStatus.SEARCHING_NAME};
 				}
 				else {
 					this.exitBlocks(sender);
 					sender.freeHeapsRefs.Add(sender.getOpcodesCount()+1);
 					//                                                                                                 v--- this is +7 instead of +5 so that it will calculate to jump to not POP EAX and RETN but PUSH 0, POP EAX and RETN
 					return new KeywordResult{newOpcodes=new Byte[]{0xE9}.Concat(BitConverter.GetBytes(sender.memAddress+7)).ToArray(), //JMP TO RELATIVE MEM ADDR
-											newStatus=ParsingStatus.SEARCHING_NAME};													 
+											newStatus=ParsingStatus.SEARCHING_NAME};												 
 				}
 				
 			}
@@ -70,7 +70,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				skipCheck:
 				
 //				sender.pseudoStack.printStackDump(true);
-				sender.blockAddrBeforeAppendingReferences[sender.lastFunctionBlock].Add(new Tuple<UInt32,Int16>((sender.InStaticEnvironment()?(UInt32)Parser.dataSectBytes.Count():sender.getOpcodesCount())+1,0));
+				sender.blockAddrBeforeAppendingReferences[sender.lastFunctionBlock].Add(new Tuple<UInt32,Int16>(sender.GetStaticInclusiveOpcodesCount().index+1,0));
 				return new KeywordResult{newOpcodes=new Byte[]{0xE9}.Concat(BitConverter.GetBytes((UInt32)(sender.GetStaticInclusiveAddress()+1))).ToArray(),newStatus=ParsingStatus.SEARCHING_NAME};
 			
 			}
@@ -80,12 +80,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		private void exitBlocks (Parser sender) {
 			
 			UInt16 blocksToExit=(UInt16)((sender.blocks.Count-sender.blocks.Keys.ToList().IndexOf(sender.lastFunctionBlock))-1);
-			while (blocksToExit!=0) {
-				
-				sender.addByte(0xC9); //LEAVE
-				--blocksToExit;
-				
-			}
+            sender.addBytes(new Byte[blocksToExit].Select(x=>x=0xC9)); // LEAVE (* blocksToExit)
 			
 		}
 		
