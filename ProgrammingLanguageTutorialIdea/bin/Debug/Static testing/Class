@@ -13,7 +13,6 @@ private static func tes3t {
 	foreach (num,arr) {
 		;MessageBox.mboxNumber(num)	
 	}
-	;retn
 	bool condition becomes true
 	if (condition) {
 		MessageBox.mbox("Was","true")
@@ -25,7 +24,6 @@ private static func tes3t {
 	else {
 		MessageBox.mbox("Was","false")
 	}
-
 	
 }
 
@@ -42,9 +40,6 @@ public static func(int x) staticFunc int {
 
 
 ; TODO:: 
-
-;  --> Add an alternative to each if(addEsiToLocalAddresses) { ... } for static functions
-;  --> Add an alternative to each memAddress (use Parser#GetStaticInclusiveAdddress) and to each opcodes/memAddress reference (many should be eliminated by default due to the nature of static contexts)
 
 ; initialization for static variables (i.e public static int i becomes 100 does not initialize until new non-static class instance is created), add it to data section immediately, throw error if initialization value is not constant or a different static/constant variable. Include support for strings
 ; See PEHeaderFactory -> dataSectAddr -> comments underneath
