@@ -60,6 +60,7 @@ dllref(Gdi32,HDC,int,int,int,int,HDC,int,int,int) BitBlt bool
 dllref(Gdi32,HDC) CreateCompatibleDC HDC
 dllref(Gdi32,HDC,HGDIOBJ) SelectObject HGDIOBJ
 dllref(Gdi32,HDC) DeleteDC bool
+dllref(User32,int,int,int,int) CreateRectRgn HRGN
 
 WNDCLASSA wndClassA
 MSG msg
@@ -75,7 +76,8 @@ pullable int RDW_INVALIDATE becomes 1
 pullable int WM_KEYDOWN becomes 256
 pullable int WM_KEYUP becomes 257
 pullable int SRCCOPY becomes 13369376
-pullable int windowHandle
+pullable int RDW_UPDATENOW becomes 256
+pullable HWND windowHandle
 pullable int brushHandle becomes GetSysColorBrush(COLOR_WINDOW)
 pullable int contentsHandle becomes GetSysColorBrush(COLOR_WINDOWTEXT)
 StringTool st becomes new(StringTool)
@@ -99,7 +101,7 @@ public Event<KeyEventArgs> onKeyDown becomes new(Event<KeyEventArgs>)
 public Event<KeyEventArgs> onKeyUp becomes new(Event<KeyEventArgs>)
 public int cTimerId becomes 1
 int RGBref becomes -1
-func(int hwnd,int uMsg,int wParam,int lParam) wndProc int {
+func(HWND hwnd,int uMsg,int wParam,int lParam) wndProc int {
 	
 	if (uMsg,=,WM_NCCREATE) {
 		if (windowHandle,=,0) { windowHandle becomes hwnd }
@@ -162,7 +164,7 @@ func(int hwnd,int uMsg,int wParam,int lParam) wndProc int {
 	if (uMsg,=,WM_TIMER) {
 		
 		TimerEventArgs args becomes new(TimerEventArgs)
-		args.formHandle becomes hwnd
+		args.formHandle becomes cast(hwnd,int)
 		foreach (timer,timers.toArray) {
 			if (timer.id,=,wParam) {
 				args.sendingTimer becomes timer
@@ -231,7 +233,7 @@ public func show {
 public func(int interval_ms) createTimer FormTimer {
 	
 	int id becomes SetTimer(windowHandle,cTimerId,interval_ms,null)
-	FormTimer timer becomes new(FormTimer,id,windowHandle)
+	FormTimer timer becomes new(FormTimer,id,cast(windowHandle,int))
 	timers.add(timer)
 	++cTimerId
 	retn(timer)
@@ -243,7 +245,6 @@ public func(str msg,str m_title) mbox int {
 	retn(MessageBoxA(windowHandle,msg,m_title,0))
 	
 }
-
 public func rePaint {
 	
 	RECT region becomes new(RECT)
@@ -264,4 +265,15 @@ public func(byte r,byte g,byte b) setDrawingRGB {
 
 public func kill {
 	ExitProcess(0)
+}
+
+public func(int x1,int y1,int x2,int y2) reDraw {
+	
+	RECT rcb becomes new(RECT)
+	rcb.left becomes x1
+	rcb.right becomes  x2
+	rcb.top becomes y1
+	rcb.bottom becomes y2
+	RedrawWindow(windowHandle,rcb,null,RDW_INVALIDATE)
+	
 }

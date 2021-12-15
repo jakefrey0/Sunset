@@ -26,7 +26,7 @@ namespace ProgrammingLanguageTutorialIdea {
         private List<String>defineTimeOrder;
 		
 		public Class (String className,String path,UInt32 byteSize,ClassType classType,Parser parserUsed,UInt32 opcodePortionByteSize,UInt32 skeletonIndex,UInt32 classAppendAfterCount,String classID) {
-			
+
 			this.bytesToReserve=parserUsed.byteCountBeforeDataSect;
 			this.className=className;
 			this.byteSize=byteSize;
@@ -40,8 +40,10 @@ namespace ProgrammingLanguageTutorialIdea {
 			this.classAppendAfterCount=classAppendAfterCount;
 			foreach (KeyValuePair<String,Tuple<UInt32,String,Modifier>>kvp in parserUsed.getVariables())
 				this.variables.Add(kvp.Key,new Tuple<UInt32,String,Modifier>(kvp.Value.Item1-parserUsed.memAddress,kvp.Value.Item2,kvp.Value.Item3));
-			foreach (KeyValuePair<String,Tuple<UInt32,String,Class,Modifier>>kvp in parserUsed.getClasses())
-				this.classes.Add(kvp.Key,new Tuple<UInt32,String,Class,Modifier>(kvp.Value.Item1-parserUsed.memAddress,kvp.Value.Item2,kvp.Value.Item3,kvp.Value.Item4));
+			foreach (KeyValuePair<String,Tuple<UInt32,String,Class,Modifier>>kvp in parserUsed.getClasses()) {
+                if (kvp.Value.Item1==0) this.classes.Add(kvp.Key,new Tuple<UInt32,String,Class,Modifier>(0,kvp.Value.Item2,kvp.Value.Item3,kvp.Value.Item4));
+                else this.classes.Add(kvp.Key,new Tuple<UInt32,String,Class,Modifier>(kvp.Value.Item1-parserUsed.memAddress,kvp.Value.Item2,kvp.Value.Item3,kvp.Value.Item4));
+            }
 			this.functions=parserUsed.getFunctions();
 			foreach (KeyValuePair<String,Tuple<UInt32,String,ArrayStyle,Modifier>>kvp in parserUsed.getArrays())
 				this.arrays.Add(kvp.Key,new Tuple<UInt32,String,ArrayStyle,Modifier>(kvp.Value.Item1-parserUsed.memAddress,kvp.Value.Item2,kvp.Value.Item3,kvp.Value.Item4));

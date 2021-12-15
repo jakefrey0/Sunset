@@ -36,7 +36,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				throw new ParsingError("Class is not imported: \""+@params[0]+'"');
 			
 			Class cl=sender.importedClasses.Where(x=>x.className==@params[0]).First();
-			
+
 			sender.pushValue((cl.bytesToReserve+cl.classAppendAfterCount).ToString());
 			sender.addBytes(new Byte[]{0x6A,8}); //PUSH 8
 			if (setProcessHeapVar)
@@ -45,10 +45,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				sender.pushProcessHeapVar();
 			const String HL="HeapAlloc",KERNEL32="KERNEL32.DLL";
 			sender.referenceDll(KERNEL32,HL);
-			sender.referencedFuncPositions[HL].Add(sender.GetStaticInclusiveOpcodesCount(2));
-
-            Console.WriteLine("Wrote "+HL+", "+sender.InStaticEnvironment());
-            Console.WriteLine(sender.referencedFuncPositions[HL].Last().type.ToString());
+            sender.ReferenceRefdFunc(HL,2);
+            
 			sender.addBytes(new Byte[]{0xFF,0x15,0,0,0,0});//CALL FUNC HeapAlloc
 
 			sender.addByte(0x56);//PUSH ESI
@@ -56,8 +54,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			sender.addBytes(BitConverter.GetBytes(cl.byteSize));
 			
 			sender.addByte(0xBE);//MOV FOLLOWING DWORD INTO ESI
-			sender.staticClassReferences[cl].Add(sender.GetStaticInclusiveOpcodesCount());
-			sender.addBytes(new Byte[]{0,0,0,0}); //DWORD
+			sender.addBytes(BitConverter.GetBytes(Parser.GetSkeletonAddress(cl))); //DWORD
 			sender.addBytes(new Byte[]{0x89,0xC7}); //MOV EDI,EAX
 			sender.addBytes(new Byte[]{0xF3,0xA4}); //REP MOVS BYTE PTR ES:[EDI],BYTE PTR DS:[ESI]
 			if (cl.classType==ClassType.NORMAL) {

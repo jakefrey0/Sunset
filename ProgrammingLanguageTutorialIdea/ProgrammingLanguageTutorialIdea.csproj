@@ -138,6 +138,7 @@
     <Compile Include="Keywords\KWExit.cs" />
     <Compile Include="OpcodeIndexReference.cs" />
     <Compile Include="OpcodeIndexType.cs" />
+    <Compile Include="SunsetProject.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

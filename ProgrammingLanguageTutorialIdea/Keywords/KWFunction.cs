@@ -66,8 +66,11 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			
 			List<Tuple<String,VarType>>paramTypes=new List<Tuple<String,VarType>>();
 			UInt16 paramIndex=0;
-			foreach (String s in @params.Reverse())
-				sender.pseudoStack.push( new LocalVar(s.Split(' ')[1]));
+			foreach (String s in @params.Reverse()) {
+                String[]pSP=s.Split(' ');
+                if (pSP.Length!=2) throw new ParsingError("Expected function parameters declaration in (type, name) format");
+				sender.pseudoStack.push( new LocalVar(pSP[1]));
+            }
 			foreach (String s in @params) {
 				
 				String[]split=s.Split(' ');

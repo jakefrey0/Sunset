@@ -1,1 +1,1 @@
-exec & wine ProgrammingLanguageTutorialIdea.exe "Static testing\Main" -v
+exec & wine ProgrammingLanguageTutorialIdea.exe "/home/elite/Documents/GitHub/AKWACJ/AKWACJ.sunproj"

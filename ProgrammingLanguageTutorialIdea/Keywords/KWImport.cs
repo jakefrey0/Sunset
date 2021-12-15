@@ -56,14 +56,25 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			if (!(File.Exists(fp))) {
 				
 				fp+=".sunset";
-				if (!(File.Exists(fp)))
-					throw new ParsingError("Invalid param for \""+constName+"\", should be a valid filepath! (Got \""+fp+"\")");
+				if (!File.Exists(fp)) {
+
+                    if (!sender.hasAttatchedProject)
+                        throw new ParsingError("Invalid param for \""+constName+"\", should be a valid filepath! (Got \""+fp+"\")");
+
+                    fp=sender.attatchedProject.projPath+'\\'+fp;
+                    if (!File.Exists(fp)) {
+                        fp=String.Concat(fp.Take(fp.Length-7));
+                        if (!File.Exists(fp))
+                            throw new ParsingError("Invalid param for \""+constName+"\", should be a valid filepath! (Got \""+fp+"\")");
+                    }
+
+                }
 				
 			}
 
 			String className=GetClassName(fp);
             Int32 initialDataSectBytesCount=Parser.dataSectBytes.Count;
-			Parser childParser=new Parser("Child parser",fp,false,true,true,false,false){addEsiToLocalAddresses=true,gui=sender.gui,className=className};
+			Parser childParser=new Parser("Child parser",fp,false,true,true,false,false){addEsiToLocalAddresses=true,gui=sender.gui,className=className,hasAttatchedProject=sender.hasAttatchedProject,attatchedProject=sender.attatchedProject};
             
             if (!String.IsNullOrEmpty(passingTypesUnparsed))
                 className+='<'+passingTypesUnparsed+'>';
@@ -75,13 +86,15 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 
                 foreach (String cw_name in classWords)
                     childParser.importedClasses.AddRange(sender.importedClasses.Where(x=>x.className==cw_name));
-			    if (passedTypes!=null)
-				    childParser.passedVarTypes=passedTypes;
-			    Byte[]data=childParser.parse(File.ReadAllText(fp));
-			    if (childParser.toggledGui)
-				    sender.gui=childParser.gui;
+                if (passedTypes!=null)
+                    childParser.passedVarTypes=passedTypes;
+                Byte[]data=childParser.parse(File.ReadAllText(fp));
+
 			    Parser.dataSectBytes.AddRange(data.Take((Int32)childParser.byteCountBeforeDataSect));
-                Parser.classSkeletons.Add(id,(UInt32)initialDataSectBytesCount);
+                Parser.classSkeletons.Add(id,(UInt32)(Parser.dataSectBytes.Count-childParser.byteCountBeforeDataSect));
+
+                if (childParser.toggledGui)
+                    sender.gui=childParser.gui;
 
             }
 			
@@ -118,15 +131,13 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 				
 				if (!sender.referencedFuncPositions.ContainsKey(kvp.Key))
 					sender.referencedFuncPositions.Add(kvp.Key,new List<OpcodeIndexReference>());
-				
-				foreach (OpcodeIndexReference i in kvp.Value) {
 
-					sender.referencedFuncPositions[kvp.Key].Add(i);
-                    if (i.type!=OpcodeIndexType.CODE_SECT_REFERENCE) continue;
-					if (!sender.refdFuncsToIncreaseWithOpcodes.ContainsKey(kvp.Key))
-						sender.refdFuncsToIncreaseWithOpcodes.Add(kvp.Key,new List<Int32>());
-					sender.refdFuncsToIncreaseWithOpcodes[kvp.Key].Add(sender.referencedFuncPositions[kvp.Key].Count-1);
-				}
+                foreach (OpcodeIndexReference i in kvp.Value) {
+                    
+                    if (i.type!=OpcodeIndexType.CODE_SECT_REFERENCE)
+                        sender.referencedFuncPositions[kvp.Key].Add(i);
+                }
+
 			}
 			
 			sender.keywordMgr.classWords.AddRange(childParser.keywordMgr.classWords);
@@ -141,11 +152,17 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 
 			if (sender.importedClasses.Select(x=>x.className).Contains(className))
 				throw new ParsingError("Class (with same name) already imported: \""+className+'"');
-                
-		    Class cl=new Class(className,path,childParser.byteCountBeforeDataSect,childParser.@struct?ClassType.STRUCT:ClassType.NORMAL,childParser,childParser.memAddress,(UInt32)initialDataSectBytesCount,(UInt32)childParser.getAppendAfterCount(),id);
-			sender.importedClasses.Add(cl);
+
+            Class cl;
+		    if (Parser.classByIDs.ContainsKey(id))
+                cl=Parser.classByIDs[id];
+            else {
+                cl=new Class(className,path,childParser.byteCountBeforeDataSect,childParser.@struct?ClassType.STRUCT:ClassType.NORMAL,childParser,childParser.memAddress,(UInt32)initialDataSectBytesCount,(UInt32)childParser.getAppendAfterCount(),id);
+                Parser.classByIDs.Add(id,cl);
+            }
+            sender.importedClasses.Add(cl);
 			sender.staticClassReferences.Add(cl,new List<OpcodeIndexReference>());
-			
+
 			if (!sender.keywordMgr.classWords.Contains(className))
 				sender.keywordMgr.classWords.Add(className);
 

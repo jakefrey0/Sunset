@@ -3,7 +3,7 @@ dllref(Kernel32,int,int,T#) HeapFree bool
 dllref(Kernel32,int) SetLastError void
 
 T# innerList becomes #0
-int length becomes 0
+pullable int length becomes 0
 
 public func(T item) add {
 	
@@ -60,5 +60,46 @@ public func(T item) indexOf int {
 		++index
 	}
 	retn(-1)
+	
+}
+
+; doesn't work for some reason?!
+;public func(T item,int index) insert {
+;	
+;	++length
+;	T# newArr becomes #length
+;	int i becomes 0
+;	int i0 becomes 0
+;	while (i,=/=,length) { 
+;		if (i,=,index) {
+;			newArr[i] becomes item
+;		}
+;		else {
+;			newArr[i] becomes innerList[i0] 
+;			++i0
+;		}
+;		++i
+;	}
+;	HeapFree(getProcessHeap,null,innerList)
+;	innerList becomes newArr
+;	
+;}
+
+public func(T item,int index) set {
+	
+	T# newArr becomes #length
+	int i becomes 0
+	int i0 becomes 0
+	while (i,=/=,length) { 
+		if (i,=/=,index) {
+			newArr[i] becomes innerList[i] 
+		}
+		else {
+			newArr[i] becomes item
+		}
+		++i 
+	}
+	HeapFree(getProcessHeap,null,innerList)
+	innerList becomes newArr
 	
 }

@@ -258,7 +258,7 @@ namespace ProgrammingLanguageTutorialIdea {
 
             if (importOpcodes!=null) {
 				
-				UInt32 addr=importOpcodesSectSize+opcodesSectSize;
+				UInt32 addr=opcodesSectSize+alignment;
 				
 				hdr.dir[2]=addr;
 				hdr.dir[3]=importOpcodesVirtualSize;
@@ -277,11 +277,11 @@ namespace ProgrammingLanguageTutorialIdea {
             #region Data section
 
             if (Parser.dataSectBytes.Count()!=0) {
-                
+
                 dataOpcodesSectSize=(UInt32)(Parser.dataSectBytes.Count-(Parser.dataSectBytes.Count%alignment)+alignment);
                 hdr.sizeOfImage+=dataOpcodesSectSize;
 
-                UInt32 addr=importOpcodesSectSize+opcodesSectSize+dataOpcodesSectSize;
+                UInt32 addr=importOpcodesSectSize+opcodesSectSize+alignment;
                 latestDataSectAddr=addr+imgBase;
 
                 // (The data section in Sunset is solely used for storing static instances)

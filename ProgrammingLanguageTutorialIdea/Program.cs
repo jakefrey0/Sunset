@@ -24,31 +24,68 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		public static void Main (String[] args) {
 
-			if (args.Length!=0&&args.First()=="help") {
+            SunsetProject sp=new SunsetProject();
+            Boolean hasAttatchedProject=false;
+
+			if (args.Length!=0) {
 				
-				Console.WriteLine("\nTo compile, set the argument to the entry file.");
-				Console.WriteLine("An example would be \"C:\\fakepath\\MySourceFile.Sunset\"");
-				Console.WriteLine("\n-- Flags --\n");
-				Console.WriteLine("Flags are optional arguments that can be added when compiling");
-				Console.WriteLine("They can be added before or after the file path argument");
-				Console.WriteLine("The flags (don't actually print the double quotes):\n");
-				Console.WriteLine(" - \"-v\" ~ this stands for \"verbose\" and will print all compiler debug output\n");
-				Console.WriteLine(" - \"-s\" ~ this stands for \"silence\" and will disable error/compiling result output\n");
-                Console.WriteLine(" - \"-st\" ~ this stands for \"stack trace\" and will show the stack trace on exception \n");
-				return;
+                String farg=args.First();
+
+                if (farg=="help") {
+    				Console.WriteLine("\nTo compile, set the argument to the entry file.");
+    				Console.WriteLine("An example would be \"C:\\fakepath\\MySourceFile.Sunset\"");
+    				Console.WriteLine("\n-- Flags --\n");
+    				Console.WriteLine("Flags are optional arguments that can be added when compiling");
+    				Console.WriteLine("They can be added before or after the file path argument");
+    				Console.WriteLine("The flags (don't actually print the double quotes):\n");
+    				Console.WriteLine(" - \"-v\" ~ this stands for \"verbose\" and will print all compiler debug output\n");
+    				Console.WriteLine(" - \"-s\" ~ this stands for \"silence\" and will disable error/compiling result output\n");
+                    Console.WriteLine(" - \"-st\" ~ this stands for \"stack trace\" and will show the stack trace on exception \n");
+                    Console.WriteLine("\nTo make a project (optional), use arguments \"mkproj [name] [path]\"");
+    				return;
+                }
+                else if (farg=="mkproj") {
+                    
+                    if (args.Length<=2) {
+                        Console.WriteLine("Argument \"mkproj\" expects1 additional arguments: project name, and the directory");
+                        return;
+                    }
+                    String dir=Parser.merge(args.Skip(2)," "),pName=args[1],mainFn=mainFn=pName+".sunset";
+                    sp=new SunsetProject(){name=pName,mainFn=mainFn,projPath=dir+"\\"+pName+"\\" };
+                    TryCreateDir(dir);
+                    dir=dir+"\\"+pName+"\\";
+                    TryCreateDir(dir);
+                    TryCreateDir(dir+"\\bin\\");
+                    TryCreateFile(dir+pName+".sunproj",sp.ToBytes());
+                    TryCreateFile(dir+mainFn,File.ReadAllBytes("Important/DemoProject.sunset"));
+                    Console.WriteLine("Created project succesfully: "+pName+ "\n @ \n"+dir);
+                    return;
+
+                }
 				
 			}
 			
 			Program.processFlags(args,out args);
 			
 			if (args.Length!=1)
-				Program.exitWithError("Expected 1 argument (path of file), with optional flags. Set argument to \"help\" to see flags.",1);
+				Program.exitWithError("Expected 1 argument (path of file), with optional flags. Set argument to \"help\" to see flags. Got "+args.Length.ToString()+" args.",1);
 			if (!(File.Exists(args[0])))
 				Program.exitWithError("Invalid filepath: \""+args[0]+'"',2);
+
+            String projPath=Path.GetDirectoryName(args[0]);
+
+            if (args[0].EndsWith(".sunproj",StringComparison.CurrentCulture)) {
+                
+                hasAttatchedProject=true;
+                sp=SunsetProjectHelper.LoadProject(args[0]);
+                sp.projPath=projPath;
+                args[0]=projPath+"/"+sp.mainFn;
+
+            }
 			
-			Parser psr=new Parser("Main parser",args[0]){className=args[0].Split('.')[0].Split(new Char[]{'\\','/'}).Last()};
+			Parser psr=new Parser("Main parser",args[0]){className=args[0].Split('.')[0].Split(new Char[]{'\\','/'}).Last(),attatchedProject=sp,hasAttatchedProject=hasAttatchedProject};
 			
-			String outputFilename=args[0].Contains('.')?args[0].Split('\\').Last().Split('/').Last().Split('.').First()+".exe":"output.exe",sourceFilename=args[0];
+			String outputFilename=hasAttatchedProject?projPath+"/bin/"+sp.name+".exe":args[0].Contains('.')?args[0].Split('\\').Last().Split('/').Last().Split('.').First()+".exe":"output.exe",sourceFilename=args[0];
 
 			try {
 				File.WriteAllBytes(outputFilename,psr.parse(File.ReadAllText(sourceFilename)));
@@ -91,7 +128,7 @@ namespace ProgrammingLanguageTutorialIdea {
 				
 			}
 			
-			Console.WriteLine("\n\nDone compiling,\nSource file: "+sourceFilename+"\nOutput file: "+outputFilename+"\nChecksum: "+checkSum.ToString("X")+"\nAt: "+DateTime.Now.ToString()+'\n');
+			Console.WriteLine((hasAttatchedProject?"\n\nDone compiling project "+sp.name+",\nSource file: ":"\n\nDone compiling,\nSource file: ")+sourceFilename+"\nOutput file: "+outputFilename+"\nChecksum: "+checkSum.ToString("X")+"\nAt: "+DateTime.Now.ToString()+'\n');
 			
 		}
 		
@@ -134,6 +171,35 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 		}
 		
+        private static void TryCreateDir (String dir) {
+
+             if (!Directory.Exists(dir)) {
+                try {
+                    Directory.CreateDirectory(dir);
+                }
+                catch (Exception e) {
+                    exitWithError("Error creating project: "+e.Message,Int32.MaxValue);
+                }
+            }
+
+        } 
+             
+        private static void TryCreateFile (String fn,Byte[] data) {
+
+             if (!File.Exists(fn)) {
+                try {
+                    FileStream fs=File.Create(fn);
+                    fs.Write(data,0,data.Length);
+                    fs.Close();
+                }
+                catch (Exception e) {
+                    exitWithError("Error creating project: "+e.Message,Int32.MaxValue-1);
+                }
+            }
+            else exitWithError("Project already exists: "+fn,Int32.MaxValue-2);
+
+        }
+
 	}
 
     public static class Helpers {
