@@ -10,6 +10,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text;
 
 namespace ProgrammingLanguageTutorialIdea.Keywords {
 	
@@ -24,32 +25,67 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			if (@params.Length!=1)
 				throw new ParsingError("Invalid param count for native call \""+KWImport.constName+"\" (expected 1)");
 			
+			Console.WriteLine(" ! ------------- KWImport#execute");
+			
 			String fp=@params[0];
 			List<Tuple<String,Tuple<String,VarType>>>passedTypes=null;
 			String passingTypesUnparsed=null;
 			Int32 startsPassingTypesNo=fp.Where(x=>sender.startsPassingTypes(x)).Count();
 			List<String>classWords=new List<String>();
+			String s;
 			if (startsPassingTypesNo!=0&&startsPassingTypesNo==fp.Where(x=>sender.endsPassingTypes(x)).Count()) {
 				
 				Int32 sptIndex=fp.IndexOf('<')+1;
 				passingTypesUnparsed=fp.Substring(sptIndex,fp.LastIndexOf('>')-sptIndex);
 				fp=fp.Split('<')[0];
 				passedTypes=new List<Tuple<String,Tuple<String,VarType>>>();
-				foreach (String s in passingTypesUnparsed.Split(',')) {
-					Tuple<String,VarType>vt=sender.getVarType(s);
-					passedTypes.Add(new Tuple<String,Tuple<String,VarType>>(null,vt));
-                    Console.WriteLine(vt.Item1+","+vt.Item2.ToString());
-					if (vt.Item2==VarType.CLASS)
-						classWords.Add(vt.Item1);
-                    else if (vt.Item2==VarType.NATIVE_ARRAY) {
-                        Tuple<String,VarType>varType=vt;
-                        while (varType.Item2==VarType.NATIVE_ARRAY) {
-                            varType=sender.getVarType(vt.Item1);
-                            if (varType.Item2==VarType.CLASS)
-                                classWords.Add(varType.Item1);
-                        }   
-                    }
+				StringBuilder sb=new StringBuilder();
+				Console.WriteLine("passingTypesUnparsed: \""+passingTypesUnparsed+'"');
+				Byte sbb=0;
+				foreach (Char c in passingTypesUnparsed.ToCharArray()) {
+					Console.WriteLine("Loop: '"+c+"'");
+					if (sender.startsPassingTypes(c)) {
+						++sbb;
+						sb.Append(c);
+					}
+					else if (sender.endsPassingTypes(c)) {
+						if (sbb==0) throw new ParsingError("Unbalanced sharp brackets (in "+constName+')');
+						--sbb;
+						sb.Append(c);
+					}
+					else if (c!=','||sbb!=0) sb.Append(c);
+					else {
+						s=sb.ToString();
+						sb.Clear();
+						Console.WriteLine("s: \""+s+'"');
+						Tuple<String,VarType>vt=sender.getVarType(s);
+						passedTypes.Add(new Tuple<String,Tuple<String,VarType>>(null,vt));
+	                    Console.WriteLine(vt.Item1+","+vt.Item2.ToString());
+						if (vt.Item2==VarType.CLASS)
+							classWords.Add(vt.Item1);
+	                    else if (vt.Item2==VarType.NATIVE_ARRAY) {
+	                        Tuple<String,VarType>varType=vt;
+	                        while (varType.Item2==VarType.NATIVE_ARRAY) {
+	                            varType=sender.getVarType(vt.Item1);
+	                            if (varType.Item2==VarType.CLASS)
+	                                classWords.Add(varType.Item1);
+	                        } 
+	                    }
+					}
 				}
+				s=sb.ToString();
+				Tuple<String,VarType>vt0=sender.getVarType(s);
+				passedTypes.Add(new Tuple<String,Tuple<String,VarType>>(null,vt0));
+				if (vt0.Item2==VarType.CLASS)
+					classWords.Add(vt0.Item1);
+                else if (vt0.Item2==VarType.NATIVE_ARRAY) {
+                    Tuple<String,VarType>varType=vt0;
+                    while (varType.Item2==VarType.NATIVE_ARRAY) {
+                        varType=sender.getVarType(vt0.Item1);
+                        if (varType.Item2==VarType.CLASS)
+                            classWords.Add(varType.Item1);
+                    } 
+                }
 				
 			}
 			

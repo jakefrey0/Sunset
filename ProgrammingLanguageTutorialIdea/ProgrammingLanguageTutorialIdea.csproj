@@ -100,6 +100,7 @@
     <Compile Include="Keywords\KWSizeOf.cs" />
     <Compile Include="Keywords\KWString.cs" />
     <Compile Include="Keywords\KWStruct.cs" />
+    <Compile Include="Keywords\KWByteSizeOf.cs" />
     <Compile Include="Keywords\KWSwitch.cs" />
     <Compile Include="Keywords\KWToggleGui.cs" />
     <Compile Include="Keywords\KWTypeSizeOf.cs" />
@@ -143,6 +144,8 @@
   <ItemGroup>
     <None Include="app.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Content Include="ProgrammingLanguageTutorialIdea.cd" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

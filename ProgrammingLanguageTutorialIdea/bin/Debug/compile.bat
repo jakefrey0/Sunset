@@ -1,5 +1,7 @@
 :here
 pause
-programminglanguagetutorialidea "./Static testing/Main" -v
-
+@echo on
+programminglanguagetutorialidea "C:\Users\GDSPIOSJDGOSDHGJSDhg\Documents\GitHub\Simple-RPG\rpg.sunset" -st
+@echo off
+rpg
 goto :here

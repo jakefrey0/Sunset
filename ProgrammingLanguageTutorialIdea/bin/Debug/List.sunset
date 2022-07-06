@@ -103,3 +103,18 @@ public func(T item,int index) set {
 	innerList becomes newArr
 	
 }
+
+public func clear {
+
+	HeapFree(getProcessHeap,null,innerList)
+	innerList becomes #0
+	length becomes 0
+	
+	;int i becomes 0
+	;int len becomes length
+	;while (i,=/=,len) {
+	;	remove(0)
+	;	++i
+	;}
+	
+}

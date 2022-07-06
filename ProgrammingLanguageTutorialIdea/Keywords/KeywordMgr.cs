@@ -69,7 +69,8 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
                                     new KWPullable(),
                                     new KWStatic(),
                                     new KWConstant(),
-                                    new KWExit()
+                                    new KWExit(),
+                                    new KWByteSizeOf()
 			                       	
 			                       });
 			

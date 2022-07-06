@@ -9,6 +9,7 @@ public func(EvtArgs args) raise {
 	
 	foreach(ptr,pointers.toArray) {
 		
+		;if (ptr,=,null) { continue }
 		callptr(ptr,args)
 		
 	}

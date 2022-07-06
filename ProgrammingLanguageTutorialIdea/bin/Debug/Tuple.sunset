@@ -1,0 +1,3 @@
+EXPECTED_TYPES(T,T0)
+public T item1
+public T0 item2

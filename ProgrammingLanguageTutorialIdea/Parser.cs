@@ -2570,13 +2570,17 @@ namespace ProgrammingLanguageTutorialIdea {
 		/// <summary>
 		/// Push a value (constant number,var,array,array indexer) onto the stack
 		/// </summary>
-		internal Tuple<String,VarType> pushValue (String value) {
+		internal Tuple<String,VarType> pushValue (String value,Boolean _gettingAddr=false) {
 			
 			//HACK:: check var type here
 			
-			Boolean gettingAddr=value.StartsWith("$",StringComparison.CurrentCulture);
-			if (gettingAddr)
-				value=value.Substring(1);
+			Boolean gettingAddr;
+			if (_gettingAddr) gettingAddr=true;
+			else {
+				gettingAddr=value.StartsWith("$",StringComparison.CurrentCulture);
+				if (gettingAddr)
+					value=value.Substring(1);
+			}
 			
 			//constants:
 			UInt32 _value;
@@ -2676,6 +2680,22 @@ namespace ProgrammingLanguageTutorialIdea {
             }
 			else if (@struct)
 				throw new ParsingError("Can only apply constant values to a struct");
+			else if (this.isALocalVar(value)) {
+				
+				Block localVarHomeBlock=this.getLocalVarHomeBlock(value);
+				
+				this.refEbp(localVarHomeBlock,2);
+				if (gettingAddr) {
+					this.addBytes(new Byte[]{0x8D,0x45,pseudoStack.getVarEbpOffset(value)}); //LEA EAX,[EBP+-OFFSET]
+					this.addByte(0x50); //PUSH EAX
+                    return PTR;
+				}
+				else {
+					this.addBytes(new Byte[]{0xFF,0x75,pseudoStack.getVarEbpOffset(value)});
+				    return localVarHomeBlock.localVariables[value].Item1;
+                }
+				
+			}
 			else if (this.variables.ContainsKey(value)) {
 				
 				if (gettingAddr) {
@@ -2884,22 +2904,6 @@ namespace ProgrammingLanguageTutorialIdea {
 				return kw.outputType;
 				
 			}
-			else if (this.isALocalVar(value)) {
-				
-				Block localVarHomeBlock=this.getLocalVarHomeBlock(value);
-				
-				this.refEbp(localVarHomeBlock,2);
-				if (gettingAddr) {
-					this.addBytes(new Byte[]{0x8D,0x45,pseudoStack.getVarEbpOffset(value)}); //LEA EAX,[EBP+-OFFSET]
-					this.addByte(0x50); //PUSH EAX
-                    return PTR;
-				}
-				else {
-					this.addBytes(new Byte[]{0xFF,0x75,pseudoStack.getVarEbpOffset(value)});
-				    return localVarHomeBlock.localVariables[value].Item1;
-                }
-				
-			}
 			else if (this.classes.ContainsKey(value)) {
 				
 				if (gettingAddr) {
@@ -3039,17 +3043,17 @@ namespace ProgrammingLanguageTutorialIdea {
 					this.addBytes(new Byte[]{0x8B,0x45,this.pseudoStack.getVarEbpOffset(first)}); //MOV [EBP+-OFFSET],EAX
 					
 				}
-                    else if (imported) {
-                        if (staticInstances[initialClass.classID].ContainsKey(pValue))
-                            this.addBytes(new Byte[]{0xA1}.Concat(BitConverter.GetBytes((UInt32)(PEHeaderFactory.dataSectAddr+staticInstances[initialClass.classID][pValue].Item1)))); // MOV EAX,[PTR]
-                        else if (!staticFunctions[initialClass.classID].ContainsKey(pValue)&&!isFuncWithParams(pValue,initialClass,true))
-                            throw new ParsingError("Does not exist in \""+initialClass.className+"\": "+pValue);
-                    }
-                    else if (staticHome) {
-                        this.addBytes(new Byte[]{0xA1}.Concat(BitConverter.GetBytes((UInt32)(PEHeaderFactory.dataSectAddr+staticInstances[ID][first].Item1)))); // MOV EAX,[PTR]
-                   
+                else if (imported) {
+                    if (staticInstances[initialClass.classID].ContainsKey(pValue))
+                        this.addBytes(new Byte[]{0xA1}.Concat(BitConverter.GetBytes((UInt32)(PEHeaderFactory.dataSectAddr+staticInstances[initialClass.classID][pValue].Item1)))); // MOV EAX,[PTR]
+                    else if (!staticFunctions[initialClass.classID].ContainsKey(pValue)&&!isFuncWithParams(pValue,initialClass,true))
+                        throw new ParsingError("Does not exist in \""+initialClass.className+"\": "+pValue);
+                }
+                else if (staticHome) {
+                    this.addBytes(new Byte[]{0xA1}.Concat(BitConverter.GetBytes((UInt32)(PEHeaderFactory.dataSectAddr+staticInstances[ID][first].Item1)))); // MOV EAX,[PTR]
+               
 
-                    }
+                }
 				else if (this.pvClassInstanceOrigin.Count<2&&!classOriginRecursor) {
 					
                           if (addEsiToLocalAddresses)
@@ -3067,7 +3071,7 @@ namespace ProgrammingLanguageTutorialIdea {
 					if (pvClassInstanceOrigin.Count==0)
 						this.pvClassInstanceOrigin.Add(first);
 					this.pvClassInstanceOrigin.Add(pValue);
-					Tuple<String,VarType>retVal=this.pushValue(value.Substring(first.Length+1));
+					Tuple<String,VarType>retVal=this.pushValue(value.Substring(first.Length+1),gettingAddr);
 					if (pvClassInstanceOrigin.Count!=0)
 						this.pvClassInstanceOrigin.Clear();
 					return retVal;
@@ -3229,10 +3233,12 @@ namespace ProgrammingLanguageTutorialIdea {
 					
 						this.addByte(5);//ADD EAX,FOLLOWING DWORD
 						this.addBytes(BitConverter.GetBytes(initialClass.functions[pValue].Item1)); //DWORD HERE
+						this.addByte(0x50);//PUSH EAX
 						return FUNC_PTR;
 						
 					}
 					Tuple<String,VarType>retType=initialClass.functions[pValue].Item2;
+					Console.WriteLine("-------------> Getting Address: "+gettingAddr);
 					if (retType==null)
 						throw new ParsingError("Function \""+pValue+"\" has no return value, therefore its return value can't be obtained");
 					Console.WriteLine("ORIGIN: "+merge(pvClassInstanceOrigin,"."));
@@ -3702,6 +3708,8 @@ namespace ProgrammingLanguageTutorialIdea {
 		
 		internal Tuple<String,VarType> getVarType (String value) {
 			
+			Console.WriteLine("getVarType: \""+value+'"');
+			
 			//HACK:: check var type here
 			if (!pvtNull()) {
 				if (pvtContainsKey(value))
@@ -3766,6 +3774,10 @@ namespace ProgrammingLanguageTutorialIdea {
 		/// Sets new parsing status
 		/// </summary>
 		private void exec (Executor executor,String[]@params) {
+			
+			Console.WriteLine("Exec: ");
+			foreach (String s in @params)
+				Console.WriteLine(" - "+s);
 			
 			if (!(String.IsNullOrEmpty(executor.func)))
 				this.callFunction(executor.func,@params);

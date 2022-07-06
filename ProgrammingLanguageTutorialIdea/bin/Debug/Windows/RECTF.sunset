@@ -1,0 +1,6 @@
+STRUCT
+public int left
+public int right
+public int top
+public int bottom
+public int brush

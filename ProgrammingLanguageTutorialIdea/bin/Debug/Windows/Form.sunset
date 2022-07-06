@@ -30,6 +30,17 @@ import(List<POINT>)
 import(List<List<POINT>>)
 import(ImageReference)
 import(List<ImageReference>)
+import(Windows/Line)
+import(List<Line>)
+import(Windows/MouseEventArgs)
+import(Event<MouseEventArgs>)
+import(Windows/CollisionEventArgs)
+import(Event<CollisionEventArgs>)
+import(List<FUNCPTR>)
+import(Windows/SIZE)
+import(Windows/BITMAP)
+import(Windows/RECTF)
+import(List<RECTF>)
 
 dllref(Kernel32,str) GetModuleHandleA int
 dllref(User32,WNDCLASSA) RegisterClassA int
@@ -60,7 +71,11 @@ dllref(Gdi32,HDC,int,int,int,int,HDC,int,int,int) BitBlt bool
 dllref(Gdi32,HDC) CreateCompatibleDC HDC
 dllref(Gdi32,HDC,HGDIOBJ) SelectObject HGDIOBJ
 dllref(Gdi32,HDC) DeleteDC bool
-dllref(User32,int,int,int,int) CreateRectRgn HRGN
+;dllref(Gdiplus,Pen,int,int,int,int) GdipDrawLine bool
+dllref(Gdi32,HDC,int,int,POINT) MoveToEx bool
+dllref(Gdi32,HDC,str,int,SIZE) GetTextExtentPoint32A bool
+dllref(User32,HWND) GetDC HDC
+dllref(Gdi32,HBITMAP,int,BITMAP) GetObjectA int
 
 WNDCLASSA wndClassA
 MSG msg
@@ -78,8 +93,10 @@ pullable int WM_KEYUP becomes 257
 pullable int SRCCOPY becomes 13369376
 pullable int RDW_UPDATENOW becomes 256
 pullable HWND windowHandle
+pullable int WM_MOUSEMOVE becomes 512
+pullable int WM_LBUTTONDOWN becomes 513
 pullable int brushHandle becomes GetSysColorBrush(COLOR_WINDOW)
-pullable int contentsHandle becomes GetSysColorBrush(COLOR_WINDOWTEXT)
+public int contentsHandle becomes GetSysColorBrush(COLOR_WINDOWTEXT)
 StringTool st becomes new(StringTool)
 public List<SimpleLabel> simpleLabels becomes new(List<SimpleLabel>)
 public List<FormTimer> timers becomes new(List<FormTimer>)
@@ -87,8 +104,11 @@ public List<RECT> rectangles becomes new(List<RECT>)
 public List<RECT> roundRectangles becomes new(List<RECT>)
 public List<RECT> ellipses becomes new(List<RECT>)
 public List<List<POINT>> polyLines becomes new(List<List<POINT>>)
-public List<POINT> lineTrail becomes new(List<POINT>)
 public List<ImageReference> images becomes new(List<ImageReference>)
+public List<Line> lines becomes new(List<Line>)
+public List<RECT> hitboxes becomes new(List<RECT>)
+public List<FUNCPTR> fncExecQueue becomes new(List<FUNCPTR>) ; Funcs are expected to have no parameters. Ran at start of next wndProc call
+public List<RECTF> fillRectangles becomes new(List<RECTF>)
 pullable int w ;Width
 pullable int h ;Height
 pullable int x ;X
@@ -99,9 +119,23 @@ public Event<FormEventArgs> onFormCreation becomes new(Event<FormEventArgs>)
 public Event<TimerEventArgs> onTimerTick becomes new(Event<TimerEventArgs>)
 public Event<KeyEventArgs> onKeyDown becomes new(Event<KeyEventArgs>)
 public Event<KeyEventArgs> onKeyUp becomes new(Event<KeyEventArgs>)
+public Event<MouseEventArgs> mouseMove becomes new(Event<MouseEventArgs>)
+public Event<CollisionEventArgs> mouseEnter becomes new(Event<CollisionEventArgs>)
+public Event<MouseEventArgs> onLmbDown becomes new(Event<MouseEventArgs>)
+public Event<CollisionEventArgs> onHitboxLmbDown becomes new(Event<CollisionEventArgs>)
 public int cTimerId becomes 1
 int RGBref becomes -1
+
 func(HWND hwnd,int uMsg,int wParam,int lParam) wndProc int {
+	
+	if (fncExecQueue.length,=/=,0) {
+		
+		foreach (fnc,fncExecQueue.toArray) {
+			callptr(fnc)
+		}
+		fncExecQueue.clear
+		
+	}
 	
 	if (uMsg,=,WM_NCCREATE) {
 		if (windowHandle,=,0) { windowHandle becomes hwnd }
@@ -123,8 +157,6 @@ func(HWND hwnd,int uMsg,int wParam,int lParam) wndProc int {
 			TextOutA(hdc,lbl.x,lbl.y,lbl.text,st.lengthOf(lbl.text))
 		}
 		foreach (rct,rectangles.toArray) {
-			; Update this to a new class maybe
-			; FormRectangle, STRUCT with RECT bounds and int brush
 			FillRect(hdc,rct,contentsHandle)
 		}
 		foreach (rct,roundRectangles.toArray) {
@@ -136,15 +168,27 @@ func(HWND hwnd,int uMsg,int wParam,int lParam) wndProc int {
 		foreach (polyLine,polyLines.toArray) {
 			Polyline(hdc,polyLine.toArray+8,lengthof(polyLine.toArray))
 		}
-		foreach (part,lineTrail.toArray) {
-			LineTo(hdc,part.x,part.y)
-		}
 		foreach (imgref,images.toArray) {
-			HBITMAP bitmap becomes LoadImageA(null,imgref.fileName,0,null,null,16)
+			HBITMAP bitmap becomes LoadImageA(null,imgref.fileName,0,imgref.width,imgref.height,16) ; maybe pre initialize this var and see what happens
 			HDC hMemDC becomes CreateCompatibleDC(hdc)
-			SelectObject(hMemDC,cast(bitmap,HGDIOBJ))
-			BitBlt(hdc,imgref.x,imgref.y,imgref.width,imgref.height,hMemDC,0,0,SRCCOPY)
+			HGDIOBJ oldBitmap becomes SelectObject(hMemDC,cast(bitmap,HGDIOBJ))
+			BITMAP bmp becomes new(BITMAP)
+			GetObjectA(bitmap,Bsizeof(BITMAP),bmp)
+			BitBlt(hdc,imgref.x,imgref.y,bmp.bmWidth,bmp.bmHeight,hMemDC,0,0,SRCCOPY)
+			SelectObject(hMemDC,oldBitmap)
 			DeleteDC(hMemDC)
+		}
+		foreach (line,lines.toArray) {
+			MoveToEx(hdc,line.x,line.y,null)
+			LineTo(hdc,line.x0,line.y0)
+		}
+		foreach (rct,fillRectangles.toArray) {
+			RECT rcb becomes new(RECT)
+			rcb.left becomes rct.left
+			rcb.top becomes rct.top
+			rcb.bottom becomes rct.bottom
+			rcb.right becomes rct.right
+			FillRect(hdc,rcb,rct.brush)
 		}
 		EndPaint(hwnd,pstrc)
 		retn(null)
@@ -193,6 +237,56 @@ func(HWND hwnd,int uMsg,int wParam,int lParam) wndProc int {
 		
 	}
 	
+	if (uMsg,=,WM_MOUSEMOVE) {
+		
+		MouseEventArgs args becomes new(MouseEventArgs)
+		shr mouseX becomes cast(lParam,shr)
+		int mouseY becomes (lParam%65535)-mouseX
+		args.x becomes mouseX
+		args.y becomes mouseY
+		mouseMove.raise(args)
+		foreach (bounds,hitboxes.toArray) {
+			if (bounds.left,<,mouseX) {
+				if (bounds.right,>,mouseX) {
+					if (bounds.top,<,mouseY) {
+						if (bounds.bottom,>,mouseY) {
+							CollisionEventArgs args0 becomes new(CollisionEventArgs)
+							args0.x becomes mouseX
+							args0.y becomes mouseY
+							args0.hitbox becomes bounds
+							mouseEnter.raise(args0)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (uMsg,=,WM_LBUTTONDOWN) {
+		
+		MouseEventArgs args becomes new(MouseEventArgs)
+		shr mouseX becomes cast(lParam,shr)
+		int mouseY becomes (lParam%65535)-mouseX
+		args.x becomes mouseX
+		args.y becomes mouseY
+		onLmbDown.raise(args)
+		foreach (bounds,hitboxes.toArray) {
+			if (bounds.left,<,mouseX) {
+				if (bounds.right,>,mouseX) {
+					if (bounds.top,<,mouseY) {
+						if (bounds.bottom,>,mouseY) {
+							CollisionEventArgs args0 becomes new(CollisionEventArgs)
+							args0.x becomes mouseX
+							args0.y becomes mouseY
+							args0.hitbox becomes bounds
+							onHitboxLmbDown.raise(args0)
+						}
+					}
+				}
+			}
+		}
+	}
+	
 	retn(DefWindowProcA(hwnd,uMsg,wParam,lParam))
 	
 }
@@ -204,7 +298,7 @@ public func(SimpleLabel lbl) addComponent {
 }
 
 constructor(str formTitle,int X,int Y,int width,int height) {
-	
+		
 	wndClassA becomes new(WNDCLASSA)
 	wndClassA.hInstance becomes GetModuleHandleA(null)
 	wndClassA.lpfnWndProc becomes $wndProc
@@ -265,6 +359,51 @@ public func(byte r,byte g,byte b) setDrawingRGB {
 
 public func kill {
 	ExitProcess(0)
+}
+
+; onClick : 1 arg (MouseEventArgs)
+public func(int x,int y,str text) drawBtn RECT {
+	
+	SIZE strSize becomes new(SIZE)
+	GetTextExtentPoint32A(GetDC(windowHandle),text,st.lengthOf(text),strSize)
+	; x y x0 y0
+	Line l becomes new(Line)
+	l.x becomes x
+	l.y becomes y
+	l.x0 becomes x+2+strSize.cx
+	l.y0 becomes y
+	lines.add(l)
+	Line l0 becomes new(Line)
+	l0.x becomes l.x0
+	l0.y becomes y
+	l0.x0 becomes l.x0
+	l0.y0 becomes y+2+strSize.cy
+	lines.add(l0)
+	Line l1 becomes new(Line)
+	l1.x becomes x
+	l1.y becomes y
+	l1.x0 becomes x
+	l1.y0 becomes l0.y0
+	lines.add(l1)
+	Line l2 becomes new(Line)
+	l2.x becomes x
+	l2.y becomes l0.y0
+	l2.x0 becomes l.x0
+	l2.y0 becomes l0.y0
+	lines.add(l2)
+	SimpleLabel lbl becomes new(SimpleLabel)
+	lbl.text becomes text
+	lbl.x becomes x+1
+	lbl.y becomes y+1
+	addComponent(lbl)
+	RECT hitbox becomes new(RECT)
+	hitbox.left becomes x
+	hitbox.top becomes y
+	hitbox.right becomes x+strSize.cx+2
+	hitbox.bottom becomes y+strSize.cy+2
+	hitboxes.add(hitbox)
+	retn(hitbox)
+	
 }
 
 public func(int x1,int y1,int x2,int y2) reDraw {

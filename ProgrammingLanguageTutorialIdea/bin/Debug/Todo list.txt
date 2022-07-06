@@ -1,9 +1,10 @@
+ - Github sunset language identification
+ - Enum
  - Public, Private, Local, Pullable, Static, Constant,  (Any access, only access within same file, only access within same folder, Like public but can only get, Accessible without instance, Non-changing, in pushValue it is processed like pushValue("123") etc., ), and update all current sunset libs for this. When doing static, ensure the only variables that can be accessed are local or static variables. Maybe make Boolean Parser#inStaticContext. 
  - Classes inheriting eachother, and update all current sunset libs for this
  - blogic (pb)
  - for loops - Set the parser to parse the first parameter normally but set the block to the for block
  - magic #'s, neural network, creative ways all to give unique performance !
- 
  
   ~~~
 TODO/FIXME :: in solution

@@ -1,0 +1,7 @@
+import(Windows/RECT)
+STRUCT
+public int x
+public int y
+;public bool lmb
+;public bool rmb
+;public bool mmb
