@@ -15,3 +15,14 @@ public func(EvtArgs args) raise {
 	}
 	
 }
+
+public func (FUNCPTR ptr) removeFunction bool {
+	
+	int index becomes pointers.indexOf(ptr)
+	if (index,=,-1) { retn(false) }
+	pointers.remove(index)
+	retn(true)
+	
+}
+
+public func clearFunctions { pointers.clear }

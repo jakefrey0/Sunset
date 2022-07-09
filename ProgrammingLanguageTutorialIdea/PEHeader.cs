@@ -34,7 +34,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		#region DOS stub
 		
 		public fixed Byte unknown[14],
-					      msg[38],
+					      msg[38], // ASCII str
 					      unknown_0[5],
 					      unknown_empty[7];
 		

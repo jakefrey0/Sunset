@@ -215,6 +215,7 @@ func(HWND hwnd,int uMsg,int wParam,int lParam) wndProc int {
 				break
 			}
 		}
+		
 		onTimerTick.raise(args)
 		
 	}
@@ -361,11 +362,18 @@ public func kill {
 	ExitProcess(0)
 }
 
-; onClick : 1 arg (MouseEventArgs)
-public func(int x,int y,str text) drawBtn RECT {
+public func(str text) getStdTextSize SIZE {
 	
 	SIZE strSize becomes new(SIZE)
 	GetTextExtentPoint32A(GetDC(windowHandle),text,st.lengthOf(text),strSize)
+	retn(strSize)
+	
+}
+
+; Return value: Btn Hitbox
+public func(int x,int y,str text) drawBtn RECT {
+	
+	SIZE strSize becomes getStdTextSize(text)
 	; x y x0 y0
 	Line l becomes new(Line)
 	l.x becomes x

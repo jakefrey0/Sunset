@@ -27,16 +27,20 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			if (sender.constructor!=null)
 				throw new ParsingError("Constructor already exists, and the \""+KWConstructor.constName+"\" keyword was called");
 			
-			sender.tryCreateRestoreEsiFunc();
-			
 			OpcodeIndexReference pos=sender.GetStaticInclusiveOpcodesCount(1);
 			sender.addBytes(new Byte[]{0xE9,0,0,0,0});
-			Byte[] newOpcodes=new Byte[0],endOpcodes=(@params.Length==0)?new Byte[]{0xC3}/*RET*/:new Byte[]{0xC2/*RET SHORT:(STACK RESTORATION AMOUNT)*/}.Concat(BitConverter.GetBytes((UInt16)(@params.Length*4))).ToArray();
-			
+			Byte[] newOpcodes=new Byte[0],endOpcodes=(@params.Length==0)?new Byte[]{0xCC,0xC3}/*RET*/:new Byte[]{0xC2/*RET SHORT:(STACK RESTORATION AMOUNT)*/}.Concat(BitConverter.GetBytes((UInt16)(@params.Length*4))).ToArray();
+									
 			if (sender.addEsiToLocalAddresses)
 				endOpcodes=new Byte[]{0x5E/*POP ESI*/}.Concat(endOpcodes).ToArray();
 			
-			Block constructorBlock=new Block(delegate{sender.inFunction=false;sender.inConstructor=false;if(sender.addEsiToLocalAddresses)sender.pseudoStack.pop();sender.pseudoStack.pop();},sender.memAddress,endOpcodes,true);
+			Block constructorBlock=new Block(delegate {
+             	sender.inFunction=false;
+             	sender.inConstructor=false;
+             	if (sender.addEsiToLocalAddresses) sender.pseudoStack.pop();
+             	sender.pseudoStack.pop();
+				sender.tryCreateRestoreEsiFunc();
+			},sender.memAddress,endOpcodes,true);
 			
 			//For information on this, see KWNew -> Extra esi dword var on classes information
 			if (sender.addEsiToLocalAddresses) {

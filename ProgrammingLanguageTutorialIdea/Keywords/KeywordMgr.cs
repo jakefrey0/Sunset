@@ -17,8 +17,9 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 		public List<String> classWords;
 		public Dictionary<String,String> synonyms;
         public Dictionary<String,String> acknowledgements;
+        private Parser sender;
 		
-		public KeywordMgr () {
+		public KeywordMgr (Parser sender) {
 			
 			this.keywords=new List<Keyword>(new Keyword[] {
 			                       	
@@ -77,6 +78,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			this.classWords=new List<String>();
 			this.synonyms=new Dictionary<String,String>();
             this.acknowledgements=new Dictionary<String,String>();
+            this.sender=sender;
 			
 		}
 		

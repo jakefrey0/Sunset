@@ -177,7 +177,7 @@ namespace ProgrammingLanguageTutorialIdea {
 			
 			memAddress=winApp?0x00401000:(UInt32)0;
 			startingMemAddr=memAddress;
-			keywordMgr=new KeywordMgr();
+			keywordMgr=new KeywordMgr(this);
 			style=winApp?ArrayStyle.DYNAMIC_MEMORY_HEAP:ArrayStyle.STATIC_MEMORY_BLOCK;
 			this.winApp=winApp;
 			toImport=new Dictionary<String,List<String>>();
@@ -2022,6 +2022,7 @@ namespace ProgrammingLanguageTutorialIdea {
                 constantBeingSet=arrayName;
                 constants.Add(arrayName,new Tuple<uint, Tuple<string, VarType>>(0,null));
             }
+            else nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT,KeywordType.MODIFIER,KeywordType.FUNCTION,KeywordType.TYPE };
 			this.lastReferencedVariable=arrayName;
 			this.lastReferencedVarType=VarType.NATIVE_ARRAY;
              currentMods=Modifier.NONE;
@@ -4671,9 +4672,9 @@ namespace ProgrammingLanguageTutorialIdea {
 		}
 		
 		internal void tryCreateRestoreEsiFunc () {
-		
-			if (addEsiToLocalAddresses&&restoreEsiFuncAddr==0&&opcodes.Count!=0&&!@struct) {
-
+			
+			if (addEsiToLocalAddresses&&restoreEsiFuncAddr==0&&opcodes.Count!=0&&blocks.Count==0&&!@struct) {
+				
 				// Create restore esi function
 				this.addBytes(new Byte[]{0x8B,0x44,0x24,4});//MOV EAX,[ESP+4]
 //				this.addBytes(new Byte[]{0x8D,0x44,0x24,4});//LEA EAX,[ESP+4]
@@ -4857,7 +4858,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		/// <summary>
 		/// passedVarTypes[String index]
 		/// </summary>
-		private Tuple<String,VarType> pvtGet (String key) {
+		public Tuple<String,VarType> pvtGet (String key) {
 			
 			return this.passedVarTypes.Where(x=>x.Item1==key).First().Item2;
 			
@@ -4865,7 +4866,7 @@ namespace ProgrammingLanguageTutorialIdea {
 		/// <summary>
 		/// passedVarTypes==null
 		/// </summary>
-		private Boolean pvtNull () {
+		public Boolean pvtNull () {
 			
 			return this.passedVarTypes==null;
 			
@@ -5083,6 +5084,7 @@ namespace ProgrammingLanguageTutorialIdea {
                     return this.classes[varName].Item4;
                 case VarType.FUNCTION:
                     return this.functions[varName].Item6;
+                case VarType.NATIVE_ARRAY_INDEXER:
                 case VarType.NATIVE_ARRAY:
                     return this.arrays[varName].Item4;
                 case VarType.NATIVE_VARIABLE:

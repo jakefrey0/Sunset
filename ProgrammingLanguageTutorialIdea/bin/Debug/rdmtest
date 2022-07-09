@@ -1,0 +1,2 @@
+import(Random)
+retn(Random.gen()

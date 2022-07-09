@@ -1,0 +1,32 @@
+; Only temporary
+; Should be redone
+; And definitely shouldn't be used with large numbers
+
+dllref(Kernel32) GetTickCount int
+
+private static int xch
+
+;Min=zero
+public static func(int max) gen int {
+	
+	retn(GetTickCount%(max+1))
+	
+}
+
+; Very pseudo-random here
+public static func(int max) genXch int {
+	
+	xch becomes xch+1
+	if (xch%7,=,0) {
+		if (gen(1),=,1) { 
+			xch becomes 0 
+		}
+	}
+	if (xch%3,=,0) {
+		if (gen(2),=,1) { 
+			xch becomes 13
+		}
+	}
+	retn((GetTickCount+xch)%(max+1))
+	
+}
