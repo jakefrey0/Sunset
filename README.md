@@ -1,5 +1,8 @@
 # ProgrammingLanguageTutorialIdea
-C# Programming Language &amp; Compiler Youtube Tutorial Repo
-
+Comprehensive ground-up parser and compiler written in C# (Turing-Complete).\
 <br />
-This repo is the repo of a youtube tutorial series that can be found at https://www.youtube.com/watch?v=WdY96DdESpA
+Never done before, I think?
+<br />
+EmEditor syntax file found in Sunset/bin/Debug/Sunset_Syntax.esy <br />
+[Example application written in Sunset (2022/08/10)](https://github.com/cashsignsesh/Simple-RPG)
+![Syntax example](https://github.com/cashsignsesh/Sunset/blob/main/Sunset/bin/Debug/Capture.PNG)
