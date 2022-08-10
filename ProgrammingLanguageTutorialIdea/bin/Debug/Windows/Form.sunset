@@ -10,11 +10,11 @@ acknowledge HBITMAP   as PTR
 acknowledge HGDIOBJ   as PTR
 
 import(Windows/MSG)
-import(Windows/PAINTSTRUCT) 
-import(Windows/POINT)
-import(Windows/RECT)
+import(Windows/Drawing/PAINTSTRUCT) 
+import(Windows/Drawing/POINT)
+import(Windows/Drawing/RECT)
 import(Windows/WNDCLASSA)
-import(Windows/SimpleLabel)
+import(Windows/Drawing/SimpleLabel)
 import(Windows/FormEventArgs)
 import(List<SimpleLabel>)
 import(StringTool)
@@ -28,18 +28,18 @@ import(Windows/KeyEventArgs)
 import(Event<KeyEventArgs>)
 import(List<POINT>)
 import(List<List<POINT>>)
-import(ImageReference)
-import(List<ImageReference>)
-import(Windows/Line)
+import(Windows/Drawing/FormImage)
+import(List<FormImage>)
+import(Windows/Drawing/Line)
 import(List<Line>)
 import(Windows/MouseEventArgs)
 import(Event<MouseEventArgs>)
 import(Windows/CollisionEventArgs)
 import(Event<CollisionEventArgs>)
 import(List<FUNCPTR>)
-import(Windows/SIZE)
-import(Windows/BITMAP)
-import(Windows/RECTF)
+import(Windows/Drawing/SIZE)
+import(Windows/Drawing/BITMAP)
+import(Windows/Drawing/RECTF)
 import(List<RECTF>)
 
 dllref(Kernel32,str) GetModuleHandleA int
@@ -66,7 +66,6 @@ dllref(Gdi32,HDC,int) SetDCBrushColor int
 dllref(Gdi32,HDC,int) SetDCPenColor int
 dllref(Gdi32,HDC,POINT#,int) Polyline bool
 dllref(Gdi32,HDC,int,int) LineTo bool
-dllref(User32,HINSTANCE,str,int,int,int,int) LoadImageA HBITMAP
 dllref(Gdi32,HDC,int,int,int,int,HDC,int,int,int) BitBlt bool
 dllref(Gdi32,HDC) CreateCompatibleDC HDC
 dllref(Gdi32,HDC,HGDIOBJ) SelectObject HGDIOBJ
@@ -104,7 +103,7 @@ public List<RECT> rectangles becomes new(List<RECT>)
 public List<RECT> roundRectangles becomes new(List<RECT>)
 public List<RECT> ellipses becomes new(List<RECT>)
 public List<List<POINT>> polyLines becomes new(List<List<POINT>>)
-public List<ImageReference> images becomes new(List<ImageReference>)
+public List<FormImage> images becomes new(List<FormImage>)
 public List<Line> lines becomes new(List<Line>)
 public List<RECT> hitboxes becomes new(List<RECT>)
 public List<FUNCPTR> fncExecQueue becomes new(List<FUNCPTR>) ; Funcs are expected to have no parameters. Ran at start of next wndProc call
@@ -168,13 +167,13 @@ func(HWND hwnd,int uMsg,int wParam,int lParam) wndProc int {
 		foreach (polyLine,polyLines.toArray) {
 			Polyline(hdc,polyLine.toArray+8,lengthof(polyLine.toArray))
 		}
-		foreach (imgref,images.toArray) {
-			HBITMAP bitmap becomes LoadImageA(null,imgref.fileName,0,imgref.width,imgref.height,16) ; maybe pre initialize this var and see what happens
+		foreach (img,images.toArray) {
+			HBITMAP bitmap becomes img.bitmap
 			HDC hMemDC becomes CreateCompatibleDC(hdc)
 			HGDIOBJ oldBitmap becomes SelectObject(hMemDC,cast(bitmap,HGDIOBJ))
 			BITMAP bmp becomes new(BITMAP)
 			GetObjectA(bitmap,Bsizeof(BITMAP),bmp)
-			BitBlt(hdc,imgref.x,imgref.y,bmp.bmWidth,bmp.bmHeight,hMemDC,0,0,SRCCOPY)
+			BitBlt(hdc,img.x,img.y,bmp.bmWidth,bmp.bmHeight,hMemDC,0,0,SRCCOPY)
 			SelectObject(hMemDC,oldBitmap)
 			DeleteDC(hMemDC)
 		}
@@ -246,16 +245,18 @@ func(HWND hwnd,int uMsg,int wParam,int lParam) wndProc int {
 		args.x becomes mouseX
 		args.y becomes mouseY
 		mouseMove.raise(args)
-		foreach (bounds,hitboxes.toArray) {
-			if (bounds.left,<,mouseX) {
-				if (bounds.right,>,mouseX) {
-					if (bounds.top,<,mouseY) {
-						if (bounds.bottom,>,mouseY) {
-							CollisionEventArgs args0 becomes new(CollisionEventArgs)
-							args0.x becomes mouseX
-							args0.y becomes mouseY
-							args0.hitbox becomes bounds
-							mouseEnter.raise(args0)
+		if (mouseEnter.references,=/=,0) {
+			foreach (bounds,hitboxes.toArray) {
+				if (bounds.left,<,mouseX) {
+					if (bounds.right,>,mouseX) {
+						if (bounds.top,<,mouseY) {
+							if (bounds.bottom,>,mouseY) {
+								CollisionEventArgs args0 becomes new(CollisionEventArgs)
+								args0.x becomes mouseX
+								args0.y becomes mouseY
+								args0.hitbox becomes bounds
+								mouseEnter.raise(args0)
+							}
 						}
 					}
 				}
@@ -271,16 +272,18 @@ func(HWND hwnd,int uMsg,int wParam,int lParam) wndProc int {
 		args.x becomes mouseX
 		args.y becomes mouseY
 		onLmbDown.raise(args)
-		foreach (bounds,hitboxes.toArray) {
-			if (bounds.left,<,mouseX) {
-				if (bounds.right,>,mouseX) {
-					if (bounds.top,<,mouseY) {
-						if (bounds.bottom,>,mouseY) {
-							CollisionEventArgs args0 becomes new(CollisionEventArgs)
-							args0.x becomes mouseX
-							args0.y becomes mouseY
-							args0.hitbox becomes bounds
-							onHitboxLmbDown.raise(args0)
+		if (onHitboxLmbDown.references,=/=,0) {
+			foreach (bounds,hitboxes.toArray) {
+				if (bounds.left,<,mouseX) {
+					if (bounds.right,>,mouseX) {
+						if (bounds.top,<,mouseY) {
+							if (bounds.bottom,>,mouseY) {
+								CollisionEventArgs args0 becomes new(CollisionEventArgs)
+								args0.x becomes mouseX
+								args0.y becomes mouseY
+								args0.hitbox becomes bounds
+								onHitboxLmbDown.raise(args0)
+							}
 						}
 					}
 				}

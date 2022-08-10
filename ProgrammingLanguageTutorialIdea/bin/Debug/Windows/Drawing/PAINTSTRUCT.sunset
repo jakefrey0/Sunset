@@ -1,5 +1,5 @@
 STRUCT
-import(Windows/RECT)
+import(Windows/Drawing/RECT)
 int hdc
 bool fErase
 RECT rcPaint

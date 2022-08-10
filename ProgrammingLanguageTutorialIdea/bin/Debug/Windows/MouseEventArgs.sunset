@@ -1,4 +1,3 @@
-import(Windows/RECT)
 STRUCT
 public int x
 public int y

@@ -2,8 +2,9 @@ EXPECTED_TYPES(EvtArgs)
 import(List<FUNCPTR>)
 
 private List<FUNCPTR> pointers becomes new(List<FUNCPTR>)
+pullable int references
 
-public func(FUNCPTR ptr) addFunction { pointers.add(ptr) }
+public func(FUNCPTR ptr) addFunction { pointers.add(ptr) ++references }
 
 public func(EvtArgs args) raise { 
 	
@@ -21,8 +22,9 @@ public func (FUNCPTR ptr) removeFunction bool {
 	int index becomes pointers.indexOf(ptr)
 	if (index,=,-1) { retn(false) }
 	pointers.remove(index)
+	references becomes references-1
 	retn(true)
 	
 }
 
-public func clearFunctions { pointers.clear }
+public func clearFunctions { pointers.clear references becomes 0 }

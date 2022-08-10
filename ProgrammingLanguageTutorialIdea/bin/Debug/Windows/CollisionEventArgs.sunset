@@ -1,4 +1,4 @@
-import(Windows/RECT)
+import(Windows/Drawing/RECT)
 STRUCT
 public int x
 public int y

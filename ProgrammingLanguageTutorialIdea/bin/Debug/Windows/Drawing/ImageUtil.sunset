@@ -1,0 +1,16 @@
+acknowledge HINSTANCE as PTR
+acknowledge HBITMAP as PTR
+
+import(ImageReference)
+
+dllref(User32,HINSTANCE,str,int,int,int,int) LoadImageA HBITMAP
+
+static public func(ImageReference imgref) bmpFromRef HBITMAP {
+	HBITMAP bmp becomes LoadImageA(null,imgref.fileName,0,imgref.width,imgref.height,16)
+	retn(bmp)
+}
+
+static public func(str fn,int width,int height) loadBitmap HBITMAP {
+	HBITMAP bmp becomes LoadImageA(null,fn,0,width,height,16)
+	retn(bmp)
+}

@@ -1,0 +1,23 @@
+; Untested
+
+EXPECTED_TYPES(T,T0)
+import(Tuple<T,T0>)
+import(List<Tuple<T,T0>>)
+
+private List<Tuple<T,T0>> entries becomes new(List<Tuple<T,T0>>)
+
+public func(T key,T0 value) add {
+	Tuple<T,T0> tuple becomes new(Tuple<T,T0>)
+	tuple.item becomes key
+	tuple.item0 becomes value
+	entries.add(tuple)
+}
+
+public func(T key) find T0 {
+	foreach (tuple,entries.toArray) {
+		if (tuple.item,=,key) { retn(tuple.item0) }
+	}
+	retn(null)
+}
+
+public func clear { entries.clear }

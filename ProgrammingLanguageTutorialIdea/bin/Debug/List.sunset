@@ -118,3 +118,18 @@ public func clear {
 	;}
 	
 }
+
+public func(T# range) addRange {
+	
+	foreach (item,range) {
+		add(item)
+	}
+	
+}
+
+public func(T item) contains bool {
+	foreach (item0,innerList) {
+		if (item0,=,item) { retn(true) }
+	}
+	retn(false)
+}

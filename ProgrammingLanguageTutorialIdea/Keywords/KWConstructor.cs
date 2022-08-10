@@ -29,7 +29,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
 			
 			OpcodeIndexReference pos=sender.GetStaticInclusiveOpcodesCount(1);
 			sender.addBytes(new Byte[]{0xE9,0,0,0,0});
-			Byte[] newOpcodes=new Byte[0],endOpcodes=(@params.Length==0)?new Byte[]{0xCC,0xC3}/*RET*/:new Byte[]{0xC2/*RET SHORT:(STACK RESTORATION AMOUNT)*/}.Concat(BitConverter.GetBytes((UInt16)(@params.Length*4))).ToArray();
+			Byte[] newOpcodes=new Byte[0],endOpcodes=(@params.Length==0)?new Byte[]{0xC3}/*RET*/:new Byte[]{0xC2/*RET SHORT:(STACK RESTORATION AMOUNT)*/}.Concat(BitConverter.GetBytes((UInt16)(@params.Length*4))).ToArray();
 									
 			if (sender.addEsiToLocalAddresses)
 				endOpcodes=new Byte[]{0x5E/*POP ESI*/}.Concat(endOpcodes).ToArray();

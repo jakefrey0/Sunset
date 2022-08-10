@@ -1,5 +1,5 @@
 STRUCT
-import(Windows/POINT)
+import(Windows/Drawing/POINT)
 int hwnd
 int message
 int wParam

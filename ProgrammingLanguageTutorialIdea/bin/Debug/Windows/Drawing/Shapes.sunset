@@ -1,4 +1,4 @@
-import(Windows/RECT)
+import(Windows/Drawing/RECT)
 dllref(User32,RECT,RECT,RECT) IntersectRect bool
 
 pullable RECT lastRectIntersection becomes new(RECT)

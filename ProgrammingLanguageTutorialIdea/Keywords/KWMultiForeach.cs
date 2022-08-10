@@ -47,7 +47,7 @@ namespace ProgrammingLanguageTutorialIdea.Keywords {
             foreach (Tuple<String,String>pair in pairs) {
                 String arrName=pair.Item2,varName=pair.Item1;
                 if (sender.nameExists(varName))
-                    throw new ParsingError("Foreach iteration variable name \""+varName+"\" is already in use");
+                    throw new ParsingError("Multi-foreach iteration variable name \""+varName+"\" is already in use");
                 if (varName.Any(x=>!Char.IsLetterOrDigit(x)))
                     throw new ParsingError("Invalid foreach iteration variable name \""+varName+"\" (should be alphanumeric)");
                 // EBX can be preserved throughout the whole loop so it doesn't have to constantly run pushValue instructions
