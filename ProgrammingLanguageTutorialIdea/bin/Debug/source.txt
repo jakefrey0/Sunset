@@ -1,4 +1,0 @@
-import(test<int>)
-
-test<int> test becomes new(test<int>)
-retn(test.test)

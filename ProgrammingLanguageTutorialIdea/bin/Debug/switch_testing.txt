@@ -1,9 +1,0 @@
-switch(0) {
-	
-	default:
-	
-	
-	
-}
-nofunct(3)
-retn(1)

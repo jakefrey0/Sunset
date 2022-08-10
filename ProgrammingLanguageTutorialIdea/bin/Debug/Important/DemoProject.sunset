@@ -1,3 +1,0 @@
-import(Windows/MessageBox)
-
-MessageBox.mbox("Hello World","")

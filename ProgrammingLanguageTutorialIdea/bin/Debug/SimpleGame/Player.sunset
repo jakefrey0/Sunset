@@ -1,5 +1,0 @@
-STRUCT
-import(Windows/RECT)
-public RECT bounds
-public int jumpPower
-public int jumpTicks

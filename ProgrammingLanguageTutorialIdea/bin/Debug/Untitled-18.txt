@@ -1,6 +1,0 @@
-; Try accessing class item from class (myClass.myOtherClass.myItem)
-; ^ Let this work as well: retn(other.arr[other.arr[4]])
-; ^ In indexArray, in the parseMath delegate, add a check for class accessor maybe
-
-; Undone: Some getting/setting (pushValue/processValue/chkName) from class functions might need checkups (maybe missing some: function,array,variables,classes)
-; Make sure they all work when the addEsi flag is set

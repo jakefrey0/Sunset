@@ -1,0 +1,573 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<ClassDiagram Zoom="1" MajorVersion="1" MinorVersion="1" MembersFormat="FullSignature">
+  <Class Name="Sunset.Keywords.KWSetProcessHeapVar" Collapsed="False">
+    <Position X="0.5" Y="3" Width="2.996149" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Parser" Collapsed="False">
+    <Position X="0.5" Y="6.3" Width="7.708102" />
+    <Compartments>
+      <Compartment Name="Properties" Collapsed="False" />
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Enum Name="Sunset.ArrayStyle" Collapsed="False">
+    <Position X="0.5" Y="48.7" Width="2.767267" />
+    <Compartments />
+  </Enum>
+  <Class Name="Sunset.Keywords.KWBecomes" Collapsed="False">
+    <Position X="3.8" Y="3" Width="1.887877" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWIncrease" Collapsed="False">
+    <Position X="6.1" Y="3" Width="1.81236" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWBoolean" Collapsed="False">
+    <Position X="8.3" Y="3" Width="1.776159" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Block" Collapsed="False">
+    <Position X="0.5" Y="50.2" Width="3.863097" />
+    <Compartments>
+      <Compartment Name="Properties" Collapsed="False" />
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWInteger" Collapsed="False">
+    <Position X="10.5" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWBreak" Collapsed="False">
+    <Position X="12.6" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWDefault" Collapsed="False">
+    <Position X="14.7" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWByte" Collapsed="False">
+    <Position X="16.9" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Class" Collapsed="False">
+    <Position X="0.5" Y="55.8" Width="6.428654" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWLengthOf" Collapsed="False">
+    <Position X="19" Y="3" Width="1.875524" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Enum Name="Sunset.ClassType" Collapsed="False">
+    <Position X="0.5" Y="59.9" Width="1.798859" />
+    <Compartments />
+  </Enum>
+  <Struct Name="Sunset.Executor" Collapsed="False">
+    <Position X="0.5" Y="61.4" Width="3.174093" />
+    <Compartments>
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Struct>
+  <Enum Name="Sunset.FunctionType" Collapsed="False">
+    <Position X="0.5" Y="63.4" Width="2.516276" />
+    <Compartments />
+  </Enum>
+  <Class Name="Sunset.Keywords.KWNew" Collapsed="False">
+    <Position X="21.3" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWCallptr" Collapsed="False">
+    <Position X="23.4" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWNofunc" Collapsed="False">
+    <Position X="25.6" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.Keyword" Collapsed="False">
+    <Position X="0.5" Y="0.5" Width="2.329005" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Struct Name="Sunset.Keywords.KeywordResult" Collapsed="False">
+    <Position X="0.5" Y="64.8" Width="1.813273" />
+    <Compartments>
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Struct>
+  <Class Name="Sunset.Keywords.KWDllReference" Collapsed="False">
+    <Position X="27.7" Y="3" Width="2.255583" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWElse" Collapsed="False">
+    <Position X="30.4" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWCase" Collapsed="False">
+    <Position X="32.5" Y="3" Width="2.123078" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWReturn" Collapsed="False">
+    <Position X="35" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KeywordMgr" Collapsed="False">
+    <Position X="0.5" Y="66.4" Width="2.803058" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWExpectedTypes" Collapsed="False">
+    <Position X="37.2" Y="3" Width="2.505231" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWConstructor" Collapsed="False">
+    <Position X="40.1" Y="3" Width="2.114323" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Enum Name="Sunset.Keywords.KeywordType" Collapsed="False">
+    <Position X="0.5" Y="68.9" Width="3.546613" />
+    <Compartments />
+  </Enum>
+  <Class Name="Sunset.Keywords.KWContinue" Collapsed="False">
+    <Position X="42.6" Y="3" Width="1.851569" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWCrash" Collapsed="False">
+    <Position X="44.8" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWFinishCompiling" Collapsed="False">
+    <Position X="47" Y="3" Width="2.561842" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWGetProcessHeap" Collapsed="False">
+    <Position X="49.9" Y="3" Width="2.668727" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWForeach" Collapsed="False">
+    <Position X="53" Y="3" Width="1.774547" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWIf" Collapsed="False">
+    <Position X="55.2" Y="3" Width="3.277165" />
+    <Compartments>
+      <Compartment Name="Properties" Collapsed="False" />
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWFunction" Collapsed="False">
+    <Position X="58.9" Y="3" Width="1.813756" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWShort" Collapsed="False">
+    <Position X="61.1" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWImport" Collapsed="False">
+    <Position X="63.2" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWDecrease" Collapsed="False">
+    <Position X="65.3" Y="3" Width="1.913014" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Enum Name="Sunset.ParsingStatus" Collapsed="False">
+    <Position X="0.5" Y="71.9" Width="3.610636" />
+    <Compartments />
+  </Enum>
+  <Class Name="Sunset.Keywords.KWStruct" Collapsed="False">
+    <Position X="67.7" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWSizeOf" Collapsed="False">
+    <Position X="69.8" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWString" Collapsed="False">
+    <Position X="71.9" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWSwitch" Collapsed="False">
+    <Position X="74.1" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWToggleGui" Collapsed="False">
+    <Position X="76.2" Y="3" Width="1.991432" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Struct Name="Sunset.PEHeader" Collapsed="False">
+    <Position X="0.5" Y="75.9" Width="2.43777" />
+    <Compartments>
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Struct>
+  <Class Name="Sunset.PEHeaderFactory" Collapsed="False">
+    <Position X="0.5" Y="89.8" Width="2.198288" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWTypeSizeOf" Collapsed="False">
+    <Position X="78.6" Y="3" Width="2.128503" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWVoid" Collapsed="False">
+    <Position X="81.1" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Interface Name="Sunset.Stack.IPseudoStackItem" Collapsed="False">
+    <Position X="0.5" Y="92" Width="1.492184" />
+    <Compartments>
+      <Compartment Name="Properties" Collapsed="False" />
+    </Compartments>
+  </Interface>
+  <Class Name="Sunset.Keywords.KWWhile" Collapsed="False">
+    <Position X="83.3" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Enum Name="Sunset.Machine" Collapsed="False">
+    <Position X="0.5" Y="93.4" Width="1.830441" />
+    <Compartments />
+  </Enum>
+  <Class Name="Sunset.Helpers" Collapsed="False">
+    <Position X="0.5" Y="98.2" Width="2.198288" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Program" Collapsed="False">
+    <Position X="0.5" Y="99.6" Width="1.921554" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Stack.ReturnPtr" Collapsed="False">
+    <Position X="0.5" Y="102.7" Width="1.54778" />
+    <Compartments>
+      <Compartment Name="Properties" Collapsed="False" />
+      <Compartment Name="Methods" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Stack.SwitchVar" Collapsed="False">
+    <Position X="0.5" Y="104.5" Width="1.599557" />
+    <Compartments>
+      <Compartment Name="Properties" Collapsed="False" />
+      <Compartment Name="Methods" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Enum Name="Sunset.VarType" Collapsed="False">
+    <Position X="0.5" Y="106.2" Width="2.634655" />
+    <Compartments />
+  </Enum>
+  <Class Name="Sunset.Keywords.KWAcknowledge" Collapsed="False">
+    <Position X="85.4" Y="3" Width="2.292428" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWAs" Collapsed="False">
+    <Position X="88.1" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWCast" Collapsed="False">
+    <Position X="90.2" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Order" Collapsed="False">
+    <Position X="0.5" Y="108.2" Width="3.82088" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Enum Name="Sunset.OrderMathType" Collapsed="False">
+    <Position X="0.5" Y="110.8" Width="2.38361" />
+    <Compartments />
+  </Enum>
+  <Class Name="Sunset.OrderItem" Collapsed="False">
+    <Position X="0.5" Y="112.2" Width="1.618786" />
+    <Compartments>
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Stack.EsiPtr" Collapsed="False">
+    <Position X="0.5" Y="113.6" Width="1.29467" />
+    <Compartments>
+      <Compartment Name="Properties" Collapsed="False" />
+      <Compartment Name="Methods" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Enum Name="Sunset.Stack.ItemType" Collapsed="False">
+    <Position X="0.5" Y="115.3" Width="2.244821" />
+    <Compartments />
+  </Enum>
+  <Class Name="Sunset.Stack.LocalVar" Collapsed="False">
+    <Position X="0.5" Y="117.3" Width="1.473874" />
+    <Compartments>
+      <Compartment Name="Properties" Collapsed="False" />
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWMultiForeach" Collapsed="False">
+    <Position X="92.4" Y="3" Width="3.075963" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Stack.PreservedEBP" Collapsed="False">
+    <Position X="0.5" Y="119.4" Width="2.064372" />
+    <Compartments>
+      <Compartment Name="Properties" Collapsed="False" />
+      <Compartment Name="Methods" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWGoto" Collapsed="False">
+    <Position X="95.8" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Stack.PreservedECX" Collapsed="False">
+    <Position X="0.5" Y="121.2" Width="2.076833" />
+    <Compartments>
+      <Compartment Name="Properties" Collapsed="False" />
+      <Compartment Name="Methods" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWPublic" Collapsed="False">
+    <Position X="98" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Stack.PseudoStack" Collapsed="False">
+    <Position X="0.5" Y="122.9" Width="2.07839" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Enum Name="Sunset.Modifier" Collapsed="False">
+    <Position X="0.5" Y="125.6" Width="1.80568" />
+    <Compartments />
+  </Enum>
+  <Class Name="Sunset.ModifierTools" Collapsed="False">
+    <Position X="0.5" Y="127.7" Width="2.198288" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWPrivate" Collapsed="False">
+    <Position X="100.1" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWLocal" Collapsed="False">
+    <Position X="102.3" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWPullable" Collapsed="False">
+    <Position X="104.4" Y="3" Width="1.753493" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWStatic" Collapsed="False">
+    <Position X="106.6" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.ParsingError" Collapsed="False">
+    <Position X="0.5" Y="129.4" Width="1.851247" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWConstant" Collapsed="False">
+    <Position X="108.7" Y="3" Width="1.850172" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWExit" Collapsed="False">
+    <Position X="110.9" Y="3" Width="1.737648" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.OpcodeIndexReference" Collapsed="False">
+    <Position X="0.5" Y="130.7" Width="2.971549" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Enum Name="Sunset.OpcodeIndexType" Collapsed="False">
+    <Position X="0.5" Y="133.1" Width="3.157423" />
+    <Compartments />
+  </Enum>
+  <Struct Name="Sunset.SunsetProject" Collapsed="False">
+    <Position X="0.5" Y="134.4" Width="1.278581" />
+    <Compartments>
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Struct>
+  <Class Name="Sunset.SunsetProjectHelper" Collapsed="False">
+    <Position X="0.5" Y="136.1" Width="2.198288" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.InvalidProjectError" Collapsed="False">
+    <Position X="0.5" Y="138.1" Width="2.445827" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+    </Compartments>
+  </Class>
+  <Class Name="Sunset.Keywords.KWClassSizeOf" Collapsed="False">
+    <Position X="113.1" Y="3" Width="2.192633" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="False" />
+      <Compartment Name="Fields" Collapsed="False" />
+    </Compartments>
+  </Class>
+</ClassDiagram>
