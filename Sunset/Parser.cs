@@ -3233,8 +3233,15 @@ namespace Sunset {
                         var inst=staticInstances[initialClass.classID][pValue];
 
                         throwIfCantAccess(inst.Item3,pValue,initialClass.path,true);
+                        if (initialClass.constants.ContainsKey(pValue)) {
+                    
+                           this.addBytes(new Byte[]{0x68 }.Concat(BitConverter.GetBytes(initialClass.constants[pValue].Item1))); // PUSH DWORD
+                           return initialClass.constants[pValue].Item2;
+
+                        }
                         this.addBytes(new Byte[]{0xBF}.Concat(BitConverter.GetBytes(PEHeaderFactory.dataSectAddr+inst.Item1))); // MOV EDI,DWORD
                         UInt32 sz=this.keywordMgr.getVarTypeByteSize(inst.Item2.Item1);
+    				  
                         
                         this.addBytes(sz==1?
                                   new Byte[]{0x31,0xC0, //XOR EAX,EAX
@@ -3313,8 +3320,7 @@ namespace Sunset {
                     Console.WriteLine("unparsedParams: \""+unparsedParams+'"');
                     Console.WriteLine("3");
                     this.CallStaticClassFunc(initialClass,funcName,@params.ToArray());
-                    this.
-                    	addByte(0x50); //PUSH EAX
+                    this.addByte(0x50); //PUSH EAX
                     return function.Item2;
 
                   }

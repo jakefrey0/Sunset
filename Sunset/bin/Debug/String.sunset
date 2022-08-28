@@ -1,3 +1,12 @@
+acknowledge char  as byte
+acknowledge WCHAR as int
+; ASCII:
+static constant public char A becomes 65
+static constant public char a becomes 97
+static constant public char Z becomes 90
+static constant public char z becomes 122
+; -----
+
 public static func(str string) lengthOf int {
 	
 	int i becomes 0
