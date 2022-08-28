@@ -20,7 +20,7 @@ namespace Sunset.Keywords {
 		public override KeywordResult execute (Parser sender,String[] @params) {
 			
 			if (@params.Length!=1)
-				throw new ParsingError("Expected 1 parameter for \""+constName+"\", got "+@params.Length.ToString()+" parameters");
+				throw new ParsingError("Expected 1 parameter for \""+constName+"\", got "+@params.Length.ToString()+" parameters",sender);
 			
 			sender.addBytes(new Byte[]{0xB8}.Concat(BitConverter.GetBytes(sender.keywordMgr.getVarTypeByteSize(sender.pushValue(@params[0]).Item1)))); //MOV EAX,DWORD
 			sender.addBytes(new Byte[]{0x83,0xC4,4}); //ADD ESP,4

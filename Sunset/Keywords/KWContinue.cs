@@ -21,7 +21,7 @@ namespace Sunset.Keywords {
 		public override KeywordResult execute (Parser sender,String[] @params) {
 			
 			if (sender.blocks.Count==0)
-				throw new ParsingError("Can't continue outside of a block");
+				throw new ParsingError("Can't continue outside of a block",sender);
 			Block block=(sender.blocks.Keys.Where(x=>x.isLoopOrSwitchBlock).Count()==0)?sender.blocks.Keys.Last():sender.blocks.Keys.Where(x=>x.isLoopOrSwitchBlock).Last();
 			
 			sender.addByte(0xC9);
@@ -43,7 +43,7 @@ namespace Sunset.Keywords {
 			}
 			
 			if (block.continueAddress==0)
-				throw new ParsingError("Unexpected continue (its block does not support continue)");
+				throw new ParsingError("Unexpected continue (its block does not support continue)",sender);
 			
 			if (block.continueInstructions!=null)
 				newOpcodes.InsertRange(0,block.continueInstructions);

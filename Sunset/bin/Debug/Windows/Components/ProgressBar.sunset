@@ -1,0 +1,39 @@
+import(Windows/Components/Component)
+import(Windows/PaintMsg)
+import(Windows/Drawing/RECT)
+import(Windows/Drawing/POINT)
+import(Windows/MouseEventArgs)
+acknowledge HBRUSH as PTR
+acknowledge HDC as PTR
+dllref(User32,int) GetSysColorBrush HBRUSH
+dllref(User32,HDC,RECT,HBRUSH) FillRect int
+dllref(Gdi32,HDC,int,int,POINT) MoveToEx bool
+dllref(Gdi32,HDC,int,int) LineTo bool
+INHERIT(Component)
+
+public int x
+public int y
+public int progress
+public int width
+public int height
+public HBRUSH brush becomes GetSysColorBrush(8)
+
+public func(PaintMsg pm) onPaint {
+	RECT rc becomes new(RECT)
+	rc.left becomes x
+	rc.top becomes y
+	rc.right becomes rc.left+((((width*100)/100)*progress)/100)
+	rc.bottom becomes rc.top+height
+	FillRect(pm.hdc,rc,brush)
+	MoveToEx(pm.hdc,x,y-1,null)
+	LineTo(pm.hdc,x+width,y-1)
+	MoveToEx(pm.hdc,x-1,y-1,null)
+	LineTo(pm.hdc,x-1,y+height+1)
+	MoveToEx(pm.hdc,x,y+height,null)
+	LineTo(pm.hdc,x+width,y+height)
+	MoveToEx(pm.hdc,x+width,y-1,null)
+	LineTo(pm.hdc,x+width,y+height+1)
+
+}
+
+public func(MouseEventArgs e) onClick { crash }

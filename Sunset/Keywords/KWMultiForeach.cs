@@ -13,7 +13,7 @@ namespace Sunset.Keywords {
         public override KeywordResult execute(Parser sender,String[]@params) {
 
             if (@params.Length%2!=0)
-                throw new ParsingError("Expected a multiple of 2 parameters for \""+constName+"\". Format: \"item,array,item0,array0, ...\", each 2 items are a pair");
+                throw new ParsingError("Expected a multiple of 2 parameters for \""+constName+"\". Format: \"item,array,item0,array0, ...\", each 2 items are a pair",sender);
 
             IEnumerable<Tuple<String,String>>pairs=KWMultiForeach.pairCollection(@params);
             Tuple<String,String>firstPair=pairs.First();
@@ -47,15 +47,15 @@ namespace Sunset.Keywords {
             foreach (Tuple<String,String>pair in pairs) {
                 String arrName=pair.Item2,varName=pair.Item1;
                 if (sender.nameExists(varName))
-                    throw new ParsingError("Multi-foreach iteration variable name \""+varName+"\" is already in use");
+                    throw new ParsingError("Multi-foreach iteration variable name \""+varName+"\" is already in use",sender);
                 if (varName.Any(x=>!Char.IsLetterOrDigit(x)))
-                    throw new ParsingError("Invalid foreach iteration variable name \""+varName+"\" (should be alphanumeric)");
+                    throw new ParsingError("Invalid foreach iteration variable name \""+varName+"\" (should be alphanumeric)",sender);
                 // EBX can be preserved throughout the whole loop so it doesn't have to constantly run pushValue instructions
                 // (but it doesn't happen here, it is an optimization idea)
                 Tuple<String,VarType>vt=sender.pushValue(arrName);
                 sender.addByte(0x5B);
                 if (vt.Item2!=VarType.NATIVE_ARRAY) 
-                    throw new ParsingError("Expected var of type array, got \""+arrName+"\" of type \""+vt.Item1+"\" (\""+vt.Item2.ToString()+"\")");
+                    throw new ParsingError("Expected var of type array, got \""+arrName+"\" of type \""+vt.Item1+"\" (\""+vt.Item2.ToString()+"\")",sender);
                 sender.addBytes(new Byte[]{0x8B,0x43,4}); //MOV EAX,[EBX+4]
                 sender.addBytes(new Byte[]{0xF7,0xE1}); //MUL ECX
                 sender.addBytes(new Byte[]{1,0xD8}); //ADD EAX,EBX

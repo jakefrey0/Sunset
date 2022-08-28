@@ -21,7 +21,7 @@ namespace Sunset.Keywords {
 		public override KeywordResult execute (Parser sender,String[]@params) {
 			
 			if (@params.Length!=3&&@params.Length!=1)
-				throw new ParsingError("Expected 3 or 1 necessary parameters for \""+constName+'"');
+				throw new ParsingError("Expected 3 or 1 necessary parameters for \""+constName+'"',sender);
 			
 			List<Byte>newOpcodes=new List<Byte>();
 			UInt32 cMemAddr=sender.GetStaticInclusiveAddress();
@@ -87,7 +87,7 @@ namespace Sunset.Keywords {
 					newOpcodes.AddRange(new Byte[]{0x0F,0x84,0,0,0,0});//JZ
 					
 				}
-				else throw new ParsingError("Invalid boolean operator \""+boolOp+'"');
+				else throw new ParsingError("Invalid boolean operator \""+boolOp+'"',sender);
 				
 				whileBlock.startMemAddr+=(UInt32)newOpcodes.Count+(sender.GetStaticInclusiveOpcodesCount().index-opcodesCountAtStart);
 				newOpcodes.AddRange(sender.getEnterBlockOpcodes(whileBlock,newOpcodes.Count));
@@ -106,9 +106,9 @@ namespace Sunset.Keywords {
 				}
 				Tuple<String,VarType>result=sender.pushValue(@params[0]);
 				if (result.Item2!=VarType.NATIVE_VARIABLE)
-					throw new ParsingError("Expected a native variable as if statement parameters (did you mean to use the 3 parameters syntax?)");
+					throw new ParsingError("Expected a native variable as if statement parameters (did you mean to use the 3 parameters syntax?)",sender);
 				else if (result.Item1!=KWBoolean.constName)
-					throw new ParsingError("Expected a boolean variable as if statement parameters (did you mean to use the 3 parameters syntax?)");
+					throw new ParsingError("Expected a boolean variable as if statement parameters (did you mean to use the 3 parameters syntax?)",sender);
 				
 				newOpcodes.Add(0x58);//POP EAX
 				newOpcodes.AddRange(new Byte[]{0x84,0xC0});//TEST AL,AL

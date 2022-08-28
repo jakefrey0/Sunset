@@ -10,7 +10,7 @@ namespace Sunset.Keywords {
         public override KeywordResult execute(Parser sender,String[]@params) {
 
             sender.nextExpectedKeywordTypes=new KeywordType[]{KeywordType.MODIFIER,KeywordType.TYPE,KeywordType.FUNCTION };
-            sender.currentMods.throwIfhasAccessorModifier();
+            sender.currentMods.throwIfhasAccessorModifier(sender);
             sender.currentMods=sender.currentMods|Modifier.LOCAL;
             return base.execute(sender, @params);
 

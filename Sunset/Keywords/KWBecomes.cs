@@ -19,7 +19,7 @@ namespace Sunset.Keywords {
 		override public KeywordResult execute (Parser sender,String[] @params) {
 			
 			if (String.IsNullOrEmpty(sender.lastReferencedVariable))
-				throw new ParsingError("Invalid use of \""+constName+"\", no referenced variable found");
+				throw new ParsingError("Invalid use of \""+constName+"\", no referenced variable found",sender);
 			
 			sender.referencedVariable=sender.lastReferencedVariable;
 			sender.referencedVarType=sender.lastReferencedVarType;

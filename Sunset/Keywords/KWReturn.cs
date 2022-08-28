@@ -21,8 +21,8 @@ namespace Sunset.Keywords {
 			
 			if (@params.Length==0) {
 				
-				if (sender.inFunction&&sender.functions.Last().Value.Item2!=null)
-					throw new ParsingError("Expected return value");
+				if (sender.inFunction&&sender.functions.Last().Value.returnType!=null)
+					throw new ParsingError("Expected return value",sender);
 				
 				if (sender.inFunction) {
 					exitBlocks(sender);
@@ -41,7 +41,7 @@ namespace Sunset.Keywords {
 			else {
 				
 				if (@params.Length!=1)
-					throw new ParsingError("Expected 1 or 0 parameters for \""+constName+'"');
+					throw new ParsingError("Expected 1 or 0 parameters for \""+constName+'"',sender);
 				
 				Tuple<String,VarType>retType=sender.pushValue(@params[0]);
 				
@@ -58,14 +58,14 @@ namespace Sunset.Keywords {
 				
 				this.exitBlocks(sender);
 				
-				if (sender.functions.Last().Value.Item2==null)
-					throw new ParsingError("Did not expect return value");
+				if (sender.functions.Last().Value.returnType==null)
+					throw new ParsingError("Did not expect return value",sender);
 				
-				if ((sender.functions.Last().Value.Item2.Item2==VarType.NATIVE_VARIABLE&&retType.Item1!=KWString.constName)||sender.keywordMgr.getVarTypeByteSize(sender.functions.Last().Value.Item2.Item1)>=sender.keywordMgr.getVarTypeByteSize(retType.Item1))
+				if ((sender.functions.Last().Value.returnType.Item2==VarType.NATIVE_VARIABLE&&retType.Item1!=KWString.constName)||sender.keywordMgr.getVarTypeByteSize(sender.functions.Last().Value.returnType.Item1)>=sender.keywordMgr.getVarTypeByteSize(retType.Item1))
 					goto skipCheck;
 				
-				if (!sender.functions.Last().Value.Item2.Equals(retType))
-					throw new ParsingError("Unexpected variable return type (Expected \""+sender.functions.Last().Value.Item2.Item1+"\" of \""+sender.functions.Last().Value.Item2.Item2+"\", yet the return value was \""+retType.Item1+"\" of \""+retType.Item2+"\")");
+				if (!sender.functions.Last().Value.returnType.Equals(retType))
+					throw new ParsingError("Unexpected variable return type (Expected \""+sender.functions.Last().Value.returnType.Item1+"\" of \""+sender.functions.Last().Value.returnType.Item2+"\", yet the return value was \""+retType.Item1+"\" of \""+retType.Item2+"\")",sender);
 				
 				skipCheck:
 				

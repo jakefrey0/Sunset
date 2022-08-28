@@ -23,12 +23,12 @@ namespace Sunset.Keywords {
 		public override KeywordResult execute(Parser sender,String[] @params) {
 			
 			if (@params.Length==0)
-				throw new ParsingError("Expected at least 1 parameter for \""+constName+"\" (func address as \""+KWInteger.constName+"\", + optional function parameters)");
+				throw new ParsingError("Expected at least 1 parameter for \""+constName+"\" (func address as \""+KWInteger.constName+"\", + optional function parameters)",sender);
 			
 			outputType=Parser.FUNC_PTR;
             Tuple<String,VarType>inputType=sender.pushValue(@params[0]);
 			if (!inputType.Equals(outputType))
-				throw new ParsingError("Expected a FUNCTION POINTER (\""+Parser.FUNC_PTR_STR+"\") as the first parameter of \""+constName+"\", as the func address! (Got: "+inputType.Item1+')');
+				throw new ParsingError("Expected a FUNCTION POINTER (\""+Parser.FUNC_PTR_STR+"\") as the first parameter of \""+constName+"\", as the func address! (Got: "+inputType.Item1+')',sender);
 			
 			Byte i=0;
 			

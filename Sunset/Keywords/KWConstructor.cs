@@ -22,10 +22,10 @@ namespace Sunset.Keywords {
 		public override KeywordResult execute(Parser sender,String[] @params) {
 			
 			if (sender.inFunction)
-				throw new ParsingError("Tried to make a constructor inside of a function");
+				throw new ParsingError("Tried to make a constructor inside of a function",sender);
 			
 			if (sender.constructor!=null)
-				throw new ParsingError("Constructor already exists, and the \""+KWConstructor.constName+"\" keyword was called");
+				throw new ParsingError("Constructor already exists, and the \""+KWConstructor.constName+"\" keyword was called",sender);
 			
 			OpcodeIndexReference pos=sender.GetStaticInclusiveOpcodesCount(1);
 			sender.addBytes(new Byte[]{0xE9,0,0,0,0});
@@ -57,7 +57,7 @@ namespace Sunset.Keywords {
 				
 				String[]split=s.Split(' ');
 				if (split.Length!=2)
-					throw new ParsingError("Invalid function declaration parameter: \""+s+'"');
+					throw new ParsingError("Invalid function declaration parameter: \""+s+'"',sender);
 				
 				String unparsedType=split[0],varName=split[1];
 				

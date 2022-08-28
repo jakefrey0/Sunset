@@ -10,3 +10,9 @@ C:\Users\usr\Documents\GitHub\ProgrammingLanguageTutorialIdea\Sunset\bin\Debug\S
 C:\Users\usr\Documents\GitHub\ProgrammingLanguageTutorialIdea\Sunset\obj\Debug\Sunset.csprojResolveAssemblyReference.cache
 C:\Users\usr\Documents\GitHub\ProgrammingLanguageTutorialIdea\Sunset\obj\Debug\Sunset.exe
 C:\Users\usr\Documents\GitHub\ProgrammingLanguageTutorialIdea\Sunset\obj\Debug\Sunset.pdb
+C:\Users\usr\Documents\GitHub\Sunset\Sunset\obj\Debug\Sunset.csprojResolveAssemblyReference.cache
+C:\Users\usr\Documents\GitHub\Sunset\Sunset\obj\Debug\Sunset.exe
+C:\Users\usr\Documents\GitHub\Sunset\Sunset\obj\Debug\Sunset.pdb
+C:\Users\usr\Documents\GitHub\Sunset\Sunset\bin\Debug\Sunset.exe.config
+C:\Users\usr\Documents\GitHub\Sunset\Sunset\bin\Debug\Sunset.exe
+C:\Users\usr\Documents\GitHub\Sunset\Sunset\bin\Debug\Sunset.pdb

@@ -19,17 +19,17 @@ namespace Sunset {
 
         public static Boolean hasAccessorModifier (this Modifier mod) { return mod>=Modifier.PUBLIC; }
 
-        public static void throwIfhasAccessorModifier (this Modifier mod) { 
+        public static void throwIfhasAccessorModifier (this Modifier mod,Parser psr) { 
 
             if (mod.hasAccessorModifier())
-                throw new ParsingError("Can't add multiple accessor modifiers to an instance");
+                throw new ParsingError("Can't add multiple accessor modifiers to an instance",psr);
 
         }
 
         public static void throwModErrIfInBlock (this Parser psr) { 
 
             if (psr.blocks.Count!=0)
-                throw new ParsingError("Can't place modifiers inside of a block");
+                throw new ParsingError("Can't place modifiers inside of a block",psr);
 
         }
 

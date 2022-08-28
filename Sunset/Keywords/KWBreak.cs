@@ -21,7 +21,7 @@ namespace Sunset.Keywords {
 		public override KeywordResult execute (Parser sender,String[]@params) {
 			
 			if (sender.blocks.Count==0)
-				throw new ParsingError("Can't break outside of a block");
+				throw new ParsingError("Can't break outside of a block",sender);
 			
 			Action ac=null;
 			Block block=(sender.blocks.Keys.Where(x=>x.isLoopOrSwitchBlock).Count()==0)?sender.blocks.Keys.Last():sender.blocks.Keys.Where(x=>x.isLoopOrSwitchBlock).Last();

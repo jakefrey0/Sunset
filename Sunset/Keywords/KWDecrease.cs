@@ -19,7 +19,7 @@ namespace Sunset.Keywords {
 		override public KeywordResult execute (Parser sender,String[] @params) {
 			
 			if (String.IsNullOrEmpty(sender.lastReferencedVariable))
-				throw new ParsingError("Invalid use of \""+constName+"\", no referenced variable found");
+				throw new ParsingError("Invalid use of \""+constName+"\", no referenced variable found",sender);
 			
 			
 			Byte[] newOpcodes=new Byte[0];
@@ -47,7 +47,7 @@ namespace Sunset.Keywords {
 				
 				
 			}
-			else throw new ParsingError("Can't decrease variable type \""+varType+'"');
+			else throw new ParsingError("Can't decrease variable type \""+varType+'"',sender);
 			
 			return new KeywordResult(){newStatus=ParsingStatus.SEARCHING_NAME,newOpcodes=newOpcodes};
 			

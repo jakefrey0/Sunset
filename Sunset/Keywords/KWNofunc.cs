@@ -43,13 +43,13 @@ namespace Sunset.Keywords {
 						Console.ReadKey(true);
 						break;
 					default:
-						throw new ParsingError("Invalid compiler instruction for \""+constName+"\": \""+@params[0]+"\"");
+						throw new ParsingError("Invalid compiler instruction for \""+constName+"\": \""+@params[0]+"\"",sender);
 						
 				}
 				
 			}
 			else if (@params.Length!=0)
-				throw new ParsingError("Expected 1 or 0 parameters for \""+constName+'"');
+				throw new ParsingError("Expected 1 or 0 parameters for \""+constName+'"',sender);
 			
 			
 //			Console.ReadKey();

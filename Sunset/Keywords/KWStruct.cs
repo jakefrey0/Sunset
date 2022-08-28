@@ -19,9 +19,12 @@ namespace Sunset.Keywords {
 		public override KeywordResult execute(Parser sender,String[]@params) {
 			
 			Keyword.throwIfShouldBeHeader(sender,constName);
+			if (sender.inheritedClasses.Count!=0) throw new ParsingError("Can't inherit classes as a struct",sender);
 			
 			sender.@struct=true;
 			sender.style=ArrayStyle.STATIC_MEMORY_BLOCK;
+			if (sender.tableAddrIndex!=0)
+				sender.clearOpcodes();
 			
 			return base.execute(sender,@params);
 			

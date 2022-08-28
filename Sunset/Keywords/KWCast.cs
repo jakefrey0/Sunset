@@ -10,7 +10,7 @@ namespace Sunset.Keywords {
         public override KeywordResult execute(Parser sender,String[] @params) {
 
             if (@params.Length!=2)
-                throw new ParsingError("Expected 2 parameters for \""+constName+"\", instance name and variable type respectively");
+                throw new ParsingError("Expected 2 parameters for \""+constName+"\", instance name and variable type respectively",sender);
 
             Tuple<String,VarType>firstType=sender.pushValue(@params[0]),secondType=sender.getVarType(@params[1]);
 

@@ -1,0 +1,69 @@
+import(Windows/PaintMsg)
+import(List<str>)
+import(Windows/Drawing/POINT)
+import(Windows/Components/Component)
+import(Windows/Drawing/SIZE)
+import(String)
+import(Windows/Components/ListBoxEntry)
+import(List<ListBoxEntry>)
+import(Windows/MouseEventArgs)
+import(Windows/MessageBox)
+acknowledge HBRUSH as PTR
+acknowledge HDC as PTR
+acknowledge HWND as PTR
+dllref(Gdi32,HDC,int,int,POINT) MoveToEx bool
+dllref(Gdi32,HDC,int,int) LineTo bool
+dllref(Gdi32,HDC,str,int,SIZE) GetTextExtentPoint32A bool
+dllref(User32,HWND) GetDC HDC
+dllref(Gdi32,HDC,int,int,str,int) TextOutA bool
+
+INHERIT(Component)
+public int x
+public int y
+public int width
+public int height
+public List<ListBoxEntry> entries becomes new(List<ListBoxEntry>)
+public func(PaintMsg pm) onPaint {
+	
+	MoveToEx(pm.hdc,x,y-1,null)
+	LineTo(pm.hdc,x+width,y-1)
+	MoveToEx(pm.hdc,x-1,y-1,null)
+	LineTo(pm.hdc,x-1,y+height+1)
+	MoveToEx(pm.hdc,x,y+height,null)
+	LineTo(pm.hdc,x+width,y+height)
+	MoveToEx(pm.hdc,x+width,y-1,null)
+	LineTo(pm.hdc,x+width,y+height+1)
+	
+	SIZE s becomes new(SIZE)
+	int yOffset becomes 1
+	int strlen
+	HDC wdc becomes GetDC(pm.windowHandle)
+	foreach (entry,entries.toArray) {
+		strlen becomes String.lengthOf(entry.text)
+		GetTextExtentPoint32A(wdc,entry.text,strlen,s)
+		while (s.cx,>=,width) {
+			strlen becomes strlen-1
+			GetTextExtentPoint32A(wdc,entry.text,strlen,s)
+		}
+		if (yOffset+s.cy,>=,height) { break }
+		TextOutA(pm.hdc,x+1,y+yOffset,entry.text,strlen)
+		MoveToEx(pm.hdc,x,y+yOffset+s.cy+2,null)
+		LineTo(pm.hdc,x+width,y+yOffset+s.cy+2)
+		entry.top becomes y+yOffset
+		yOffset becomes yOffset+s.cy+3
+		entry.bottom becomes y+yOffset-1
+	}
+}
+
+public func(MouseEventArgs e) onClick {
+	int i becomes 0
+	foreach (entry,entries.toArray) {
+		if (e.y,>=,entry.top) {
+			if (e.y,<=,entry.bottom) {
+				ListBoxEntry lbe becomes entries.get(i)
+				lbe.onClick.raise(e)
+			}
+		}
+		++i
+	}
+}

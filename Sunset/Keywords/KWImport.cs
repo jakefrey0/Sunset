@@ -23,9 +23,10 @@ namespace Sunset.Keywords {
 		public override KeywordResult execute (Parser sender,String[]@params) {
 			
 			if (@params.Length!=1)
-				throw new ParsingError("Invalid param count for native call \""+KWImport.constName+"\" (expected 1)");
+				throw new ParsingError("Invalid param count for native call \""+KWImport.constName+"\" (expected 1)",sender);
 			
 			Console.WriteLine(" ! ------------- KWImport#execute");
+			UInt32 bgnInstanceId=Parser.instanceID;
 			
 			String fp=@params[0];
 			List<Tuple<String,Tuple<String,VarType>>>passedTypes=null;
@@ -49,7 +50,7 @@ namespace Sunset.Keywords {
 						sb.Append(c);
 					}
 					else if (sender.endsPassingTypes(c)) {
-						if (sbb==0) throw new ParsingError("Unbalanced sharp brackets (in "+constName+')');
+						if (sbb==0) throw new ParsingError("Unbalanced sharp brackets (in "+constName+')',sender);
 						--sbb;
 						sb.Append(c);
 					}
@@ -95,13 +96,13 @@ namespace Sunset.Keywords {
 				if (!File.Exists(fp)) {
 
                     if (!sender.hasAttatchedProject)
-                        throw new ParsingError("Invalid param for \""+constName+"\", should be a valid filepath! (Got \""+fp+"\")");
+                        throw new ParsingError("Invalid param for \""+constName+"\", should be a valid filepath! (Got \""+fp+"\")",sender);
 
                     fp=sender.attatchedProject.projPath+'\\'+fp;
                     if (!File.Exists(fp)) {
                         fp=String.Concat(fp.Take(fp.Length-7));
                         if (!File.Exists(fp))
-                            throw new ParsingError("Invalid param for \""+constName+"\", should be a valid filepath! (Got \""+fp+"\")");
+                            throw new ParsingError("Invalid param for \""+constName+"\", should be a valid filepath! (Got \""+fp+"\")",sender);
                     }
 
                 }
@@ -140,7 +141,7 @@ namespace Sunset.Keywords {
 					sender.winApp=true;
 				
 				else
-					throw new ParsingError("An import referenced a DLL, which are compatible with only Windows apps ("+fp+")");
+					throw new ParsingError("An import referenced a DLL, which are compatible with only Windows apps ("+fp+")",sender);
 				
 			}
 			
@@ -187,7 +188,7 @@ namespace Sunset.Keywords {
             }
 
 			if (sender.importedClasses.Select(x=>x.className).Contains(className))
-				throw new ParsingError("Class (with same name) already imported: \""+className+'"');
+				throw new ParsingError("Class (with same name) already imported: \""+className+'"',sender);
 
             Class cl;
 		    if (Parser.classByIDs.ContainsKey(id))
@@ -201,6 +202,8 @@ namespace Sunset.Keywords {
 
 			if (!sender.keywordMgr.classWords.Contains(className))
 				sender.keywordMgr.classWords.Add(className);
+			
+			sender.instanceTable.AddRange(new UInt32[Parser.instanceID-bgnInstanceId]);
 
 			return base.execute(sender, @params);
 			

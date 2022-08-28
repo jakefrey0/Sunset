@@ -1,0 +1,8 @@
+import(Windows/PaintMsg)
+import(Windows/MouseEventArgs)
+public int x
+public int y
+public int width
+public int height
+public func(PaintMsg pm) onPaint { }
+public func(MouseEventArgs e) onClick { }

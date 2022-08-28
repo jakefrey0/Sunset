@@ -1,0 +1,7 @@
+public static func(str string) lengthOf int {
+	
+	int i becomes 0
+	foreach (b,string) { ++i }
+	retn(i)
+	
+}

@@ -10,7 +10,7 @@ namespace Sunset.Keywords {
         public override KeywordResult execute(Parser sender,String[]@params) {
 
             if (String.IsNullOrEmpty(sender.rTypeDefinition))
-                throw new ParsingError("Got keyword \""+constName+"\" outside of a type acknowledgement context");
+                throw new ParsingError("Got keyword \""+constName+"\" outside of a type acknowledgement context",sender);
 
             sender.nextExpectedKeywordTypes=new KeywordType[]{KeywordType.TYPE};
             return base.execute(sender,@params);

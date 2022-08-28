@@ -12,6 +12,7 @@ using Sunset.Keywords;
 using System.Linq;
 using Sunset.Stack;
 using System.Runtime.InteropServices;
+using Sunset.VarTypes;
 
 namespace Sunset {
 	
@@ -27,6 +28,7 @@ namespace Sunset {
 
          public static List<Byte>dataSectBytes=new List<Byte>();
 
+         internal static UInt32 instanceID=0;
          public static UInt32 processHeapVar=UInt32.MaxValue;//Mem Addr, References
 
 		public readonly String parserName;
@@ -54,7 +56,7 @@ namespace Sunset {
 		internal Boolean lastReferencedVariableIsLocal,lastReferencedVariableIsFromClass,lastReferencedVariableIsStatic;
 		
 		internal VarType lastReferencedVarType=VarType.NONE,referencedVarType=VarType.NONE;
-		internal String varType;
+		internal String varType,lastDataToParse;
 		internal Dictionary<String,List<UInt32>> variableReferences=new Dictionary<String,List<UInt32>>(),//Name,(Index in the Opcodes List)
 												 arrayReferences=new Dictionary<String,List<UInt32>>(),//Name,(Index in the Opcodes List)
 												 classReferences=new Dictionary<String,List<UInt32>>();//Name,(Index in the Opcodes List)
@@ -87,12 +89,11 @@ namespace Sunset {
 		internal Boolean expectsBlock=false,expectsElse=false,searchingFunctionReturnType=false,inFunction=false,@struct=false,inConstructor=false;
 		internal Byte setExpectsElse=0,setExpectsBlock=0;
 		
-		internal Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>> functions;//Function Name,(Memory Address,(Return Type, Return Var Type),No. of expected parameters,Function Type,Calling Convention,Modifiers)
+		internal Dictionary<String,Function> functions;//Function Name,(Memory Address,(Return Type, Return Var Type),No. of expected parameters,Function Type,Calling Convention,Modifiers,Instance ID)
 		internal Tuple<UInt32,List<Tuple<String,VarType>>> constructor;//Memory Address,Func Param Types
 		internal Dictionary<String,List<Tuple<UInt32,UInt32>>> functionReferences;//Function Name,(Indexes in Opcodes of the reference,Memory Address at time of Reference)
 		internal UInt16 nextFunctionParamsCount;
-		internal Dictionary<String,List<Tuple<String,VarType>>> functionParamTypes;//Function Name,Var Type
-		internal Tuple<String,VarType>[] nextFunctionParamTypes;
+		internal ValueTuple<String,VarType>[] nextFunctionParamTypes;
          internal Dictionary<String,List<OpcodeIndexReference>> referencedFuncPositions;//FuncName,Opcode pos
 		
 		internal readonly Action elseBlockClosed;
@@ -128,7 +129,8 @@ namespace Sunset {
 		internal List<String> defineTimeOrder;
 		internal List<UInt32>esiFuncReferences=new List<UInt32>();
          internal List<Byte>appendAfterStaticFunc=new List<Byte>();
-		
+         internal List<Class>inheritedClasses=new List<Class>();
+         
 		internal Boolean addEsiToLocalAddresses=false;
 		/// <summary>
 		/// (esiOffsetFromStart) Only set if addEsiToLocalAddresses is true
@@ -146,12 +148,25 @@ namespace Sunset {
          internal Dictionary<String,List<Tuple<UInt32,UInt32>>>labelReferences=new Dictionary<String,List<Tuple<UInt32,UInt32>>>(); // Name of label,(Opcode Index, Mem Address at exact point of Reference before the long jump opcode)
          internal Modifier currentMods=Modifier.NONE;
          internal Dictionary<String,UInt32>importedClassAppendAfterIndex=new Dictionary<String,UInt32>();//Imported Class (not class instance), start index in appendAfter
-
+		internal Dictionary<String,Function> inhFuncsToDefine;//Function Name,(Memory Address,(Return Type, Return Var Type),No. of expected parameters,Function Type,Calling Convention,Modifiers)
+		internal Dictionary<String,Tuple<UInt32,String,Modifier,UInt32>> inhVarsToDefine=new Dictionary<String,Tuple<UInt32,String,Modifier,UInt32>>();//Name,(Mem Address,Var Type,Modifiers,)
+		internal Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>> inhArrsToDefine=new Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>>();//Name,(Mem Address,Var Type,Modifiers,Instance ID)
+		internal Dictionary<String,Tuple<UInt32,String,Class,Modifier,UInt32>> inhClassesToDefine=new Dictionary<String,Tuple<UInt32,String,Class,Modifier,UInt32>>();//Name,(Ptr To Mem Address of Heap Handle,Class type name,Class type),Modifier,Instance ID
+       	internal UInt32 inhTblAppendAfterIndex,tableAddrIndex;
+       	internal Int32 charCtr=-1;
+         internal List<UInt32>instanceTable=new List<UInt32>((Int32)instanceID);
+         //test esi,esi
+         //jnz 11
+         // mov esi, dword
+         // mov edx, dword
+         // retn
+         internal Byte[]tableFuncBytes=new Byte[]{0x85,0xF6,0x75,11,0xBE,0,0,0,0,0xBA,0,0,0,0,0xC3};
+         
 		private List<Byte> opcodes=new List<Byte>(),importOpcodes=null,finalBytes=new List<Byte>(),appendAfter=new List<Byte>();
 		private ParsingStatus status;
-		private Dictionary<String,Tuple<UInt32,String,Modifier>> variables=new Dictionary<String,Tuple<UInt32,String,Modifier>>();//Name,(Mem Address,Var Type,Modifiers)
-		private Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier>> arrays=new Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier>>();//Name,(Ptr To Mem Address of Heap Handle(Dynamic) or Mem Block(Static),Array Var Type,ArrayStyle(Dynamic or Static),Modifiers)
-		private Dictionary<String,Tuple<UInt32,String,Class,Modifier>> classes=new Dictionary<String,Tuple<UInt32,String,Class,Modifier>>();//Name,(Ptr To Mem Address of Heap Handle,Class type name,Class type),Modifier
+		private Dictionary<String,Tuple<UInt32,String,Modifier,UInt32>> variables=new Dictionary<String,Tuple<UInt32,String,Modifier,UInt32>>();//Name,(Mem Address,Var Type,Modifiers,Instance ID)
+		private Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>> arrays=new Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>>();//Name,(Ptr To Mem Address of Heap Handle(Dynamic) or Mem Block(Static),Array Var Type,ArrayStyle(Dynamic or Static),Modifiers),Instance ID
+		private Dictionary<String,Tuple<UInt32,String,Class,Modifier,UInt32>> classes=new Dictionary<String,Tuple<UInt32,String,Class,Modifier,UInt32>>();//Name,(Ptr To Mem Address of Heap Handle,Class type name,Class type),Modifier,Instance ID
 		private List<UInt32>int32sToSubtractByFinalOpcodesCount=new List<UInt32>();
 		private List<String>pvClassInstanceOrigin;
          private Dictionary<String,UInt32>labels=new Dictionary<String,UInt32>();//Name, Mem Address
@@ -164,6 +179,7 @@ namespace Sunset {
 		private UInt16 squareBracketBalance=0,roundBracketBalance=0,nestedLevel=0;
 		private Int16 sharpbb=0;
 		private UInt32 freeHeapsMemAddr,esiFuncVarIndex=0;
+		private const UInt32 tableAddrIndexConst=5,appendAfterIndexConst=10;
 		private Boolean attemptingClassAccess=false,gettingClassItem=false,clearNextPvOrigin=false;
          private String constantBeingSet=null,ID;
 		
@@ -193,7 +209,7 @@ namespace Sunset {
 					
                     Int32 index=@ref.GetIndexAsInt();
 					Int32 prevNum=(@ref.type==OpcodeIndexType.CODE_SECT_REFERENCE?BitConverter.ToInt32(new []{opcodes[index],opcodes[index+1],opcodes[index+2],opcodes[index+3]},0):BitConverter.ToInt32(new []{dataSectBytes[index],dataSectBytes[index+1],dataSectBytes[index+2],dataSectBytes[index+3]},0));
-					Byte[]newNum=BitConverter.GetBytes(prevNum+5);//5 because the opcodes are 0xE9,Integer.... (See KWElse -> JMP TO MEM ADDR)
+					Byte[]newNum=BitConverter.GetBytes(prevNum+5);//5 because the opcodes are 0xE9,Dword.... (See KWElse -> JMP TO MEM ADDR)
 					
 					Console.WriteLine("Updating index: "+index+" (Calculated Mem Addr: "+(0x00401000+index).ToString("X")+") to "+(prevNum+5));
 					
@@ -208,10 +224,10 @@ namespace Sunset {
 				}
 				
 			};
-			functions=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>>();
+			functions=new Dictionary<String,Function>();
+			inhFuncsToDefine=new Dictionary<String,Function>();
 			functionReferences=new Dictionary<String,List<Tuple<UInt32,UInt32>>>();
 			freeHeapsRefs=new List<UInt32>();
-			functionParamTypes=new Dictionary<String,List<Tuple<String,VarType>>>();
 			enterPositions=new Dictionary<Block,UInt32>();
 			blockVariablesCount=new Dictionary<Block,UInt16>();
 			blockAddrBeforeAppendingReferences=new Dictionary<Block,List<Tuple<UInt32,Int16>>>();
@@ -224,7 +240,6 @@ namespace Sunset {
 			this.fillToNextPage=fillToNextPage;
 			this.writeImportSection=writeImportSection;
 			importedClasses=new List<Class>();
-			classes=new Dictionary<String,Tuple<UInt32,String,Class,Modifier>>();
 			staticClassReferences=new Dictionary<Class,List<OpcodeIndexReference>>();
 			defineTimeOrder=new List<String>();
 			pvClassInstanceOrigin=new List<String>();
@@ -234,21 +249,30 @@ namespace Sunset {
             keywordMgr.acknowledgements.Add(PTR_STR,KWInteger.constName);
             keywordMgr.acknowledgements.Add(FUNC_PTR_STR,KWInteger.constName);
             this.fileName=fileName;
+            instanceTable.AddRange(new UInt32[instanceTable.Capacity]);
             if (className==null) className=KWImport.GetClassName(fileName);
 			ID=KWImport.CreateClassID(fileName,className);
             if (!staticInstances.ContainsKey(ID))
                 staticInstances.Add(ID,new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier,Class>>());
             if (!staticFunctions.ContainsKey(ID))
                 staticFunctions.Add(ID,new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>>());
-
+            
 			Console.WriteLine("Parser \""+parserName+"\" skipHdr:"+skipHdr.ToString());
-			
+           
 		}
 		
 		public Byte[] parse (String data) {
 			
-			if (addEsiToLocalAddresses)
+			if (addEsiToLocalAddresses) {
 				this.pseudoStack.push(new EsiPtr());
+            	//TEST ESI,ESI
+            	//JNZ 11
+            	//MOV ESI,0
+            	//MOV EDX,0
+            	//RETN
+            	tableAddrIndex=tableAddrIndexConst;//should be opcodes.Count + 5 if opcodes are added before this
+            	this.addBytes(tableFuncBytes);
+            }
 			
 			status=ParsingStatus.SEARCHING_NAME;
 			StringBuilder nameReader=new StringBuilder();
@@ -260,7 +284,9 @@ namespace Sunset {
 			Boolean inDoubleQuotes=false,readAlphaNumeric=false;
 			UInt16 rbbrv=0,sharprv=0;
 			
+			lastDataToParse=data;
 			data+=' ';
+			charCtr=0;
 			
 			foreach (Char c in data) {
 				
@@ -281,6 +307,7 @@ namespace Sunset {
 				}
 				
 				switchStart:
+				++charCtr;
 				switch (status) {
 
                     case ParsingStatus.SEARCHING_TYPE_DEFINITION_NAME:
@@ -323,9 +350,15 @@ namespace Sunset {
     								
     								n+=c;
                                     String fn=this.functions.Last().Key;
-    								this.functions[fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.getVarType(n),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+                                    Function f=functions[fn];
+                                    this.functions[fn]=new Function(f.memAddr,getVarType(n),f.expectedParameterCount,f.functionType,f.callingConvention,f.modifier,f.parameterTypes,f.instanceID,f.isInherited);
+    								if (this.inhFuncsToDefine.ContainsKey(fn)) {
+										if ((this.inhFuncsToDefine[fn].returnType==null&&functions[fn].returnType!=null)||!this.inhFuncsToDefine[fn].returnType.Equals(this.functions[fn].returnType))
+											throw new ParsingError("Expected "+(inhFuncsToDefine[fn].returnType==null?"no return type":"return type \""+inhFuncsToDefine[fn].returnType.Item1+"\" of \""+inhFuncsToDefine[fn].returnType.Item2+"\"")+ " for func \""+fn+"\".",this);
+										this.inhFuncsToDefine.Remove(fn);
+									}
     								if (staticFunctions[ID].ContainsKey(fn))
-                                        staticFunctions[ID][fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.getVarType(n),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+    									staticFunctions[ID][fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(f.memAddr,this.getVarType(n),f.expectedParameterCount,f.functionType,f.callingConvention,f.modifier);
                                     status=ParsingStatus.SEARCHING_NAME;
     								this.setExpectsBlock=1;
     								
@@ -355,7 +388,7 @@ namespace Sunset {
 						else if (this.opensBlock(c)) {
 							
 							if (!(this.expectsBlock))
-								throw new ParsingError("Got \""+c+"\" but did not expect block");
+								throw new ParsingError("Got \""+c+"\" but did not expect block",this);
 							
 							this.updateBlockBalances(c);
 							
@@ -365,7 +398,7 @@ namespace Sunset {
 						else if (this.closesBlock(c)) {
 							
 							if (this.blockBracketBalances.Count==0)
-								throw new ParsingError("Tried to close block, when no block detected");
+								throw new ParsingError("Tried to close block, when no block detected",this);
 							
 							this.updateBlockBalances(c);
 							
@@ -384,7 +417,7 @@ namespace Sunset {
 						}
 						else if (this.endsPassingTypes(c)) {
 							
-							if (sharprv==0) throw new ParsingError("Unbalanced sharp ('<', '>') brackets");
+							if (sharprv==0) throw new ParsingError("Unbalanced sharp ('<', '>') brackets",this);
 							--sharprv;
 							nameReader.Append(c);
 							
@@ -578,12 +611,12 @@ namespace Sunset {
 							if (funcName.Any(x=>this.isCallingConventionIdentifier(x))) {
 								
 								if (this.nextType==FunctionType.SUNSET)
-									throw new ParsingError("Did not expect calling convention for Sunset defined function (calling convention is stdcall)");
+									throw new ParsingError("Did not expect calling convention for Sunset defined function (calling convention is stdcall)",this);
 								else if (this.nextType==FunctionType.DLL_REFERENCED) {
 									
 									String[]sp=funcName.Split(':');
 									if (sp.Length!=2)
-										throw new ParsingError("Invalid syntax for calling convention identifier");
+										throw new ParsingError("Invalid syntax for calling convention identifier",this);
 									
 									funcName=sp[1];
 									switch (sp[0].ToLower()) {
@@ -595,9 +628,9 @@ namespace Sunset {
 											break;
 										case "fastcall":
 										case "thiscall":
-											throw new ParsingError("Calling convention not supported: \""+sp[0]+'"');
+											throw new ParsingError("Calling convention not supported: \""+sp[0]+'"',this);
 										default:
-											throw new ParsingError("Invalid calling convention: \""+sp[0]+"\", did you mean \"stdcall\" or \"cdecl\"?");
+											throw new ParsingError("Invalid calling convention: \""+sp[0]+"\", did you mean \"stdcall\" or \"cdecl\"?",this);
 											
 									}
 									
@@ -607,18 +640,40 @@ namespace Sunset {
 							if (this.nextType==FunctionType.DLL_REFERENCED)
 								this.referenceDll(this.nextReferencedDLL,funcName);
 							nameReader.Clear();
-							if (functionParamTypes.ContainsKey(funcName))
-								throw new ParsingError("A function is already declared with the name \""+funcName+'"');
-							this.functionParamTypes.Add(funcName,new List<Tuple<String,VarType>>(this.nextFunctionParamTypes));
+							if (functions.ContainsKey(funcName))
+								throw new ParsingError("A function is already declared with the name \""+funcName+'"',this);
                             if (!currentMods.hasAccessorModifier())
                                 currentMods=currentMods|Modifier.PRIVATE;
                             if (currentMods.HasFlag(Modifier.PULLABLE)||currentMods.HasFlag(Modifier.CONSTANT))
-                                throw new ParsingError("Pullable and constant are not valid modifiers for functions");
-						
-                            this.functions.Add(funcName,new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>((this.nextType== FunctionType.SUNSET)?blocks.Keys.Last().startMemAddr:0,null,(UInt16)this.nextFunctionParamTypes.Length,this.nextType,cl,currentMods));
-
-                            if (currentMods.HasFlag(Modifier.STATIC))
-                                staticFunctions[ID].Add(functions.Last().Key,functions.Last().Value);
+                                throw new ParsingError("Pullable and constant are not valid modifiers for functions",this);
+                            if (this.inhFuncsToDefine.ContainsKey(funcName)) {
+                            	Int32 i=-1;
+                            	Console.WriteLine(this.inhFuncsToDefine[funcName].parameterTypes.Count.ToString()+" params vs " +nextFunctionParamTypes.Length.ToString());
+                            	if (this.inhFuncsToDefine[funcName].parameterTypes.Count!=nextFunctionParamTypes.Length)
+                            			throw new ParsingError("Expected func \""+funcName+"\" to have "+(this.inhFuncsToDefine[funcName].parameterTypes.Count==0?"no param types":"param types: "+merge(this.inhFuncsToDefine[funcName].parameterTypes.Select(x=>x.Item1),", "))+'.',this);
+                            	Console.WriteLine(this.nextFunctionParamTypes.Length+" <- nextFunctionParamTypes.Length");
+                            	while (++i!=nextFunctionParamTypes.Length) {
+                            		if (inhFuncsToDefine[funcName].parameterTypes[i].Item1!=nextFunctionParamTypes[i].Item1||inhFuncsToDefine[funcName].parameterTypes[i].Item2!=nextFunctionParamTypes[i].Item2)
+                            			throw new ParsingError("Expected func \""+funcName+"\" to have "+(this.inhFuncsToDefine[funcName].parameterTypes.Count==0?"no param types":"param types: "+merge(this.inhFuncsToDefine[funcName].parameterTypes.Select(x=>x.Item1),", "))+'.',this);
+                            	}
+                            }
+                            Boolean isPrivate=currentMods.HasFlag(Modifier.PRIVATE);
+                            this.functions.Add(funcName,new Function((this.nextType== FunctionType.SUNSET)?blocks.Keys.Last().startMemAddr:0,null,(UInt16)this.nextFunctionParamTypes.Length,this.nextType,cl,currentMods,new List<ValueTuple<String,VarType>>(this.nextFunctionParamTypes),(inhFuncsToDefine.ContainsKey(funcName)?inhFuncsToDefine[funcName].instanceID:instanceID),inhFuncsToDefine.ContainsKey(funcName)));
+							
+                        	if (currentMods.HasFlag(Modifier.STATIC)) {
+                        		Function val=functions.Last().Value;
+                        		staticFunctions[ID].Add(functions.Last().Key,new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(val.memAddr,val.returnType,val.expectedParameterCount,val.functionType,val.callingConvention,val.modifier));
+                        	} else if (!isPrivate) {
+                        		if (inhFuncsToDefine.ContainsKey(funcName)) {
+                            		Int32 idx=(Int32)this.functions.Last().Value.instanceID;
+                            		instanceTable.RemoveAt(idx);
+                            		instanceTable.Insert(idx,this.functions.Last().Value.memAddr);
+                        		}
+                            	else {
+                            		++Parser.instanceID;
+                            		instanceTable.Add(this.functions.Last().Value.memAddr);
+                            	}
+                        	}
                            this.functionReferences.Add(funcName,new List<Tuple<UInt32,UInt32>>());
 						status=ParsingStatus.SEARCHING_NAME;
 						if (this.nextType==FunctionType.SUNSET)
@@ -646,7 +701,7 @@ namespace Sunset {
 							status=ParsingStatus.SEARCHING_NAME;
 							break;
 						}
-						throw new ParsingError("Expected colon, got \""+c+'"');
+						throw new ParsingError("Expected colon, got \""+c+'"',this);
 
                     case ParsingStatus.READING_TYPE_DEFINITION_NAME:
 
@@ -659,11 +714,11 @@ namespace Sunset {
                             rTypeDefinition=nameReader.ToString();
                             nameReader.Clear();
                             if (this.nameExists(rTypeDefinition))
-                                throw new ParsingError("Can't acknowledge \""+rTypeDefinition+"\", name is in use");
+                                throw new ParsingError("Can't acknowledge \""+rTypeDefinition+"\", name is in use",this);
 
                         }
                         else
-                            throw new ParsingError("Got invalid character '"+c+"' while reading name \""+nameReader.ToString()+"\": \""+c+'"');
+                            throw new ParsingError("Got invalid character '"+c+"' while reading name \""+nameReader.ToString()+"\": \""+c+'"',this);
 
 
                         break;
@@ -677,14 +732,14 @@ namespace Sunset {
                             String labelName=nameReader.ToString();
                             nameReader.Clear();
                             if (this.nameExists(labelName))
-                                throw new ParsingError("Can't define label \""+labelName+"\", name is in use");
+                                throw new ParsingError("Can't define label \""+labelName+"\", name is in use",this);
                             if (blocks.Count!=0)
-                                throw new ParsingError("Label \""+labelName+"\" cannot be defined because it is in a block");
+                                throw new ParsingError("Label \""+labelName+"\" cannot be defined because it is in a block",this);
                             this.labels.Add(labelName,this.memAddress);
 
                         }
                         else
-                            throw new ParsingError("Got invalid character '"+c+"' while reading name \""+nameReader.ToString()+"\": \""+c+'"');
+                            throw new ParsingError("Got invalid character '"+c+"' while reading name \""+nameReader.ToString()+"\": \""+c+'"',this);
 
                         break;
 						
@@ -701,18 +756,34 @@ namespace Sunset {
 		}
 		
 		private Byte[] compile () {
+			if (inhVarsToDefine.Count!=0)
+				throw new ParsingError("Missing inherited variable: \""+inhVarsToDefine.First().Key+"\" of type "+inhVarsToDefine.First().Value.Item2,this);
+			if (inhArrsToDefine.Count!=0)
+				throw new ParsingError("Missing inherited array: \""+inhArrsToDefine.First().Key+"\" of type "+inhArrsToDefine.First().Value.Item2,this);
+			if (inhClassesToDefine.Count!=0)
+				throw new ParsingError("Missing inherited class: \""+inhClassesToDefine.First().Key+"\" of type "+inhClassesToDefine.First().Value.Item2,this);
+			if (inhFuncsToDefine.Count!=0)
+				throw new ParsingError("Missing inherited function: \""+inhFuncsToDefine.First().Key+(inhFuncsToDefine.First().Value.parameterTypes.Count==0?"\" with no parameters":"\" with parameters "+merge(inhFuncsToDefine.First().Value.parameterTypes.Select(x=>x.Item1),", "))+" and "+(inhFuncsToDefine.First().Value.returnType==null?"no return value":"return type of "+inhFuncsToDefine.First().Value.returnType.Item1)+".",this);
 			
 			Console.WriteLine("Compiling: "+this.parserName);
 			
 			if (!@struct) {
 				
-				this.addBytes(new Byte[]{0x6A,0}); //PUSH 0
+				this.addBytes(new Byte[]{0x6A,0}); //PUSH 0EAX
 				freeHeapsMemAddr=memAddress;
 				this.freeHeaps();
-				this.addByte(0x58); //POP EAX to set the exit code (return value) of process (HACK:: NOTICE::return value is an UNSIGNED value)
+				this.addByte(0x58); //POP  to set the exit code (return value) of process (HACK:: NOTICE::return value is an UNSIGNED value)
 				this.addByte(0xC3); //Add RETN call to end of our exe, so no matter what happens in terms of the source, it should not be a blank application & will exit
 			}
 			
+			inhTblAppendAfterIndex=(UInt32)appendAfter.Count;
+            if (tableAddrIndex!=0) {
+            	opcodes.RemoveRange((Int32)tableAddrIndex,4);
+            	opcodes.InsertRange((Int32)tableAddrIndex,BitConverter.GetBytes((UInt32)(inhTblAppendAfterIndex)));
+            	opcodes.RemoveRange((Int32)appendAfterIndexConst,4);
+            	opcodes.InsertRange((Int32)appendAfterIndexConst,BitConverter.GetBytes((UInt32)(opcodes.Count+4)));
+            }
+			appendAfter.AddRange(instanceTable.SelectMany(x=>BitConverter.GetBytes(x)));
 			this.setEsiFuncVar();
 			this.fillEsiFuncReferences();
 			opcodes.AddRange(appendAfter);
@@ -728,7 +799,7 @@ namespace Sunset {
 				if (this.setToWinAppIfDllReference)
 					this.winApp=true;
 				else
-					throw new ParsingError("Can not reference DLL's on non-PE app ("+parserName+')');
+					throw new ParsingError("Can not reference DLL's on non-PE app ("+parserName+')',this);
 				
 			}
 			
@@ -783,7 +854,7 @@ namespace Sunset {
 			
 			if (@struct) {
 				if (referencedVariable==null)
-					throw new ParsingError("A struct is limited to only variable declarations");
+					throw new ParsingError("A struct is limited to only variable declarations",this);
 				else return;
 			}
 			else if (InStaticEnvironment()) {
@@ -791,29 +862,28 @@ namespace Sunset {
                 dataSectBytes.Add(b);
                 return;
             }
-
-			Dictionary<String,Tuple<UInt32,String,Modifier>> newDict=new Dictionary<String,Tuple<UInt32,String,Modifier>>(this.variables.Count);
-			foreach (KeyValuePair<String,Tuple<UInt32,String,Modifier>> kvp in this.variables) {
+			Dictionary<String,Tuple<UInt32,String,Modifier,UInt32>> newDict=new Dictionary<String,Tuple<UInt32,String,Modifier,UInt32>>(this.variables.Count);
+			foreach (KeyValuePair<String,Tuple<UInt32,String,Modifier,UInt32>> kvp in this.variables) {
 //				Console.WriteLine("For variable: "+kvp.Key+", updating mem address to: "+(kvp.Value.Item1+1).ToString("X"));
-				newDict.Add(kvp.Key,new Tuple<UInt32,String,Modifier>(kvp.Value.Item1+1,kvp.Value.Item2,kvp.Value.Item3));
+				newDict.Add(kvp.Key,new Tuple<UInt32,String,Modifier,UInt32>(kvp.Value.Item1+1,kvp.Value.Item2,kvp.Value.Item3,kvp.Value.Item4));
 			}
 			
-			this.variables=new Dictionary<String,Tuple<UInt32,String,Modifier>>(newDict);
+			this.variables=new Dictionary<String,Tuple<UInt32,String,Modifier,UInt32>>(newDict);
 			
-			Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier>> newDict0=new Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier>>(this.arrays.Count);
-			foreach (KeyValuePair<String,Tuple<UInt32,String,ArrayStyle,Modifier>> kvp in this.arrays) {
+			Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>> newDict0=new Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>>(this.arrays.Count);
+			foreach (KeyValuePair<String,Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>> kvp in this.arrays) {
 			
 			
 //					Console.WriteLine("For array: "+kvp.Key+", updating mem address to: "+(kvp.Value.Item1+1).ToString("X"));
 				
-				newDict0.Add(kvp.Key,new Tuple<UInt32,String,ArrayStyle,Modifier>(kvp.Value.Item1+1,kvp.Value.Item2,kvp.Value.Item3,kvp.Value.Item4));
+				newDict0.Add(kvp.Key,new Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>(kvp.Value.Item1+1,kvp.Value.Item2,kvp.Value.Item3,kvp.Value.Item4,kvp.Value.Item5));
 				
 			}
 			
-			this.arrays=new Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier>>(newDict0);
+			this.arrays=new Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>>(newDict0);
 			
-			Dictionary<String,Tuple<UInt32,String,Class,Modifier>> newDict1=new Dictionary<String,Tuple<UInt32,String,Class,Modifier>>(this.classes.Count);
-			foreach (KeyValuePair<String,Tuple<UInt32,String,Class,Modifier>> kvp in this.classes) {
+			Dictionary<String,Tuple<UInt32,String,Class,Modifier,UInt32>> newDict1=new Dictionary<String,Tuple<UInt32,String,Class,Modifier,UInt32>>(this.classes.Count);
+			foreach (KeyValuePair<String,Tuple<UInt32,String,Class,Modifier,UInt32>> kvp in this.classes) {
 				
 				if (kvp.Value.Item1==0) newDict1.Add(kvp.Key,kvp.Value);
 				
@@ -821,13 +891,13 @@ namespace Sunset {
 				
 					Console.WriteLine("For class: "+kvp.Key+", updating mem address to: "+(kvp.Value.Item1+1).ToString("X"));
 					
-					newDict1.Add(kvp.Key,new Tuple<UInt32,String,Class,Modifier>(kvp.Value.Item1+1,kvp.Value.Item2,kvp.Value.Item3,kvp.Value.Item4));
+					newDict1.Add(kvp.Key,new Tuple<UInt32,String,Class,Modifier,UInt32>(kvp.Value.Item1+1,kvp.Value.Item2,kvp.Value.Item3,kvp.Value.Item4,kvp.Value.Item5));
 				
 				}
 
 			}
 			
-			this.classes=new Dictionary<String,Tuple<UInt32,String,Class,Modifier>>(newDict1);
+			this.classes=new Dictionary<String,Tuple<UInt32,String,Class,Modifier,UInt32>>(newDict1);
 			
 			List<Tuple<UInt32,List<UInt32>>>newList=new List<Tuple<UInt32,List<UInt32>>>(this.stringsAndRefs.Count);
 			foreach (Tuple<UInt32,List<UInt32>>str in this.stringsAndRefs) {
@@ -906,11 +976,11 @@ namespace Sunset {
 
 			if (this.functions.ContainsKey(name)) {
 				
-				Console.WriteLine("PARAM CT: "+this.functions[name].Item3.ToString());
+				Console.WriteLine("PARAM CT: "+this.functions[name].expectedParameterCount.ToString());
 				
 				lastReferencedVariableIsLocal=false;
 				
-				if (this.functions[name].Item3!=0) {
+				if (this.functions[name].expectedParameterCount!=0) {
 					
 					status=(this.beginsParameters(this.nextChar))?ParsingStatus.READING_PARAMETERS:ParsingStatus.SEARCHING_PARAMETERS;
 					roundBracketBalance=1;
@@ -967,10 +1037,15 @@ namespace Sunset {
 				
 				if (wasSearchingFuncReturnType) {
                         String fn=this.functions.Last().Key;
-					 this.functions[fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.pvtGet(name),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+                        Function f=functions[fn];
+                        this.functions[fn]=new Function(f.memAddr,this.pvtGet(name),f.expectedParameterCount,f.functionType,f.callingConvention,f.modifier,f.parameterTypes,f.instanceID,f.isInherited);
     				     if (staticFunctions[ID].ContainsKey(fn))
-                            staticFunctions[ID][fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.pvtGet(name),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
-                                    
+    				     	staticFunctions[ID][fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(f.memAddr,this.pvtGet(name),f.expectedParameterCount,f.functionType,f.callingConvention,f.modifier);
+	                     if (this.inhFuncsToDefine.ContainsKey(fn)) {
+							if ((this.inhFuncsToDefine[fn].returnType==null&&functions[fn].returnType!=null)||!this.inhFuncsToDefine[fn].returnType.Equals(this.functions[fn].returnType))
+								throw new ParsingError("Expected "+(inhFuncsToDefine[fn].returnType==null?"no return type":"return type \""+inhFuncsToDefine[fn].returnType.Item1+"\" of \""+inhFuncsToDefine[fn].returnType.Item2+"\"")+ " for func \""+fn+"\".",this);
+							this.inhFuncsToDefine.Remove(fn);
+						}
                        status=ParsingStatus.SEARCHING_NAME;
 					this.setExpectsBlock=1;
 					return;
@@ -997,10 +1072,16 @@ namespace Sunset {
                 
                 if (wasSearchingFuncReturnType) {
                     String fn=this.functions.Last().Key;
-                    this.functions[this.functions.Last().Key]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.acknowledgements[name],functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+                    Function f=functions[fn];
+                    this.functions[fn]=new Function(f.memAddr,this.acknowledgements[name],f.expectedParameterCount,f.functionType,f.callingConvention,f.modifier,f.parameterTypes,f.instanceID,f.isInherited);
                     if (staticFunctions[ID].ContainsKey(fn))
-                            staticFunctions[ID][fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,this.acknowledgements[name],functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+                    	staticFunctions[ID][fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(f.memAddr,this.acknowledgements[name],f.expectedParameterCount,f.functionType,f.callingConvention,f.modifier);
                     status=ParsingStatus.SEARCHING_NAME;
+                    if (this.inhFuncsToDefine.ContainsKey(fn)) {
+						if ((this.inhFuncsToDefine[fn].returnType==null&&functions[fn].returnType!=null)||!this.inhFuncsToDefine[fn].returnType.Equals(this.functions[fn].returnType))
+							throw new ParsingError("Expected "+(inhFuncsToDefine[fn].returnType==null?"no return type":"return type \""+inhFuncsToDefine[fn].returnType.Item1+"\" of \""+inhFuncsToDefine[fn].returnType.Item2+"\"")+ " for func \""+fn+"\".",this);
+						this.inhFuncsToDefine.Remove(fn);
+					}
                     this.setExpectsBlock=1;
                     return;
                 }
@@ -1029,9 +1110,9 @@ namespace Sunset {
 						StringBuilder sb=new StringBuilder();
 						foreach (KeywordType kt in pKTs)
 							sb.Append('"'+kt.ToString()+"\", ");
-						throw new ParsingError("Expected a keyword of any of the following types: "+String.Concat(sb.ToString().Take(sb.Length-2)));
+						throw new ParsingError("Expected a keyword of any of the following types: "+String.Concat(sb.ToString().Take(sb.Length-2)),this);
 					}
-					else throw new ParsingError("Expected a keyword of type \""+pKTs[0].ToString()+'"');
+					else throw new ParsingError("Expected a keyword of type \""+pKTs[0].ToString()+'"',this);
 				}
 			
 				this.varType=name;
@@ -1040,9 +1121,15 @@ namespace Sunset {
 				
 				if (wasSearchingFuncReturnType) {
                       String fn=this.functions.Last().Key;
-					this.functions[fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,new Tuple<String,VarType>(this.varType,VarType.CLASS),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+                      Function f=this.functions[fn];
+					this.functions[fn]=new Function(f.memAddr,new Tuple<String,VarType>(this.varType,VarType.CLASS),f.expectedParameterCount,f.functionType,f.callingConvention,f.modifier,f.parameterTypes,f.instanceID,f.isInherited);
+					if (this.inhFuncsToDefine.ContainsKey(fn)) {
+						if ((this.inhFuncsToDefine[fn].returnType==null&&functions[fn].returnType!=null)||!this.inhFuncsToDefine[fn].returnType.Equals(this.functions[fn].returnType))
+							throw new ParsingError("Expected "+(inhFuncsToDefine[fn].returnType==null?"no return type":"return type \""+inhFuncsToDefine[fn].returnType.Item1+"\" of \""+inhFuncsToDefine[fn].returnType.Item2+"\"")+ " for func \""+fn+"\".",this);
+						this.inhFuncsToDefine.Remove(fn);
+					}
 					if (staticFunctions[ID].ContainsKey(fn))
-                            staticFunctions[ID][fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,new Tuple<String,VarType>(this.varType,VarType.CLASS),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+                            staticFunctions[ID][fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(f.memAddr,new Tuple<String,VarType>(this.varType,VarType.CLASS),f.expectedParameterCount,f.functionType,f.callingConvention,f.modifier);
                        status=ParsingStatus.SEARCHING_NAME;
 					this.setExpectsBlock=1;
 				}
@@ -1067,7 +1154,7 @@ namespace Sunset {
 						return;
 						
 					}
-					else throw new ParsingError("\""+name+"\" does not exist in \""+merge(lastReferencedClassInstance,".")+'"');
+					else throw new ParsingError("\""+name+"\" does not exist in \""+merge(lastReferencedClassInstance,".")+'"',this);
 					
 				}
 				else if (this.classes.ContainsKey(name)||this.importedClasses.Select(x=>x.className).Contains(name)||homeStatic) {
@@ -1090,7 +1177,7 @@ namespace Sunset {
 					return;
 					
 				}
-				else throw new ParsingError("Expected class instance, got: \""+name+'"');
+				else throw new ParsingError("Expected class instance, got: \""+name+'"',this);
 				
 			}
 			else if (gettingClassItem) {
@@ -1127,7 +1214,7 @@ namespace Sunset {
                             return;
 
                         }
-                        throw new ParsingError(scName+" does not contain the static instance \""+name+'"');
+                        throw new ParsingError(scName+" does not contain the static instance \""+name+'"',this);
                     }
                     this.lastReferencedVarType=staticInstances[cl.classID][name].Item2.Item2;
                     return;
@@ -1158,7 +1245,7 @@ namespace Sunset {
 					this.status=ParsingStatus.SEARCHING_NAME;
 					lastReferencedVariableIsFromClass=false;
 					
-					if (cl.functions[name].Item3!=0) {
+					if (cl.functions[name].expectedParameterCount!=0) {
 						
 						status=(this.beginsParameters(this.nextChar))?ParsingStatus.READING_PARAMETERS:ParsingStatus.SEARCHING_PARAMETERS;
 						roundBracketBalance=1;
@@ -1186,7 +1273,7 @@ namespace Sunset {
 					return;	
 					
 				}
-                else throw new ParsingError("Invalid class item: \""+name+'"');
+                else throw new ParsingError("Invalid class item: \""+name+'"',this);
 				
 			}
 			
@@ -1198,20 +1285,20 @@ namespace Sunset {
 					Type kwt=kw.GetType();
 					
 					if (expectsCaseOrDefault&&kwt!=typeof(KWDefault)&&kwt!=typeof(KWCase))
-						throw new ParsingError("Expected only \""+KWCase.constName+"\" and \""+KWDefault.constName+"\" blocks in a \""+KWSwitch.constName+"\" block");
+						throw new ParsingError("Expected only \""+KWCase.constName+"\" and \""+KWDefault.constName+"\" blocks in a \""+KWSwitch.constName+"\" block",this);
 					
 					if (!pKTs.Contains(KeywordType.NONE)&&!pKTs.Contains(kw.type)) {
 						if (pKTs.Length>1) {
 							StringBuilder sb=new StringBuilder();
 							foreach (KeywordType kt in pKTs)
 								sb.Append('"'+kt.ToString()+"\", ");
-							throw new ParsingError("Expected a keyword of any of the following types: "+String.Concat(sb.ToString().Take(sb.Length-2)));
+							throw new ParsingError("Expected a keyword of any of the following types: "+String.Concat(sb.ToString().Take(sb.Length-2)),this);
 						}
-						else throw new ParsingError("Expected a keyword of type \""+pKTs[0].ToString()+'"');
+						else throw new ParsingError("Expected a keyword of type \""+pKTs[0].ToString()+'"',this);
 					}
 					
 					if (kw.name==KWElse.constName&&!expectsElse)
-						throw new ParsingError("Got \""+KWElse.constName+"\", but was not expecting an else reference");
+						throw new ParsingError("Got \""+KWElse.constName+"\", but was not expecting an else reference",this);
 					else if (kw.hasParameters) {
 						
 						status=(this.beginsParameters(this.nextChar))?ParsingStatus.READING_PARAMETERS:ParsingStatus.SEARCHING_PARAMETERS;
@@ -1225,9 +1312,15 @@ namespace Sunset {
 					
 					if (wasSearchingFuncReturnType) {
                            String fn=this.functions.Last().Key;
-						this.functions[fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,new Tuple<String,VarType>(this.varType,this.lastReferencedVarType),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+                           Function f= this.functions[fn];
+						this.functions[fn]=new Function(f.memAddr,new Tuple<String,VarType>(this.varType,this.lastReferencedVarType),f.expectedParameterCount,f.functionType,f.callingConvention,f.modifier,f.parameterTypes,f.instanceID,f.isInherited);
+						if (this.inhFuncsToDefine.ContainsKey(fn)) {
+							if ((this.inhFuncsToDefine[fn].returnType==null&&functions[fn].returnType!=null)||!this.inhFuncsToDefine[fn].returnType.Equals(this.functions[fn].returnType))
+								throw new ParsingError("Expected "+(inhFuncsToDefine[fn].returnType==null?"no return type":"return type \""+inhFuncsToDefine[fn].returnType.Item1+"\" of \""+inhFuncsToDefine[fn].returnType.Item2+"\"")+ " for func \""+fn+"\".",this);
+							this.inhFuncsToDefine.Remove(fn);
+						}
 						if (staticFunctions[ID].ContainsKey(fn))
-                            staticFunctions[ID][fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(this.functions.Last().Value.Item1,new Tuple<String,VarType>(this.varType,this.lastReferencedVarType),functions.Last().Value.Item3,functions.Last().Value.Item4,functions.Last().Value.Item5,functions.Last().Value.Item6);
+                            staticFunctions[ID][fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(f.memAddr,new Tuple<String,VarType>(this.varType,this.lastReferencedVarType),f.expectedParameterCount,f.functionType,f.callingConvention,f.modifier);
                            status=ParsingStatus.SEARCHING_NAME;
 						this.setExpectsBlock=1;
 					}
@@ -1256,7 +1349,16 @@ namespace Sunset {
 				if (this.opensBlock(c)) {
 					
 					if (!(this.expectsBlock))
-						throw new ParsingError("Got \""+c+"\" but did not expect block");
+						throw new ParsingError("Got \""+c+"\" but did not expect block",this);
+					
+					if (wasSearchingFuncReturnType) {
+						String fn=this.functions.Last().Key;
+						if (this.inhFuncsToDefine.ContainsKey(fn)) {
+							if (this.inhFuncsToDefine[fn].returnType!=null)
+								throw new ParsingError("Expected "+(inhFuncsToDefine[fn].returnType==null?"no return type":"return type \""+inhFuncsToDefine[fn].returnType.Item1+"\" of \""+inhFuncsToDefine[fn].returnType.Item2+"\"")+ " for func \""+fn+"\".",this);
+							this.inhFuncsToDefine.Remove(fn);
+						}
+					}
 					
 					this.updateBlockBalances(c);
 					
@@ -1269,7 +1371,7 @@ namespace Sunset {
 				else if (this.closesBlock(c)) {
 					
 					if (this.blockBracketBalances.Count==0)
-						throw new ParsingError("Tried to close block, when no block detected");
+						throw new ParsingError("Tried to close block, when no block detected",this);
 					
 					this.updateBlockBalances(c);
 					
@@ -1286,10 +1388,24 @@ namespace Sunset {
 			Console.WriteLine(attemptingClassAccess);
 			Console.WriteLine(gettingClassItem);
 			Console.WriteLine(expectsCaseOrDefault);
-			throw new ParsingError("Unexpected name: \""+name+'"');
+			throw new ParsingError("Unexpected name: \""+name+'"',this);
 			
 		}
 		
+		private static String ModsToLegibleString (Modifier mod) {
+			StringBuilder sb=new StringBuilder();
+			if (mod.hasAccessorModifier())
+				sb.Append(mod.HasFlag(Modifier.PRIVATE)?"private ":mod.HasFlag(Modifier.LOCAL)?"local ":mod.HasFlag(Modifier.PULLABLE)?"pullable ":"public ");
+			if (mod.HasFlag(Modifier.CONSTANT))
+				sb.Append("constant ");
+			if (mod.HasFlag(Modifier.STATIC))
+				sb.Append("static ");
+			String str=sb.ToString();
+			if (str.EndsWith(" "))
+				str=str.Substring(0,str.Length-1);
+			return str;
+		}
+			
 		private void registerVariable (String varName) {
 
 			if (this.containsImportedClass(this.varType)) {
@@ -1305,7 +1421,7 @@ namespace Sunset {
 			Console.WriteLine("Registering variable "+varName+" (a type of \""+this.varType+"\"), memAddress: "+memAddress.ToString("X"));
 			
 			if (this.nameExists(varName))
-				throw new ParsingError("The name \""+varName+"\" is already in use");
+				throw new ParsingError("The name \""+varName+"\" is already in use",this);
 		
 			this.tryIncreaseBlockVarCount();
 			
@@ -1321,9 +1437,27 @@ namespace Sunset {
 
             }
 			else if (this.blocks.Count==0) {//not local var
+            	Boolean isPrivate=currentMods.HasFlag(Modifier.PRIVATE);
 				this.defineTimeOrder.Add(varName);
-				this.variables.Add(varName,new Tuple<UInt32,String,Modifier>(memAddress+(UInt32)appendAfter.Count,this.varType,currentMods));
+				this.variables.Add(varName,new Tuple<UInt32,String,Modifier,UInt32>(memAddress+(UInt32)appendAfter.Count,this.varType,currentMods,(isPrivate?0:instanceID)));
 				this.appendAfterIndex.Add(varName,(UInt32)appendAfter.Count);
+				if (!isPrivate) {
+					if (inhVarsToDefine.ContainsKey(varName)) {
+						Int32 idx=(Int32)this.inhVarsToDefine[varName].Item4;
+						var pv=this.variables[varName];
+						this.variables[varName]=new Tuple<uint, string, Modifier, uint>(pv.Item1,pv.Item2,pv.Item3,(UInt32)idx);
+		        		instanceTable.RemoveAt(idx);
+		        		instanceTable.Insert(idx,(UInt32)(appendAfter.Count));
+		        		if (!currentMods.Equals(inhVarsToDefine[varName].Item3)) throw new ParsingError("Expected \""+varName+"\" to be defined with mods \""+ModsToLegibleString(inhVarsToDefine[varName].Item3)+'"',this);
+						if (this.varType!=inhVarsToDefine[varName].Item2) throw new ParsingError("Expected \""+varName+"\" to be defined of type \""+inhVarsToDefine[varName].Item2+'"',this);
+						inhVarsToDefine.Remove(varName);
+						Console.WriteLine(varName+" successfully being defined as a inherited var.");
+		    		}
+					else {
+						++instanceID;
+						instanceTable.Add((UInt32)appendAfter.Count);
+					}
+				}
 				this.appendAfter.AddRange(new Byte[vtbs]);
 				this.variableReferences.Add(varName,new List<UInt32>());
 			}
@@ -1392,7 +1526,7 @@ namespace Sunset {
 
             }
             else if (mods.HasFlag(Modifier.CONSTANT))
-                throw new ParsingError("Can only set constants immediately at definition time ("+this.referencedVariable+')');
+                throw new ParsingError("Can only set constants immediately at definition time ("+this.referencedVariable+')',this);
 
 //			Console.WriteLine("referencingArray: "+referencingArray.ToString());
 //			Console.WriteLine("this.arrays[referencedVariable]: "+this.arrays[referencedVariable].Item2);
@@ -1475,7 +1609,7 @@ namespace Sunset {
 					}
 					else {
 						
-						if (adjustedValue.Length<=2||!this.beginsParameters(adjustedValue[1])) throw new ParsingError("Invalid syntax for initializing array by set of values: expected format \"#,(value,value0,value1,...)\"");
+						if (adjustedValue.Length<=2||!this.beginsParameters(adjustedValue[1])) throw new ParsingError("Invalid syntax for initializing array by set of values: expected format \"#,(value,value0,value1,...)\"",this);
 						
 						List<String>@params=parseParameters(adjustedValue.Substring(2));
 						Int32 bytesToReserve=(Int32)((@params.Count*keywordMgr.getVarTypeByteSize(type))+8),stackSpace=(Int32)(@params.Count*4);
@@ -1526,7 +1660,7 @@ namespace Sunset {
 								this.addBytes(new Byte[]{0x68}.Concat(BitConverter.GetBytes(i)));
 							else
 								this.addBytes(new Byte[]{0x6A,(Byte)(i)});
-							this.tryConvertVars(arrayMemberType,this.pushValue(str));
+							this.tryConvertVars(arrayMemberType,this.pushValue(str),str);
 							switch (byteSize) {
 								case 4:
 									this.callSetArrayValue(this.referencedVariable);
@@ -1596,7 +1730,7 @@ namespace Sunset {
 						this.addBytes(new Byte[]{0x89,0x10}); //MOV [EAX],EDX
 						this.addBytes(new Byte[]{0x83,0xC4,4}); //ADD ESP,4
 						//FIXME:: probable bug on next line, it may apply for all classes of that type
-						this.getOriginFinalClass(this.lastReferencedClassInstance,lastReferencedVariableIsLocal).arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle,Modifier>(this.arrays[value].Item1,this.arrays[value].Item2,this.arrays[value].Item3,this.arrays[value].Item4);
+						this.getOriginFinalClass(this.lastReferencedClassInstance,lastReferencedVariableIsLocal).arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>(this.arrays[value].Item1,this.arrays[value].Item2,this.arrays[value].Item3,this.arrays[value].Item4,this.arrays[value].Item5);
 					}
 					else {
 						this.arrayReferences[value].Add((UInt32)this.opcodes.Count+1);
@@ -1637,8 +1771,8 @@ namespace Sunset {
 						}
 						else {
 							
-							Tuple<UInt32,String,ArrayStyle,Modifier>_refdVar=this.arrays[this.referencedVariable];
-							this.arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle,Modifier>(this.memAddress+(UInt32)(appendAfter.Count),_refdVar.Item2,_refdVar.Item3,_refdVar.Item4);
+							Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>_refdVar=this.arrays[this.referencedVariable];
+							this.arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>(this.memAddress+(UInt32)(appendAfter.Count),_refdVar.Item2,_refdVar.Item3,_refdVar.Item4,_refdVar.Item5);
 							this.appendAfterIndex.Add(referencedVariable,(UInt32)appendAfter.Count);
 							this.appendAfter.AddRange(new Byte[4]);
 							
@@ -1663,7 +1797,7 @@ namespace Sunset {
 						this.addBytes(new Byte[]{0x89,0x10}); //MOV [EAX],EDX
 						this.addBytes(new Byte[]{0x83,0xC4,4}); //ADD ESP,4
 						//FIXME:: probable bug on next line, it may apply for all classes of that type
-						this.getOriginFinalClass(this.lastReferencedClassInstance,lastReferencedVariableIsLocal).arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle,Modifier>(this.arrays[value].Item1,this.arrays[value].Item2,this.arrays[value].Item3,this.arrays[value].Item4);
+						this.getOriginFinalClass(this.lastReferencedClassInstance,lastReferencedVariableIsLocal).arrays[this.referencedVariable]=new Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>(this.arrays[value].Item1,this.arrays[value].Item2,this.arrays[value].Item3,this.arrays[value].Item4,this.arrays[value].Item5);
 					}
 					else {
 						
@@ -1679,12 +1813,12 @@ namespace Sunset {
 					}
 					
 				}
-				else throw new ParsingError("Invalid array assignment value: \""+value+'"');
+				else throw new ParsingError("Invalid array assignment value: \""+value+'"',this);
 				
 			}
 			else if (this.referencedVarType==VarType.NATIVE_ARRAY_INDEXER) {
 				
-				this.pushValue(value);
+				tryConvertVars(new Tuple<String,VarType>(type,referencedVarType),this.pushValue(value),value);
 				this.addByte(0x5A);//POP EDX 
 				this.addByte(0x58);//POP EAX
 				UInt32 size=this.keywordMgr.getVarTypeByteSize(varType);
@@ -1702,7 +1836,7 @@ namespace Sunset {
 				
 				this.addByte(0x50);//PUSH EAX
 				Tuple<String,VarType> tpl=this.pushValue(value);
-				this.tryConvertVars(new Tuple<String,VarType>(type,this.referencedVarType),tpl);
+				this.tryConvertVars(new Tuple<String,VarType>(type,this.referencedVarType),tpl,value);
 				this.addByte(0x5A);//POP EDX
 				this.addByte(0x58);//POP EAX
 				//EDX has VALUE, EAX has PTR
@@ -1710,13 +1844,13 @@ namespace Sunset {
                     type=ackRootOf(type).Item1;
 				
 				if (tpl.Item1==KWBoolean.constName&&type!=KWBoolean.constName)
-					throw new ParsingError("You can only apply \""+KWBoolean.constTrue+"\" and +\""+KWBoolean.constFalse+"\" to boolean variables");
+					throw new ParsingError("You can only apply \""+KWBoolean.constTrue+"\" and +\""+KWBoolean.constFalse+"\" to boolean variables",this);
 				
 				if (type!=KWString.constName&&tpl.Item1==KWString.constName)
-					throw new ParsingError("Can't convert \""+tpl.Item1+"\" to a string (\""+KWString.constName+"\").");
+					throw new ParsingError("Can't convert \""+tpl.Item1+"\" to a string (\""+KWString.constName+"\").",this);
 				
 				if (type==KWString.constName&&tpl.Item1!=KWString.constName)
-					throw new ParsingError("Can't convert a string (\""+KWString.constName+"\") to \""+tpl.Item1+"\".");
+					throw new ParsingError("Can't convert a string (\""+KWString.constName+"\") to \""+tpl.Item1+"\".",this);
 					
 				if (type==KWByte.constName||type==KWBoolean.constName) {
 				
@@ -1757,7 +1891,7 @@ namespace Sunset {
 				
 				this.addByte(0x50);//PUSH EAX
 				Tuple<String,VarType> tpl=this.pushValue(value);
-				this.tryConvertVars(new Tuple<String,VarType>(type,this.referencedVarType),tpl);
+				this.tryConvertVars(new Tuple<String,VarType>(type,this.referencedVarType),tpl,value);
 				this.addByte(0x5A);//POP EDX
 				this.addByte(0x58);//POP EAX
 				
@@ -1770,6 +1904,7 @@ namespace Sunset {
 			else if (this.referencedVarType==VarType.CLASS) {
 				
 				Tuple<String,VarType> tpl=this.pushValue(value);
+				this.tryConvertVars(new Tuple<String,VarType>(type,this.referencedVarType),tpl,referencedVariable);
 				if (this.referencedVariableIsLocal) {
 					if (this.getLocalVarHomeBlock(this.referencedVariable)!=this.getCurrentBlock())
 						this.localVarEBPPositionsToOffset[this.getCurrentBlock()].Add((UInt32)(this.opcodes.Count+2));
@@ -1795,17 +1930,17 @@ namespace Sunset {
 				Tuple<String,VarType> tpl=this.pushValue(value);
                 //this.debugLine(referencedVariable+" processValue type result: "+tpl.Item1+" (this may not be the type of \""+referencedVariable+"\")");
 				Console.WriteLine("value: \""+value+"\",type: "+type);
-                this.tryConvertVars(new Tuple<String,VarType>(type,this.referencedVarType),tpl);
+                this.tryConvertVars(new Tuple<String,VarType>(type,this.referencedVarType),tpl,value);
                 if (acknowledgements.ContainsKey(type))
                     type=ackRootOf(type).Item1;
 				if (tpl.Item1==KWBoolean.constName&&type!=KWBoolean.constName)
-					throw new ParsingError("You can only apply \""+KWBoolean.constTrue+"\" and \""+KWBoolean.constFalse+"\" to boolean variables");
+					throw new ParsingError("You can only apply \""+KWBoolean.constTrue+"\" and \""+KWBoolean.constFalse+"\" to boolean variables",this);
 				
 				if (type!=KWString.constName&&tpl.Item1==KWString.constName)
-					throw new ParsingError("Can't convert \""+type+"\" to a string (\""+KWString.constName+"\").");
+					throw new ParsingError("Can't convert \""+type+"\" to a string (\""+KWString.constName+"\").",this);
 				
 				if (type==KWString.constName&&tpl.Item1!=KWString.constName)
-					throw new ParsingError("Can't convert a string (\""+KWString.constName+"\") to \""+tpl.Item1+"\".");
+					throw new ParsingError("Can't convert a string (\""+KWString.constName+"\") to \""+tpl.Item1+"\".",this);
 				
 				if (this.referencedVariableIsLocal) {
 					if (this.getLocalVarHomeBlock(this.referencedVariable)!=this.getCurrentBlock())
@@ -1988,24 +2123,43 @@ namespace Sunset {
 			Console.WriteLine("Registering array "+arrayName+" (an array type of \""+this.varType+"\"), memAddress: "+memAddress.ToString("X"));
 			
 			if (this.nameExists(arrayName))
-				throw new ParsingError("The name \""+arrayName+"\" is already in use");
+				throw new ParsingError("The name \""+arrayName+"\" is already in use",this);
 
 			if (!(currentMods.hasAccessorModifier()))
                 currentMods=currentMods|Modifier.PRIVATE;
             lastReferencedVariableIsStatic=false;
 			this.tryIncreaseBlockVarCount();
 
-                var vt=new Tuple<Tuple<String,VarType>>(new Tuple<String,VarType>(this.varType,VarType.NATIVE_ARRAY));
-    			if (currentMods.HasFlag(Modifier.STATIC)) {
-                    
-                    staticInstances[ID].Add(arrayName,new Tuple<UInt32,Tuple<String,VarType>,Modifier,Class>((UInt32)dataSectBytes.Count,vt.Item1,currentMods,null));
-                    dataSectBytes.AddRange(new Byte[4]);
+            var vt=new Tuple<Tuple<String,VarType>>(new Tuple<String,VarType>(this.varType,VarType.NATIVE_ARRAY));
+			if (currentMods.HasFlag(Modifier.STATIC)) {
+                
+                staticInstances[ID].Add(arrayName,new Tuple<UInt32,Tuple<String,VarType>,Modifier,Class>((UInt32)dataSectBytes.Count,vt.Item1,currentMods,null));
+                dataSectBytes.AddRange(new Byte[4]);
 
-                }
+            }
 			else if (this.blocks.Count==0) {
+            	Boolean isPrivate=currentMods.HasFlag(Modifier.PRIVATE);
+                
 				this.defineTimeOrder.Add(arrayName);
-				this.arrays.Add(arrayName,new Tuple<UInt32,String,ArrayStyle,Modifier>(this.memAddress+(UInt32)(appendAfter.Count),this.varType,this.style,currentMods));
+				this.arrays.Add(arrayName,new Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>(this.memAddress+(UInt32)(appendAfter.Count),this.varType,this.style,currentMods,(isPrivate?0:instanceID)));
 				this.appendAfterIndex.Add(arrayName,(UInt32)appendAfter.Count);
+				if (!isPrivate) { 
+					if (inhArrsToDefine.ContainsKey(arrayName)) {
+						Int32 idx=(Int32)this.inhArrsToDefine[arrayName].Item5;
+						var pa=this.arrays[arrayName];
+						this.arrays[arrayName]=new Tuple<uint, string, ArrayStyle, Modifier, uint>(pa.Item1,pa.Item2,pa.Item3,pa.Item4,(UInt32)idx);
+						instanceTable.RemoveAt(idx);
+						instanceTable.Insert(idx,(UInt32)appendAfter.Count);
+						if (!currentMods.Equals(inhArrsToDefine[arrayName].Item4)) throw new ParsingError("Expected \""+arrayName+"\" to be defined with mods \""+ModsToLegibleString(inhArrsToDefine[arrayName].Item4)+'"',this);
+						if (this.varType!=inhArrsToDefine[arrayName].Item2) throw new ParsingError("Expected \""+arrayName+"\" to be defined of type \""+inhArrsToDefine[arrayName].Item2+'"',this);
+						inhArrsToDefine.Remove(arrayName);
+						Console.WriteLine(arrayName+" successfully being defined as a inherited array.");
+					}
+					else {
+						++instanceID;
+						instanceTable.Add((UInt32)appendAfter.Count); //....
+					}
+				}
 //						this.debugLine(referencedVariable+','+appendAfter.Count.ToString());
 				this.appendAfter.AddRange(new Byte[4]);
 				this.arrayReferences.Add(arrayName,new List<UInt32>());
@@ -2172,7 +2326,6 @@ namespace Sunset {
 		internal void setProcessHeapVar () {
 			
 			const String GPH="GetProcessHeap";
-
             if (processHeapVar!=UInt32.MaxValue) return;
 
             if (blocks.Count!=0) {
@@ -2181,7 +2334,7 @@ namespace Sunset {
                 return;
 
             }
-			
+            
 			this.referenceDll(Parser.KERNEL32,GPH);
 			ReferenceRefdFunc(GPH,2);
 			Parser.processHeapVar=(UInt32)Parser.dataSectBytes.Count;
@@ -2339,7 +2492,7 @@ namespace Sunset {
 						if (blc.localVariables[str0].Item1.Item2==VarType.NATIVE_ARRAY)
 							return true;
 				
-				throw new ParsingError("Invalid array indexer: Array \""+referencedArray+"\" does not exist");
+				throw new ParsingError("Invalid array indexer: Array \""+referencedArray+"\" does not exist",this);
 				
 			}
 			else return false;
@@ -2680,7 +2833,7 @@ namespace Sunset {
 
             }
 			else if (@struct)
-				throw new ParsingError("Can only apply constant values to a struct");
+				throw new ParsingError("Can only apply constant values to a struct",this);
 			else if (this.isALocalVar(value)) {
 				
 				Block localVarHomeBlock=this.getLocalVarHomeBlock(value);
@@ -2816,7 +2969,7 @@ namespace Sunset {
 
                     var function=staticFunctions[ID][funcName];
                     if (function.Item2==null)
-                        throw new ParsingError("Function \""+funcName+"\" has no return value, therefore its return value can't be obtained");
+                        throw new ParsingError("Function \""+funcName+"\" has no return value, therefore its return value can't be obtained",this);
 
                     String unparsedParams0=value.Substring(value.IndexOf('(')+1);
                     List<String>@params0=parseParameters(unparsedParams0);
@@ -2825,14 +2978,14 @@ namespace Sunset {
                     return function.Item2;
                     
                   }
-				if (functions[funcName].Item2==null)
-					throw new ParsingError("Function \""+funcName+"\" has no return value, therefore its return value can't be obtained");
+				if (functions[funcName].returnType==null)
+					throw new ParsingError("Function \""+funcName+"\" has no return value, therefore its return value can't be obtained",this);
 				
 				String unparsedParams=value.Substring(value.IndexOf('(')+1);
 				List<String>@params=parseParameters(unparsedParams);
 				this.callFunction(funcName,@params.ToArray());
 				this.addByte(0x50); //PUSH EAX
-				return this.functions[funcName].Item2;
+				return this.functions[funcName].returnType;
 				
 			}
              else if (staticFunctions[ID].ContainsKey(value)) {
@@ -2843,7 +2996,7 @@ namespace Sunset {
                     return FUNC_PTR;
                 }
                 if (function.Item2==null)
-                    throw new ParsingError("Function \""+value+"\" has no return value, therefore its return value can't be obtained");
+                    throw new ParsingError("Function \""+value+"\" has no return value, therefore its return value can't be obtained",this);
                 CallStaticClassFunc(ID,fileName,value,new String[0]);
                 this.addByte(0x50); //PUSH EAX
                 return function.Item2;
@@ -2855,23 +3008,23 @@ namespace Sunset {
 					
 					if (addEsiToLocalAddresses) {
 						this.int32sToSubtractByFinalOpcodesCount.Add((UInt32)this.opcodes.Count+2);
-						this.addBytes(new Byte[]{0x8D,0x86}.Concat(BitConverter.GetBytes(this.functions[value].Item1)));
+						this.addBytes(new Byte[]{0x8D,0x86}.Concat(BitConverter.GetBytes(this.functions[value].memAddr)));
 						this.addByte(0x50);//PUSH EAX
 					}
 					else
-						this.addBytes(new Byte[]{0x68}.Concat(BitConverter.GetBytes((UInt32)(this.functions[value].Item1))));
+						this.addBytes(new Byte[]{0x68}.Concat(BitConverter.GetBytes((UInt32)(this.functions[value].memAddr))));
 					return FUNC_PTR;
 					
 				}
 				
 				String funcName=value;
 				
-				if (functions[funcName].Item2==null)
-					throw new ParsingError("Function \""+funcName+"\" has no return value, therefore its return value can't be obtained");
+				if (functions[funcName].returnType==null)
+					throw new ParsingError("Function \""+funcName+"\" has no return value, therefore its return value can't be obtained",this);
 				
 				this.callFunction(funcName,new String[0]);
 				this.addByte(0x50); //PUSH EAX
-				return this.functions[funcName].Item2;
+				return this.functions[funcName].returnType;
 				
 			}
 			else if (this.keywordMgr.getKeywords().Where(x=>x.type==KeywordType.NATIVE_CALL_WITH_RETURN_VALUE).Select(x=>x.name).Contains(value)) {
@@ -2880,7 +3033,7 @@ namespace Sunset {
 				
 				Keyword[] query=this.keywordMgr.getKeywords().Where(x=>x.type==KeywordType.NATIVE_CALL_WITH_RETURN_VALUE&&x.name==value).ToArray();
 				if (query.Length==0)
-					throw new ParsingError("Function \""+value+"\" has no return value, therefore its return value can't be obtained");
+					throw new ParsingError("Function \""+value+"\" has no return value, therefore its return value can't be obtained",this);
 				Keyword kw=query.First();
 				this.execKeyword(kw,new String[0]);
 				this.addByte(0x50); //PUSH EAX
@@ -2895,7 +3048,7 @@ namespace Sunset {
 				
 				Keyword[] query=this.keywordMgr.getKeywords().Where(x=>x.type==KeywordType.NATIVE_CALL_WITH_RETURN_VALUE&&x.name==funcName).ToArray();
 				if (query.Length==0)
-					throw new ParsingError("Function \""+funcName+"\" has no return value, therefore its return value can't be obtained");
+					throw new ParsingError("Function \""+funcName+"\" has no return value, therefore its return value can't be obtained",this);
 				Keyword kw=query.First();
 				
 				String unparsedParams=value.Substring(value.IndexOf('(')+1);
@@ -3008,14 +3161,13 @@ namespace Sunset {
 				accessors.Add(sb.ToString());
 				String first=accessors.First();
 				Class initialClass;
-				this.writeStrOpcodes("Test");
 				
 				Boolean local=false,imported=this.isImportedClass(first),staticHome=staticInstances[ID].ContainsKey(first);
 				if (this.isALocalVar(first)) {
 					
 					local=true;
 					if (this.getLocalVarHomeBlock(first).localVariables[first].Item1.Item2!=VarType.CLASS)
-						throw new ParsingError("Not a class, can't read member of: \""+first+'"');
+						throw new ParsingError("Not a class, can't read member of: \""+first+'"',this);
 					
 					initialClass=this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(first).localVariables[first].Item1.Item1).First();
 					
@@ -3038,7 +3190,6 @@ namespace Sunset {
 				if (clearNextPvOrigin)
 					pvClassInstanceOrigin=new List<String>(new String[]{first});
 				if (this.isALocalVar(first)) {
-				
 					if (this.getLocalVarHomeBlock(first)!=this.getCurrentBlock())
 						this.refEbp(this.getLocalVarHomeBlock(first),2);
 					this.addBytes(new Byte[]{0x8B,0x45,this.pseudoStack.getVarEbpOffset(first)}); //MOV [EBP+-OFFSET],EAX
@@ -3048,7 +3199,7 @@ namespace Sunset {
                     if (staticInstances[initialClass.classID].ContainsKey(pValue))
                         this.addBytes(new Byte[]{0xA1}.Concat(BitConverter.GetBytes((UInt32)(PEHeaderFactory.dataSectAddr+staticInstances[initialClass.classID][pValue].Item1)))); // MOV EAX,[PTR]
                     else if (!staticFunctions[initialClass.classID].ContainsKey(pValue)&&!isFuncWithParams(pValue,initialClass,true))
-                        throw new ParsingError("Does not exist in \""+initialClass.className+"\": "+pValue);
+                        throw new ParsingError("Does not exist in \""+initialClass.className+"\": "+pValue,this);
                 }
                 else if (staticHome) {
                     this.addBytes(new Byte[]{0xA1}.Concat(BitConverter.GetBytes((UInt32)(PEHeaderFactory.dataSectAddr+staticInstances[ID][first].Item1)))); // MOV EAX,[PTR]
@@ -3068,7 +3219,6 @@ namespace Sunset {
 				}
 
 				if (classOriginRecursor) {
-					
 					if (pvClassInstanceOrigin.Count==0)
 						this.pvClassInstanceOrigin.Add(first);
 					this.pvClassInstanceOrigin.Add(pValue);
@@ -3111,7 +3261,7 @@ namespace Sunset {
                     }
                     Tuple<String,VarType>retType=function.Item2;
                     if (retType==null)
-                        throw new ParsingError("Function \""+pValue+"\" has no return value, therefore its return value can't be obtained");
+                        throw new ParsingError("Function \""+pValue+"\" has no return value, therefore its return value can't be obtained",this);
                     Console.WriteLine("ORIGIN: "+merge(pvClassInstanceOrigin,"."));
                     
                     this.CallStaticClassFunc(initialClass,pValue,new String[0]);
@@ -3128,7 +3278,7 @@ namespace Sunset {
                     this.throwIfAddr(gettingAddr,value);
                     
                     if (function.Item2==null)
-                        throw new ParsingError("Function \""+funcName+"\" has no return value, therefore its return value can't be obtained");
+                        throw new ParsingError("Function \""+funcName+"\" has no return value, therefore its return value can't be obtained",this);
                     
                     String unparsedParams=pValue.Substring(pValue.IndexOf('(')+1);
                     Byte roundBracketBalance=1,sharpBracketBalance=0;
@@ -3163,7 +3313,8 @@ namespace Sunset {
                     Console.WriteLine("unparsedParams: \""+unparsedParams+'"');
                     Console.WriteLine("3");
                     this.CallStaticClassFunc(initialClass,funcName,@params.ToArray());
-                    this.addByte(0x50); //PUSH EAX
+                    this.
+                    	addByte(0x50); //PUSH EAX
                     return function.Item2;
 
                   }
@@ -3178,9 +3329,15 @@ namespace Sunset {
                            return initialClass.constants[pValue].Item2;
 
                         }
-    					this.addByte(5);//ADD EAX,FOLLOWING DWORD
-    					this.addBytes(BitConverter.GetBytes(initialClass.variables[pValue].Item1+initialClass.opcodePortionByteSize)); //DWORD HERE
-    					
+                        if (initialClass.variables[pValue].Item3.HasFlag(Modifier.PRIVATE)||initialClass.parserUsed.@struct) {
+                                                                         
+	    					this.addByte(5);//ADD EAX,FOLLOWING DWORD
+	    					this.addBytes(BitConverter.GetBytes(initialClass.variables[pValue].Item1+initialClass.opcodePortionByteSize)); //DWORD HERE
+	                    }
+                        else {
+                        	// push esi, push edx, xor esi esi, add eax edx, add eax [eax+esi+fn.instanceId*4], call eax, pop esi, pop edx
+                        	this.addBytes(new Byte[]{0x56,0x52,0x33,0xF6,0xFF,0xD0,3,0xC2,3,0x84,0x30}.Concat(BitConverter.GetBytes(initialClass.variables[pValue].Item4*4)).Concat(new Byte[]{0x5A,0x5E}));
+                  		}
     					this.addBytes(new Byte[]{0x8B,0xF8}); //MOV EDI,EAX
     					UInt32 sz=this.keywordMgr.getVarTypeByteSize(initialClass.variables[pValue].Item2);
     					if (gettingAddr) {
@@ -3211,9 +3368,17 @@ namespace Sunset {
                            return initialClass.constants[pValue].Item2;
 
                         }
-					this.addByte(5);//ADD EAX,FOLLOWING DWORD
-					this.addBytes(BitConverter.GetBytes(initialClass.classes[pValue].Item1+initialClass.opcodePortionByteSize)); //DWORD HERE
+                    if (initialClass.classes[pValue].Item4.HasFlag(Modifier.PRIVATE)||initialClass.parserUsed.@struct) {
+                    	
+						this.addByte(5);//ADD EAX,FOLLOWING DWORD
+						this.addBytes(BitConverter.GetBytes(initialClass.classes[pValue].Item1+initialClass.opcodePortionByteSize)); //DWORD HERE
 				
+                    }   
+                    else {
+                    	// push esi, push edx, xor esi esi, add eax edx, add eax [eax+esi+fn.instanceId*4], call eax, pop esi, pop edx
+            			this.addBytes(new Byte[]{0x56,0x52,0x33,0xF6,0xFF,0xD0,3,0xC2,3,0x84,0x30}.Concat(BitConverter.GetBytes(initialClass.classes[pValue].Item5*4)).Concat(new Byte[]{0x5A,0x5E}));
+                    }
+    				
 					this.addBytes(new Byte[]{0x8B,0xF8}); //MOV EDI,EAX
 					UInt32 sz=this.keywordMgr.getVarTypeByteSize(initialClass.classes[pValue].Item2);
 					if (gettingAddr) {
@@ -3228,20 +3393,20 @@ namespace Sunset {
 				}
 				else if (initialClass.functions.ContainsKey(pValue)) {
 					
-                    throwIfCantAccess(initialClass.functions[pValue].Item6,pValue,initialClass.path,true);
-                    throwIfStatic(initialClass.functions[pValue].Item6,pValue);
+                    throwIfCantAccess(initialClass.functions[pValue].modifier,pValue,initialClass.path,true);
+                    throwIfStatic(initialClass.functions[pValue].modifier,pValue);
 					if (gettingAddr) {
 					
 						this.addByte(5);//ADD EAX,FOLLOWING DWORD
-						this.addBytes(BitConverter.GetBytes(initialClass.functions[pValue].Item1)); //DWORD HERE
+						this.addBytes(BitConverter.GetBytes(initialClass.functions[pValue].memAddr)); //DWORD HERE
 						this.addByte(0x50);//PUSH EAX
 						return FUNC_PTR;
 						
 					}
-					Tuple<String,VarType>retType=initialClass.functions[pValue].Item2;
+					Tuple<String,VarType>retType=initialClass.functions[pValue].returnType;
 					Console.WriteLine("-------------> Getting Address: "+gettingAddr);
 					if (retType==null)
-						throw new ParsingError("Function \""+pValue+"\" has no return value, therefore its return value can't be obtained");
+						throw new ParsingError("Function \""+pValue+"\" has no return value, therefore its return value can't be obtained",this);
 					Console.WriteLine("ORIGIN: "+merge(pvClassInstanceOrigin,"."));
 					
 					this.callClassFunc(pvClassInstanceOrigin,pValue,new String[0],local);
@@ -3254,13 +3419,13 @@ namespace Sunset {
                     
                     String funcName=pValue.Split('(')[0];
 
-                    throwIfCantAccess(initialClass.functions[funcName].Item6,funcName,initialClass.path,true);
-                    throwIfStatic(initialClass.functions[funcName].Item6,funcName);
+                    throwIfCantAccess(initialClass.functions[funcName].modifier,funcName,initialClass.path,true);
+                    throwIfStatic(initialClass.functions[funcName].modifier,funcName);
 					this.throwIfAddr(gettingAddr,value);
 					
 					
-					if (initialClass.functions[funcName].Item2==null)
-						throw new ParsingError("Function \""+funcName+"\" has no return value, therefore its return value can't be obtained");
+					if (initialClass.functions[funcName].returnType==null)
+						throw new ParsingError("Function \""+funcName+"\" has no return value, therefore its return value can't be obtained",this);
 					
 					String unparsedParams=pValue.Substring(pValue.IndexOf('(')+1);
 					Byte roundBracketBalance=1,sharpBracketBalance=0;
@@ -3296,7 +3461,7 @@ namespace Sunset {
                     Console.WriteLine("3");
 					this.callClassFunc(pvClassInstanceOrigin,funcName,@params.ToArray(),local,true,initialClass);
 					this.addByte(0x50); //PUSH EAX
-					return initialClass.functions[funcName].Item2;
+					return initialClass.functions[funcName].returnType;
 					
 				}
 				else if (this.isArrayIndexer(pValue)) {
@@ -3305,9 +3470,15 @@ namespace Sunset {
                     throwIfCantAccess(initialClass.arrays[pValue].Item4,pValue,initialClass.path,true);
                     throwIfStatic(initialClass.arrays[pValue].Item4,pValue);
 					if (!(initialClass.arrays.ContainsKey(arrName)))
-						throw new ParsingError("Array does not exist in \""+initialClass.className+"\": \""+arrName+'"');
-					this.addByte(5);//ADD EAX,FOLLOWING DWORD
-					this.addBytes(BitConverter.GetBytes(initialClass.arrays[arrName].Item1+initialClass.opcodePortionByteSize)); //DWORD HERE
+						throw new ParsingError("Array does not exist in \""+initialClass.className+"\": \""+arrName+'"',this);
+					if (initialClass.arrays[arrName].Item4.HasFlag(Modifier.PRIVATE)||initialClass.parserUsed.@struct) {
+						this.addByte(5);//ADD EAX,FOLLOWING DWORD
+						this.addBytes(BitConverter.GetBytes(initialClass.arrays[arrName].Item1+initialClass.opcodePortionByteSize)); //DWORD HERE
+					}
+					else {
+						// push esi, push edx, xor esi esi, add eax edx, add eax [eax+esi+fn.instanceId*4], call eax, pop esi, pop edx
+            			this.addBytes(new Byte[]{0x56,0x52,0x33,0xF6,0xFF,0xD0,3,0xC2,3,0x84,0x30}.Concat(BitConverter.GetBytes(initialClass.arrays[arrName].Item5*4)).Concat(new Byte[]{0x5A,0x5E}));
+					}
 					if (gettingAddr) {
 						
 						this.addByte(0x50);//PUSH EAX
@@ -3329,8 +3500,14 @@ namespace Sunset {
                        return initialClass.constants[pValue].Item2;
 
                     }
-					this.addByte(5);//ADD EAX,FOLLOWING DWORD
-					this.addBytes(BitConverter.GetBytes(initialClass.arrays[pValue].Item1+initialClass.opcodePortionByteSize)); //DWORD HERE
+                    if (initialClass.arrays[pValue].Item4.HasFlag(Modifier.PRIVATE)||initialClass.parserUsed.@struct) {
+                    	this.addByte(5);//ADD EAX,FOLLOWING DWORD
+						this.addBytes(BitConverter.GetBytes(initialClass.arrays[pValue].Item1+initialClass.opcodePortionByteSize)); //DWORD HERE		
+                    }
+                    else {
+                    	// push esi, push edx, xor esi esi, add eax edx, add eax [eax+esi+fn.instanceId*4], call eax, pop esi, pop edx
+            			this.addBytes(new Byte[]{0x56,0x52,0x33,0xF6,0xFF,0xD0,3,0xC2,3,0x84,0x30}.Concat(BitConverter.GetBytes(initialClass.classes[pValue].Item5*4)).Concat(new Byte[]{0x5A,0x5E}));
+                    }
 					
 					if (gettingAddr) {
 						this.addByte(0x50);//PUSH EAX
@@ -3344,7 +3521,7 @@ namespace Sunset {
 					
 					
 				}
-				else throw new ParsingError("Item \""+pValue+"\" is not accessible and may not exist from \""+initialClass.className+'"');
+				else throw new ParsingError("Item \""+pValue+"\" is not accessible and may not exist from \""+initialClass.className+'"',this);
 				
 			}
 			
@@ -3354,7 +3531,7 @@ namespace Sunset {
 				
 			}
 			
-			else throw new ParsingError("Invalid value: \""+value+'"');
+			else throw new ParsingError("Invalid value: \""+value+'"',this);
 		}
 		
 		private void freeHeaps () {
@@ -3372,7 +3549,7 @@ namespace Sunset {
 			this.referenceDll(Parser.KERNEL32,HF);
 			
 			List<UInt32> doneMemAddrs=new List<UInt32>();
-			foreach (KeyValuePair<String,Tuple<UInt32,String,ArrayStyle,Modifier>> array in this.arrays) {
+			foreach (KeyValuePair<String,Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>> array in this.arrays) {
 				
 				if (doneMemAddrs.Contains(array.Value.Item1))
 					continue;
@@ -3447,6 +3624,8 @@ namespace Sunset {
 			this.blocks[block]=endAddress;
 			Console.WriteLine("onBlockClosed: "+endAddress.ToString("X")+','+block.startMemAddr.ToString("X"));
 			//Console.WriteLine(memAddress.ToString("X")+'-'+block.startMemAddr.ToString("X")+'='+(memAddress-block.startMemAddr).ToString());
+			
+			
 			Byte[] memAddr=BitConverter.GetBytes((Int32)endAddress-(Int32)block.startMemAddr);
 			Byte i;
              foreach (Block b in this.blocks.Select(x=>x.Key)) {
@@ -3585,11 +3764,11 @@ namespace Sunset {
 		internal void callFunction (String functionName,String[]@params) {
 				
 			if (!(this.functions.ContainsKey(functionName)))
-				throw new ParsingError("Function does not exist: \""+functionName+'"');
+				throw new ParsingError("Function does not exist: \""+functionName+'"',this);
 			
-			Boolean restoreEsiCondition=functions[functionName].Item4==FunctionType.DLL_REFERENCED&&addEsiToLocalAddresses&&inFunction;
-            if (!functions[functionName].Item6.HasFlag(Modifier.STATIC)&&InStaticEnvironment()&&functions[functionName].Item4!=FunctionType.DLL_REFERENCED)
-                throw new ParsingError("Can't access non-static function from a static environment (\""+functionName+"\" was called)");
+			Boolean restoreEsiCondition=functions[functionName].functionType==FunctionType.DLL_REFERENCED&&addEsiToLocalAddresses&&inFunction;
+            if (!functions[functionName].modifier.HasFlag(Modifier.STATIC)&&InStaticEnvironment()&&functions[functionName].functionType!=FunctionType.DLL_REFERENCED)
+                throw new ParsingError("Can't access non-static function from a static environment (\""+functionName+"\" was called)",this);
 			
 			Console.WriteLine(" == callFunction: "+functionName+" == ");
 			foreach (String str in @params)
@@ -3603,20 +3782,20 @@ namespace Sunset {
 				
 			}
 			
-			if (this.functions[functionName].Item3!=@params.Length)
-				throw new ParsingError("Expected \""+this.functions[functionName].Item3.ToString()+"\" parameters for \""+functionName+"\", got \""+@params.Length+'"');
+			if (this.functions[functionName].expectedParameterCount!=@params.Length)
+				throw new ParsingError("Expected \""+this.functions[functionName].expectedParameterCount.ToString()+"\" parameters for \""+functionName+"\", got \""+@params.Length+'"',this);
 			
 			if (restoreEsiCondition) {
 				pseudoStack.push(new EsiPtr());
 				this.addByte(0x56);//PUSH ESI
 			}
 			
-			if (this.functionParamTypes[functionName].Count!=0) {
-				UInt16 i=(UInt16)(this.functionParamTypes[functionName].Count-1);
+			if (this.functions[functionName].parameterTypes.Count!=0) {
+				UInt16 i=(UInt16)(this.functions[functionName].parameterTypes.Count-1);
 				foreach (String str in @params.Reverse()) {
 					
 					Console.WriteLine("Pushing: "+str);
-					this.tryConvertVars(this.functionParamTypes[functionName][i],this.pushValue(str));
+					this.tryConvertVars(vtToTpl(this.functions[functionName].parameterTypes[i]),this.pushValue(str),str);
 					if (i==0) break;
 					--i;
 					
@@ -3628,13 +3807,13 @@ namespace Sunset {
 				this.addBytes(new Byte[]{0x8B,0x75,this.pseudoStack.getLatestEsiOffset()}); //MOV ESI,[EBP+-OFFSET]
 			}
 			
-			this.addBytes((this.functions[functionName].Item4==FunctionType.SUNSET)?new Byte[]{0xE8,0,0,0,0}:new Byte[]{0xFF,0x15,0,0,0,0}); //CALL Mem Addr
-			if (this.functions[functionName].Item4==FunctionType.SUNSET)
+			this.addBytes((this.functions[functionName].functionType==FunctionType.SUNSET)?new Byte[]{0xE8,0,0,0,0}:new Byte[]{0xFF,0x15,0,0,0,0}); //CALL Mem Addr
+			if (this.functions[functionName].functionType==FunctionType.SUNSET)
 				this.functionReferences[functionName].Add(new Tuple<UInt32,UInt32>((UInt32)opcodes.Count-4,this.memAddress));
 			else
                   ReferenceRefdFunc(functionName,-4);
-			if (this.functions[functionName].Item5==CallingConvention.Cdecl)
-				this.addBytes(new Byte[]{0x81,0xC4}.Concat(BitConverter.GetBytes((UInt32)this.functions[functionName].Item3*4)));
+			if (this.functions[functionName].callingConvention==CallingConvention.Cdecl)
+				this.addBytes(new Byte[]{0x81,0xC4}.Concat(BitConverter.GetBytes((UInt32)this.functions[functionName].expectedParameterCount*4)));
 			if (restoreEsiCondition) {
 				this.addByte(0x5E);//POP ESI
 				pseudoStack.pop();
@@ -3654,12 +3833,12 @@ namespace Sunset {
 					
 					i=0;
 					Console.WriteLine("Writing opcodes @ "+tpl.Item1.ToString());
-					Console.WriteLine("Filling function ref @ "+tpl.Item1.ToString()+": "+this.functions[funcName].Item1.ToString("X")+'-'+tpl.Item2.ToString("X")+'='+((Int32)this.functions[funcName].Item1-(Int32)tpl.Item2).ToString());
+					Console.WriteLine("Filling function ref @ "+tpl.Item1.ToString()+": "+this.functions[funcName].memAddr.ToString("X")+'-'+tpl.Item2.ToString("X")+'='+((Int32)this.functions[funcName].memAddr-(Int32)tpl.Item2).ToString());
 					
-					if (this.functions[funcName].Item4==FunctionType.SUNSET)
-						memAddr=BitConverter.GetBytes(((Int32)this.functions[funcName].Item1-(Int32)tpl.Item2));
+					if (this.functions[funcName].functionType==FunctionType.SUNSET)
+						memAddr=BitConverter.GetBytes(((Int32)this.functions[funcName].memAddr-(Int32)tpl.Item2));
 					else 
-						memAddr=BitConverter.GetBytes(this.functions[funcName].Item1);
+						memAddr=BitConverter.GetBytes(this.functions[funcName].memAddr);
 					while (i!=4) {
 						
 						this.opcodes[(Int32)tpl.Item1+i]=memAddr[i];
@@ -3766,7 +3945,7 @@ namespace Sunset {
 				
 			}
 			
-			throw new ParsingError("Not a var type: \""+value+'"');
+			throw new ParsingError("Not a var type: \""+value+'"',this);
 				
 			
 		}
@@ -3797,24 +3976,39 @@ namespace Sunset {
 			
 		}
 		
-		internal void tryConvertVars (Tuple<String,VarType>to,Tuple<String,VarType>from) {
+		internal void tryConvertVars (Tuple<String,VarType>to,Tuple<String,VarType>from,String refVar) {
 			
 			//HACK:: check var type here
-
-            Console.WriteLine("tryConvertVars: "+to.Item1+", "+from.Item1);
+  
+			Console.WriteLine("tryConvertVars: "+to.Item1+','+to.Item2.ToString()+" - "+from.Item1+','+from.Item2.ToString());
 			
-			if (from.Item2==VarType.NATIVE_ARRAY_INDEXER||from.Item2==VarType.NATIVE_VARIABLE) {
+			if (from.Item2==VarType.NATIVE_VARIABLE) {
 				if (keywordMgr.getVarTypeByteSize(to.Item1)<keywordMgr.getVarTypeByteSize(from.Item1))
-					throw new ParsingError("Can't convert \""+to.Item1+"\" to \""+from.Item1+'"');
-			}
-			if (from.Item2==VarType.CLASS&&to.Item2==VarType.CLASS&&from.Item1!=to.Item1)
-				throw new ParsingError("Cannot convert class \""+from.Item1+"\" to \""+to.Item1+'"');
+					throw new ParsingError("Can't convert \""+to.Item1+"\" to \""+from.Item1+'"',this);
+            }
+            if (to.Item2==VarType.NATIVE_ARRAY_INDEXER) {
+				tryConvertVars(getVarType(to.Item1),from,refVar);
+            	return;
+            }
+			if (from.Item2==VarType.NATIVE_ARRAY_INDEXER) {
+				tryConvertVars(to,getVarType(from.Item1),refVar);
+            	return;
+            }
+            if (from.Item2==VarType.CLASS&&to.Item2==VarType.CLASS&&from.Item1!=to.Item1) {
+            	// if from inherits to...
+            	//   then its ok to convert but the memory addresses wont align so that has to be accounted for in the code.
+            	Class parent=importedClasses.Where(x=>x.className==to.Item1).First(),child=importedClasses.Where(x=>x.className==from.Item1).First();
+            	if (!child.inheritedClasses.Contains(parent))
+            		throw new ParsingError("Cannot convert class \""+from.Item1+"\" to \""+to.Item1+'"',this);
+            }
+			else if (from.Item2!=VarType.NONE&&((from.Item2==VarType.CLASS&&to.Item2!=VarType.CLASS)||(to.Item2==VarType.CLASS&&from.Item2!=VarType.CLASS)))
+				throw new ParsingError("Can't cross convert classes with other var types! (\""+from.Item1+"\" to \""+to.Item1+"\")",this);
 			else if (from.Item2==VarType.NATIVE_VARIABLE&&to.Item2==VarType.NATIVE_VARIABLE&&(from.Item1==KWString.constName||to.Item1==KWString.constName)&&from.Item1!=to.Item1)
-				throw new ParsingError("Can't convert \""+from.Item1+"\" to \""+to.Item1+'"');
+				throw new ParsingError("Can't convert \""+from.Item1+"\" to \""+to.Item1+'"',this);
 			else if (from.Item2!=to.Item2&&keywordMgr.getVarTypeByteSize(to.Item1)!=4)// What this does is allow pointers of native arrays etc to be moved into native integers!
-				throw new ParsingError("Can't convert \""+to.Item2.ToString()+"\" of \""+to.Item1.ToString()+"\" to \""+from.Item2.ToString()+"\" of \""+from.Item1+'"');
+				throw new ParsingError("Can't convert \""+to.Item2.ToString()+"\" of \""+to.Item1.ToString()+"\" to \""+from.Item2.ToString()+"\" of \""+from.Item1+'"',this);
 			else if ((acknowledgements.ContainsKey(from.Item1))&&from.Item1!=to.Item1)
-                throw new ParsingError("Can't convert \""+from.Item1+"\" to \""+to.Item1+"\", did you mean to cast(...,...)?");
+                throw new ParsingError("Can't convert \""+from.Item1+"\" to \""+to.Item1+"\", did you mean to cast(x,y)?",this);
             
 		}
 		
@@ -3868,25 +4062,42 @@ namespace Sunset {
 			Console.WriteLine("Registering class "+varName+" (a type of \""+this.varType+"\"), memAddress: "+memAddress.ToString("X"));
 			
 			if (this.nameExists(varName))
-				throw new ParsingError("The name \""+varName+"\" is already in use");
+				throw new ParsingError("The name \""+varName+"\" is already in use",this);
 
     		if (!(currentMods.hasAccessorModifier()))
                     currentMods=currentMods|Modifier.PRIVATE;
+    		
+			
 
 			this.tryIncreaseBlockVarCount();
     			
-                var vt=new Tuple<Tuple<String,VarType>>(new Tuple<String,VarType>(this.varType,VarType.CLASS));
-                Class cl=this.importedClasses.Where(x=>x.className==this.varType).First();
-                if (currentMods.HasFlag(Modifier.STATIC)) {
-                    
-                    staticInstances[ID].Add(varName,new Tuple<UInt32,Tuple<String,VarType>,Modifier,Class>((UInt32)dataSectBytes.Count,vt.Item1,currentMods,cl));
-                    dataSectBytes.AddRange(new Byte[4]);
+            var vt=new Tuple<Tuple<String,VarType>>(new Tuple<String,VarType>(this.varType,VarType.CLASS));
+            Class cl=this.importedClasses.Where(x=>x.className==this.varType).First();
+            if (currentMods.HasFlag(Modifier.STATIC)) {
+                
+                staticInstances[ID].Add(varName,new Tuple<UInt32,Tuple<String,VarType>,Modifier,Class>((UInt32)dataSectBytes.Count,vt.Item1,currentMods,cl));
+                dataSectBytes.AddRange(new Byte[4]);
 
-                }
+            }
 			else if (this.blocks.Count==0) {//not local var
+            	Boolean isPrivate=currentMods.HasFlag(Modifier.PRIVATE);
 				this.defineTimeOrder.Add(varName);
                 UInt32 addr=memAddress+(UInt32)appendAfter.Count;
-				this.classes.Add(varName,new Tuple<UInt32,String,Class,Modifier>(addr,this.varType,cl,currentMods));
+                this.classes.Add(varName,new Tuple<UInt32,String,Class,Modifier,UInt32>(addr,this.varType,cl,currentMods,(isPrivate?0:instanceID)));
+                if (this.inhClassesToDefine.ContainsKey(varName)) {
+                	Int32 idx=(Int32)this.inhClassesToDefine[varName].Item5;
+					var pc=this.classes[varName];
+					this.classes[varName]=new Tuple<uint, string, Class, Modifier, uint>(pc.Item1,pc.Item2,pc.Item3,pc.Item4,(UInt32)idx);
+	        		instanceTable.RemoveAt(idx);
+	        		instanceTable.Insert(idx,(UInt32)(appendAfter.Count));
+	        		if (!currentMods.Equals(inhClassesToDefine[varName].Item4)) throw new ParsingError("Expected \""+varName+"\" to be defined with mods \""+ModsToLegibleString(inhClassesToDefine[varName].Item4)+'"',this);
+					if (this.varType!=inhClassesToDefine[varName].Item2) throw new ParsingError("Expected \""+varName+"\" to be defined of type \""+inhClassesToDefine[varName].Item2+'"',this);
+					inhClassesToDefine.Remove(varName);
+					Console.WriteLine(varName+" successfully being defined as a inherited class.");
+				}else { 
+                	++instanceID;
+                	instanceTable.Add((UInt32)appendAfter.Count); // ....
+                }
 				this.appendAfterIndex.Add(varName,(UInt32)appendAfter.Count);
 				this.appendAfter.AddRange(new Byte[4]);
 				this.classReferences.Add(varName,new List<UInt32>());
@@ -4198,6 +4409,7 @@ namespace Sunset {
 			this.indexArray(arrName,(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub,0,noName,arrMemSize);
 			
 			UInt32 varTypeByteSize=(arrMemSize!=0?arrMemSize:(this.isALocalVar(arrName))?this.keywordMgr.getVarTypeByteSize(this.getLocalVarHomeBlock(arrName).localVariables[arrName].Item1.Item1):this.keywordMgr.getVarTypeByteSize(this.arrays[arrName].Item2));
+			String varType=(this.isALocalVar(arrName))?this.getLocalVarHomeBlock(arrName).localVariables[arrName].Item1.Item1:this.arrays[arrName].Item2;
 			if (!gettingAddr)
 				this.addBytes((varTypeByteSize==4)?
 				              new Byte[]{0x5B,           //POP EBX
@@ -4264,13 +4476,13 @@ namespace Sunset {
 					
 				}
 				else
-					throw new ParsingError("Unexpected: \""+slack+'"');
+					throw new ParsingError("Unexpected: \""+slack+'"',this);
 				
 			}
 			
 			this.writeStrOpcodes("PAV E");
 			
-			return new Tuple<String,VarType>((varTypeByteSize==4)?KWInteger.constName:(varTypeByteSize==2)?KWShort.constName:KWByte.constName,VarType.NATIVE_ARRAY_INDEXER);
+			return new Tuple<String,VarType>(varType,VarType.NATIVE_ARRAY_INDEXER);
 			
 		}
 		
@@ -4404,7 +4616,7 @@ namespace Sunset {
 					              	0x89,(Byte)((this.isDivision(op))?4:0x14),0x24 // MOV [ESP],EAX || MOV [ESP],EDX
 					              });
 				else
-					throw new ParsingError("Unexpected math operator \""+op+"\" (?!)");
+					throw new ParsingError("Unexpected math operator \""+op+"\" (?!)",this);
 				
 			}
 //				order.dumpData(true);
@@ -4447,13 +4659,13 @@ namespace Sunset {
 			
 		}
 		
-		internal Dictionary<String,Tuple<UInt32,String,Modifier>>getVariables () {
+		internal Dictionary<String,Tuple<UInt32,String,Modifier,UInt32>>getVariables () {
 			
 			return this.variables;
 			
 		}
 		
-		internal Dictionary<String,Tuple<UInt32,String,Class,Modifier>>getClasses () {
+		internal Dictionary<String,Tuple<UInt32,String,Class,Modifier,UInt32>>getClasses () {
 			
 			return this.classes;
 			
@@ -4476,7 +4688,7 @@ namespace Sunset {
 			
 		}
 		
-		internal Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>>getFunctions () {
+		internal Dictionary<String,Function>getFunctions () {
 			
 			return this.functions;
 			
@@ -4494,7 +4706,7 @@ namespace Sunset {
 					if (!inQ&&c==')') {
 						
 						if (parenthesesBalance==0)
-							throw new ParsingError("Unbalanced parentheses in \""+str+'"');
+							throw new ParsingError("Unbalanced parentheses in \""+str+'"',this);
 						
 						--parenthesesBalance;
 						
@@ -4512,44 +4724,97 @@ namespace Sunset {
 		}
 		
 		private void moveClassItemAddrIntoEax (String classInstance,String item,VarType vt,Boolean classInstanceAlreadyInEax=false,Class cl=null) {
-
-                Boolean imported=isImportedClass(classInstance);
+			
+            Boolean imported=isImportedClass(classInstance);
 
 			if (!classInstanceAlreadyInEax&&!imported)
 				this.moveClassInstanceIntoEax(classInstance);
 			
 			if (cl==null)
 				cl=this.getClassFromInstanceName(classInstance);
-				
-                if (imported) this.addByte(0xB8); // MOV EAX,FOLLOWING DWORD
-			 else this.addByte(5);//ADD EAX,FOLLOWING DWORD
+		
+            Console.WriteLine("Class instance: "+classInstance+", item: "+item+", imported: "+imported);
 			
-                Console.WriteLine("Class instance: "+classInstance+", item: "+item+", imported: "+imported);
-                
-               if (imported) {
-                    this.addBytes(BitConverter.GetBytes(PEHeaderFactory.dataSectAddr+staticInstances[cl.classID][item].Item1));
-                    return;
-                }
-			switch (vt) {
-					
+            if (imported) { 
+            	this.addByte(0xB8); // MOV EAX,FOLLOWING DWORD
+                this.addBytes(BitConverter.GetBytes(PEHeaderFactory.dataSectAddr+staticInstances[cl.classID][item].Item1));
+            	return;
+            }
+            // Not Static:
+            switch (vt) {
+		    		
 				case VarType.NATIVE_VARIABLE:
-					this.addBytes(BitConverter.GetBytes(cl.variables[item].Item1+cl.opcodePortionByteSize)); //DWORD HERE
-					break;
+            		var v=cl.variables[item];
+            		if (v.Item3.HasFlag(Modifier.PRIVATE)||cl.parserUsed.@struct)
+            			this.addBytes(new Byte[]{5}.Concat(BitConverter.GetBytes(v.Item1+cl.opcodePortionByteSize))); //ADD EAX,DWORD HERE
+            		else {
+            			// push esi
+            			// push edx
+            			// xor esi,esi
+            			// add eax,edx
+            			// add eax,[eax+esi+fn.instanceId*4]
+            			// call eax
+            			// pop esi
+            			// pop edx
+            			this.addBytes(new Byte[]{0x56,0x52,0x33,0xF6,0xFF,0xD0,3,0xC2,3,0x84,0x30}.Concat(BitConverter.GetBytes((UInt32)(v.Item4*4))).Concat(new Byte[]{0x5A,0x5E}));
+            			
+            		}
+            		break;
 					
 				case VarType.CLASS:
-					this.addBytes(BitConverter.GetBytes(cl.classes[item].Item1+cl.opcodePortionByteSize)); //DWORD HERE
-					break;
+            		var c=cl.classes[item];
+            		if (c.Item4.HasFlag(Modifier.PRIVATE)||cl.parserUsed.@struct)
+						this.addBytes(new Byte[]{5}.Concat(BitConverter.GetBytes(cl.classes[item].Item1+cl.opcodePortionByteSize))); //ADD EAX,DWORD HERE
+            		else {
+            			// push esi
+            			// push edx
+            			// xor esi,esi
+            			// add eax,edx
+            			// add eax,[eax+esi+fn.instanceId*4]
+            			// call eax
+            			// pop esi
+            			// pop edx
+            			this.addBytes(new Byte[]{0x56,0x52,0x33,0xF6,0xFF,0xD0,3,0xC2,3,0x84,0x30}.Concat(BitConverter.GetBytes((UInt32)(c.Item5*4))).Concat(new Byte[]{0x5A,0x5E}));
+            			
+            		}
+            		break;
 					
 				case VarType.FUNCTION:
-					this.addBytes(BitConverter.GetBytes(cl.functions[item].Item1)); //DWORD HERE
+					Function fn=cl.functions[item];
+					if (fn.modifier.HasFlag(Modifier.PRIVATE))
+						this.addBytes(new Byte[]{5}.Concat(BitConverter.GetBytes(fn.memAddr))); //ADD EAX,DWORD HERE
+					else {
+						// push esi
+						// push edx
+						// xor esi esi
+						// call EAX
+						// add esi,edx
+						// add EAX [EAX+ESI+fn.instanceId*4]
+						// pop edx
+						// pop esi
+						this.addBytes(new Byte[]{0x56,0x52,0x33,0xF6,0xFF,0xD0,3,0xF2,3,0x84,0x30}.Concat(BitConverter.GetBytes(fn.instanceID*4)).Concat(new Byte[]{0x5A,0x5E}));
+					}
 					break;
 				
 				case VarType.NATIVE_ARRAY:
-					this.addBytes(BitConverter.GetBytes(cl.arrays[item].Item1+cl.opcodePortionByteSize)); // DWORD HERE
+					var a=cl.arrays[item];
+					if (a.Item4.HasFlag(Modifier.PRIVATE))
+						this.addBytes(new Byte[]{5}.Concat(BitConverter.GetBytes(cl.arrays[item].Item1+cl.opcodePortionByteSize))); // ADD EAX,DWORD HERE
+					else {
+						// push esi
+						// push edx
+						// xor esi esi
+						// call EAX
+						// add esi,edx
+						// add EAX [EAX+ESI+fn.instanceId*4]
+						// pop edx
+						// pop esi
+						this.addBytes(new Byte[]{0x56,0x52,0x33,0xF6,0xFF,0xD0,3,0xF2,3,0x84,0x30}.Concat(BitConverter.GetBytes(a.Item5*4)).Concat(new Byte[]{0x5A,0x5E}));
+					}
 					break;
 					
 				default:
-					throw new ParsingError("Invalid VarType (?!) ("+vt.ToString()+')');
+					throw new ParsingError("Invalid VarType (?!) ("+vt.ToString()+')',this);
 					
 			}
 			
@@ -4558,7 +4823,7 @@ namespace Sunset {
 		private void throwIfAddr (Boolean gettingAddr,String value) {
 			
 			if (gettingAddr)
-				throw new ParsingError("Can't get address of: \""+value+'"');
+				throw new ParsingError("Can't get address of: \""+value+'"',this);
 			
 		}
 		
@@ -4610,13 +4875,13 @@ namespace Sunset {
 			
 			if(!cl.functions.ContainsKey(func)) throw new Exception("Func:"+func+", origin: "+merge(classInstance,"."));
 			
-            Modifier mods=cl.functions[func].Item6;
+            Modifier mods=cl.functions[func].modifier;
             throwIfCantAccess(mods,func,cl.path,true);
             if (!this.containsImportedClass(classInstance.Last()))
                 throwIfStatic(mods,func);
 
-			if (cl.functions[func].Item3!=parameters.Length)
-				throw new ParsingError("Expected \""+cl.functions[func].Item3+"\" parameters for \""+func+"\", got \""+parameters.Length+'"');
+			if (cl.functions[func].expectedParameterCount!=parameters.Length)
+				throw new ParsingError("Expected \""+cl.functions[func].expectedParameterCount+"\" parameters for \""+func+"\", got \""+parameters.Length+'"',this);
 			
 			this.addByte(0x56);//PUSH ESI
 			if (classInstanceAlreadyInEax)
@@ -4635,12 +4900,12 @@ namespace Sunset {
 			}
 				
 			
-			if (!classInstanceAlreadyInEax)
+			if (!classInstanceAlreadyInEax) {
 				this.moveClassOriginIntoEax(classInstance,originLocal);
-			if (classInstanceAlreadyInEax)
-				this.moveClassItemAddrIntoEax(null,func,VarType.FUNCTION,true,lastClassOnOriginIfInstanceInEax);
-			else
 				this.moveClassOriginItemAddrIntoEax(classInstance.ToList(),func,VarType.FUNCTION,originLocal,true);
+			}
+			else
+				this.moveClassItemAddrIntoEax(null,func,VarType.FUNCTION,true,lastClassOnOriginIfInstanceInEax);
 			this.addBytes(new Byte[]{0xFF,0xD0}); //CALL EAX
 			if (classInstanceAlreadyInEax)
 				this.addBytes(new Byte[]{0x83,0xC4,4});//ADD ESP,4
@@ -4721,7 +4986,7 @@ namespace Sunset {
 			
 		}
 		
-		public Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier>> getArrays () {
+		public Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>> getArrays () {
 			
 			return this.arrays;
 			
@@ -4930,7 +5195,7 @@ namespace Sunset {
         private Tuple<String,VarType> ackRootOf (String ack) {
 
             if (!(this.acknowledgements.ContainsKey(ack)))
-                throw new ParsingError("Not an acknowledgement: "+ack);
+                throw new ParsingError("Not an acknowledgement: "+ack,this);
 
             Tuple<String,VarType>root=this.acknowledgements[ack];
             if (this.acknowledgements.ContainsKey(root.Item1))
@@ -4948,7 +5213,7 @@ namespace Sunset {
             foreach (KeyValuePair<String,List<Tuple<UInt32,UInt32>>>kvp in this.labelReferences) {
 
                 if (!(labels.ContainsKey(kvp.Key)))
-                    throw new ParsingError("Label was referenced but does not exist: \""+kvp.Key+'"');
+                    throw new ParsingError("Label was referenced but does not exist: \""+kvp.Key+'"',this);
 
                 foreach (Tuple<UInt32,UInt32>tpl in kvp.Value) {
 
@@ -4975,15 +5240,15 @@ namespace Sunset {
             instanceName=this.trimCurrentPath(instanceName);
             classFilePath=this.trimCurrentPath(classFilePath);
 
-            if ((mods.HasFlag(Modifier.PRIVATE)&&classFilePath!=fileName)||(mods.HasFlag(Modifier.LOCAL)&&((classFilePath.Contains('\\')||classFilePath.Contains('/'))&&merge(fileName.Split(arr).allButLast(),"/")!=merge(classFilePath.Split(arr).allButLast(),"/")))||(mods.HasFlag(Modifier.PULLABLE)&&!getting))
-                throw new ParsingError("Can't access \""+instanceName+"\" from \""+classFilePath.Split(arr).Last()+"\": exists, but inaccessible due to its modifiers. \n\nCalling path: "+merge(fileName.Split(new []{'/','\\' }).allButLast(),"/")+"\nCalled path: "+merge(classFilePath.Split(new []{'/','\\' }).allButLast(),"/")+'\n');
+            if ((mods.HasFlag(Modifier.PRIVATE)&&classFilePath!=fileName)||(mods.HasFlag(Modifier.LOCAL)&&((classFilePath.Contains('\\')||classFilePath.Contains('/'))&&merge(fileName.Split(arr).AllButLast(),"/")!=merge(classFilePath.Split(arr).AllButLast(),"/")))||(mods.HasFlag(Modifier.PULLABLE)&&!getting))
+                throw new ParsingError("Can't access \""+instanceName+"\" from \""+classFilePath.Split(arr).Last()+"\": exists, but inaccessible due to its modifiers. \n\nCalling path: "+merge(fileName.Split(new []{'/','\\' }).AllButLast(),"/")+"\nCalled path: "+merge(classFilePath.Split(new []{'/','\\' }).AllButLast(),"/")+'\n',this);
             
         }
 
         private void throwIfStatic (Modifier mods,String instanceName) {
 
             if (mods.HasFlag(Modifier.STATIC))
-                throw new ParsingError("Tried to access a static instance \""+instanceName+"\" from a class instance (use class name)");
+                throw new ParsingError("Tried to access a static instance \""+instanceName+"\" from a class instance (use class name)",this);
 
         }
 
@@ -5009,13 +5274,13 @@ namespace Sunset {
                 case VarType.CLASS: 
                     return pc.classes[item].Item4;
                 case VarType.FUNCTION:
-                    return pc.functions[item].Item6;
+                    return pc.functions[item].modifier;
                 case VarType.NATIVE_ARRAY:
                     return pc.arrays[item].Item4;
                 case VarType.NATIVE_VARIABLE:
                     return pc.variables[item].Item3;
                 default:
-                    throw new ParsingError("Invalid VarType (?!): "+vt.ToString());
+                    throw new ParsingError("Invalid VarType (?!): "+vt.ToString(),this);
 
             }
 
@@ -5070,7 +5335,7 @@ namespace Sunset {
 
             }
 
-            throw new ParsingError("Not constant value: "+value);
+            throw new ParsingError("Not constant value: "+value,this);
 
         }
 
@@ -5083,16 +5348,16 @@ namespace Sunset {
                 case VarType.CLASS:
                     return this.classes[varName].Item4;
                 case VarType.FUNCTION:
-                    return this.functions[varName].Item6;
+                    return this.functions[varName].modifier;
                 case VarType.NATIVE_ARRAY_INDEXER:
                 case VarType.NATIVE_ARRAY:
                     return this.arrays[varName].Item4;
                 case VarType.NATIVE_VARIABLE:
                     return this.variables[varName].Item3;
                 case VarType.NONE:
-                    throw new ParsingError("Can't get var type of void/null variable: "+varName);
+                    throw new ParsingError("Can't get var type of void/null variable: "+varName,this);
                 default:
-                    throw new ParsingError("Can't get var type of: "+varName);
+                    throw new ParsingError("Can't get var type of: "+varName,this);
 
             }
 
@@ -5164,7 +5429,7 @@ namespace Sunset {
         private void ThrowIfInstRefFromStaticEnv (String varName) {
 
             if (InStaticEnvironment()&&this.variables.ContainsKey(varName)&&!this.variables[varName].Item3.HasFlag(Modifier.STATIC))
-                throw new ParsingError("Tried to access non-static instance variable \""+varName+"\" from a static environment");
+                throw new ParsingError("Tried to access non-static instance variable \""+varName+"\" from a static environment",this);
 
         }
 
@@ -5175,7 +5440,7 @@ namespace Sunset {
         }
 
         internal Boolean InStaticEnvironment () {
-            return this.inFunction&&!this.inConstructor&&this.functions.Count>0&&this.functions.Last().Value.Item6.HasFlag(Modifier.STATIC);
+            return this.inFunction&&!this.inConstructor&&this.functions.Count>0&&this.functions.Last().Value.modifier.HasFlag(Modifier.STATIC);
         }
 
         internal UInt32 GetStaticInclusiveAddress (Boolean inStaticEnvironment) {
@@ -5193,7 +5458,7 @@ namespace Sunset {
             throwIfCantAccess(mods,funcName,path,false);
 
             if (function.Item3!=parameters.Length)
-                throw new ParsingError("Expected \""+function.Item3+"\" parameters for \""+funcName+"\", got \""+parameters.Length+'"');
+                throw new ParsingError("Expected \""+function.Item3+"\" parameters for \""+funcName+"\", got \""+parameters.Length+'"',this);
             
             foreach (String s in parameters.Reverse())
                 this.pushValue(s); //FIXME:: tryConvertVars here
@@ -5251,7 +5516,11 @@ namespace Sunset {
             else this.referencedFuncPositions[functionName].Add(GetDataSectInclusiveOpcodesCount(offset));
 
         }
-
+        
+        internal Tuple<String,VarType> vtToTpl (ValueTuple<String,VarType>vt) {
+        	return new Tuple<String,VarType>(vt.Item1,vt.Item2);
+        }
+        
         #region Character parsing helpers
         //TODO:: make all this static
 
@@ -5320,8 +5589,29 @@ namespace Sunset {
             return c=='~';
 
         }
+        
+        private Boolean endsInherit (Char c) {
+        	
+        	return c=='.';
+        	
+        }
+        
+        private Boolean continuesInherit (Char c) {
+        	
+        	return c==',';
+        	
+        }
 		
 		#endregion
+		
+		/// <summary>
+		/// will most likely have unexpected outcome (due to collateral damage) if used
+		/// </summary>
+		internal void clearOpcodes () {
+			opcodes.Clear();
+			memAddress=startingMemAddr;
+			tableAddrIndex=0;
+		}
 		
 	}
 	

@@ -97,7 +97,7 @@ namespace Sunset {
 				if (showStackTrace)
 				    Console.WriteLine("Error compiling: "+ex.ToString());
 				else
-				    Console.WriteLine("There was an error in your code: "+ex.Message);
+				    Console.WriteLine("\nThere was an error in your code: "+ex.Message);
 				return;
 				
 			}
@@ -204,7 +204,14 @@ namespace Sunset {
 
     public static class Helpers {
 
-        public static IEnumerable<T> allButLast<T> (this IEnumerable<T> instances) { return instances.Take(instances.Count()-1); }
+        public static IEnumerable<T> AllButLast<T> (this IEnumerable<T> instances) { return instances.Take(instances.Count()-1); }
+		
+	 	public static IEnumerable<T> TakeUntil<T> (this IEnumerable<T> instances,Func<T,Boolean>predicate) {
+			foreach (T instance in instances) {
+				if (predicate(instance)) break;
+				yield return instance;
+			}
+		}
 
     }
 	

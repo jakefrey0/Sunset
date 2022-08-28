@@ -22,7 +22,7 @@ namespace Sunset.Keywords {
 		public override KeywordResult execute (Parser sender,String[] @params) {
 			
 			if (@params.Length==0)
-				throw new ParsingError("Expected at least 1 parameter for native call \""+constName+'"');
+				throw new ParsingError("Expected at least 1 parameter for native call \""+constName+'"',sender);
 			
 			Boolean setProcessHeapVar=false;
 			if (Parser.processHeapVar==UInt32.MaxValue) {
@@ -33,7 +33,7 @@ namespace Sunset.Keywords {
 			}
 			
 			if (!(sender.containsImportedClass(@params[0])))
-				throw new ParsingError("Class is not imported: \""+@params[0]+'"');
+				throw new ParsingError("Class is not imported: \""+@params[0]+'"',sender);
 			
 			Class cl=sender.importedClasses.Where(x=>x.className==@params[0]).First();
 
@@ -85,12 +85,12 @@ namespace Sunset.Keywords {
 					sender.addBytes(new Byte[]{0x8B,0x74,0x24,4});//MOV ESI,[ESP+4] (restore ESI to original class value)
 					
 					if (@params.Length-1!=cl.constructor.Item2.Count)
-						throw new ParsingError("Expected "+cl.constructor.Item2.Count.ToString()+" parameters for the constructor of \""+cl.className+"\", but got "+(@params.Length-1).ToString());
+						throw new ParsingError("Expected "+cl.constructor.Item2.Count.ToString()+" parameters for the constructor of \""+cl.className+"\", but got "+(@params.Length-1).ToString(),sender);
 					Byte i=0;
 					Tuple<String,VarType>[]types= cl.constructor.Item2.ToArray().Reverse().ToArray();
 					if (@params.Length!=1) {
 						foreach (String s in @params.Skip(1).Reverse()) {
-							sender.tryConvertVars(types[i/4],sender.pushValue(s));
+							sender.tryConvertVars(types[i/4],sender.pushValue(s),s);
 							i+=4;
 						}
 					}
@@ -99,7 +99,7 @@ namespace Sunset.Keywords {
 					sender.addBytes(new Byte[]{0xFF,0xD0}); //CALL EAX
 					
 				}
-				else if (@params.Length!=1) throw new ParsingError("\""+cl.className+"\" has no constructors parameters, but got parameters in \""+KWNew.constName+'"');
+				else if (@params.Length!=1) throw new ParsingError("\""+cl.className+"\" has no constructors parameters, but got parameters in \""+KWNew.constName+'"',sender);
 				sender.addByte(0x58); //POP EAX
 				
 			}

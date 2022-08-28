@@ -1,0 +1,18 @@
+import(Windows/Components/Component)
+import(Windows/MouseEventArgs)
+import(Windows/PaintMsg)
+import(String)
+dllref(Gdi32,HDC,int,int,str,int) TextOutA bool
+INHERIT(Component)
+public str text
+public int x
+public int y
+public int width
+public int height
+public func(PaintMsg pm) onPaint {
+	
+	TextOutA(pm.hdc,x,y,text,String.lengthOf(text))
+	
+}
+
+public func(MouseEventArgs e) onClick { }

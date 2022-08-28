@@ -24,7 +24,7 @@ namespace Sunset.Keywords {
 		public override KeywordResult execute (Parser sender,String[] @params) {
 			
 			if (sender.inFunction)
-				throw new ParsingError("Tried to make a function inside of a function");
+				throw new ParsingError("Tried to make a function inside of a function",sender);
 			
             Modifier currentMods=sender.currentMods;
             sender.lastFuncOpcodeStartIndex=sender.getOpcodesCount();
@@ -64,23 +64,23 @@ namespace Sunset.Keywords {
 				sender.addBytes(new Byte[]{0xE8}.Concat(BitConverter.GetBytes(sender.memAddress))); //CALL DWORD RELATIVE ADDRESS
 			}
 			
-			List<Tuple<String,VarType>>paramTypes=new List<Tuple<String,VarType>>();
+			List<ValueTuple<String,VarType>>paramTypes=new List<ValueTuple<String,VarType>>();
 			UInt16 paramIndex=0;
 			foreach (String s in @params.Reverse()) {
                 String[]pSP=s.Split(' ');
-                if (pSP.Length!=2) throw new ParsingError("Expected function parameters declaration in (type, name) format");
+                if (pSP.Length!=2) throw new ParsingError("Expected function parameters declaration in (type, name) format",sender);
 				sender.pseudoStack.push( new LocalVar(pSP[1]));
             }
 			foreach (String s in @params) {
 				
 				String[]split=s.Split(' ');
 				if (split.Length!=2)
-					throw new ParsingError("Invalid function declaration parameter: \""+s+'"');
+					throw new ParsingError("Invalid function declaration parameter: \""+s+'"',sender);
 				
 				String unparsedType=split[0],varName=split[1];
 				
 				Tuple<String,VarType>varType=sender.getVarType(unparsedType);
-				paramTypes.Add(varType);
+				paramTypes.Add(new ValueTuple<String,VarType>(varType.Item1,varType.Item2));
 				Console.WriteLine(varType.Item1+','+varType.Item2.ToString()+','+varName);
 				functionBlock.localVariables.Add(varName,new Tuple<Tuple<String,VarType>>(varType));
 				++paramIndex;

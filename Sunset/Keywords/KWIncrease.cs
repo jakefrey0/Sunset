@@ -20,7 +20,7 @@ namespace Sunset.Keywords {
 		override public KeywordResult execute (Parser sender,String[] @params) {
 			
 			if (String.IsNullOrEmpty(sender.lastReferencedVariable))
-				throw new ParsingError("Invalid use of \""+constName+"\", no referenced variable found");
+				throw new ParsingError("Invalid use of \""+constName+"\", no referenced variable found",sender);
 			
 			Byte[] newOpcodes=new Byte[0];
 			if (sender.lastReferencedVariableIsLocal) {
@@ -96,7 +96,7 @@ namespace Sunset.Keywords {
 					
 					
 				}
-				else throw new ParsingError("Can't increase variable type \""+varType+'"');
+				else throw new ParsingError("Can't increase variable type \""+varType+'"',sender);
 				
 			}
 			

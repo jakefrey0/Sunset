@@ -90,6 +90,7 @@
     <Compile Include="Keywords\KWIf.cs" />
     <Compile Include="Keywords\KWImport.cs" />
     <Compile Include="Keywords\KWIncrease.cs" />
+    <Compile Include="Keywords\KWInherit.cs" />
     <Compile Include="Keywords\KWInteger.cs" />
     <Compile Include="Keywords\KWLengthOf.cs" />
     <Compile Include="Keywords\KWNew.cs" />
@@ -140,12 +141,17 @@
     <Compile Include="OpcodeIndexReference.cs" />
     <Compile Include="OpcodeIndexType.cs" />
     <Compile Include="SunsetProject.cs" />
+    <Compile Include="VarTypes\Function.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Sunset.cd" />
+    <Content Include="Sunset.cd" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="VarTypes" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

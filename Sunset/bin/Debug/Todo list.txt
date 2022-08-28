@@ -1,13 +1,9 @@
 Current:
-; - cleanup repo and try to get Sunset syntax recogized on github... remember to update yt channel description links
 
- - Better exception handling (character/line identification, file name)
- - Clean up files in Debug folder
- - Github sunset language identification
+ - move StringUtil into String and make it static (also go through all lib files and replace StringTool instances with String and test each 1)
+
  - Enum
- - move StringUtil into String and make it static
  - free array heaps on block end (when the block they were defined in closes) or if they weren't defined in a block, on class end
- - Classes inheriting eachother, and update all current sunset libs for this
  - blogic (pb)
  - for loops - Set the parser to parse the first parameter normally but set the block to the for block
  - anonymous functions
@@ -22,28 +18,6 @@ LET ARRAYS BE PASSED EXTERNALLY EASILY (i.e without +8, maybe make automatic.)
   ~~~
 LINUX LIBS & LINUX SUPPORT
   ~~~
+STANDALONE LIBS, ALLOW OS TO BE MADE ENTIRELY USING SUNSET
+  ~~~
    - Only one class reference block should be made per compilation, so if it already exists from a previous Parser, don't make a new one, instead reference the initial one
-
-Classes Inheriting Eachother:
-INHERIT: ClassName,ClassName0. ; Colon to indicate begin searching, comma to split, period to end query
-
-; More proper syntax to test:
-; INHERIT:ClassName,ClassName0
-; INHERIT:ClassName.
-; INHERIT: ClassName, ClassName0.
-; INHERIT: ClassName, ClassName0 .
-; INHERIT: ClassName , ClassName0 .
-; INHERIT:ClassName .
-; INHERIT : ClassName,ClassName0 .
-; INHERIT :ClassName,ClassName0.
-; INHERIT: ClassName.
-;
-; INHERIT :ClassName,
-; ClassName0
-;.
-; 
-; INHERIT:
-; 	ClassName,
-; 	ClassName0,
-; .
-

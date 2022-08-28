@@ -22,20 +22,20 @@ namespace Sunset.Keywords {
 			
 			Keyword.throwIfShouldBeHeader(sender,constName);
 			if (@params.Length==0)
-				throw new ParsingError("Expected at least 1 parameter for \""+constName+'"');
+				throw new ParsingError("Expected at least 1 parameter for \""+constName+'"',sender);
 			
 			if (sender.passedVarTypes==null)
-				throw new ParsingError("Expected "+@params.Length+" passed types on class import, got none");
+				throw new ParsingError("Expected "+@params.Length+" passed types on class import, got none",sender);
 			
 			if (@params.Length!=sender.passedVarTypes.Count)
-				throw new ParsingError("Expected "+@params.Length+" passed types on class import, got "+sender.passedVarTypes.Count+" ("+Parser.merge(sender.passedVarTypes.Select(x=>x.Item2.Item1),", ")+')');
+				throw new ParsingError("Expected "+@params.Length+" passed types on class import, got "+sender.passedVarTypes.Count+" ("+Parser.merge(sender.passedVarTypes.Select(x=>x.Item2.Item1),", ")+')',sender);
 			
 			UInt32 i=0;
 			List<Tuple<String,Tuple<String,VarType>>>list=new List<Tuple<String,Tuple<String,VarType>>>();
 			foreach (String s in @params) {
 				
-				if (sender.pvtContainsKey(s)) throw new ParsingError("In \""+constName+"\", got duplicate name \""+s+'"');
-				else if (sender.nameExists(s)) throw new ParsingError("Name already exists: \""+s+'"');
+				if (sender.pvtContainsKey(s)) throw new ParsingError("In \""+constName+"\", got duplicate name \""+s+'"',sender);
+				else if (sender.nameExists(s)) throw new ParsingError("Name already exists: \""+s+'"',sender);
 				Tuple<String,VarType> tpl=sender.passedVarTypes[(Int32)i].Item2;
 				list.Add(new Tuple<String,Tuple<String,VarType>>(s,tpl));
 				sender.keywordMgr.synonyms.Add(s,tpl.Item1);

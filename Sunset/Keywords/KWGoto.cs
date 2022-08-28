@@ -10,7 +10,7 @@ namespace Sunset.Keywords {
 
         public override KeywordResult execute (Parser sender,String[]@params) {
 
-            if (@params.Length!=1) throw new ParsingError("Expected 1 parameter (a label) for \""+constName+'"');
+            if (@params.Length!=1) throw new ParsingError("Expected 1 parameter (a label) for \""+constName+'"',sender);
 
             String labelName=@params[0];
             if (!(sender.labelReferences.ContainsKey(labelName)))

@@ -14,7 +14,7 @@ import(Windows/Drawing/PAINTSTRUCT)
 import(Windows/Drawing/POINT)
 import(Windows/Drawing/RECT)
 import(Windows/WNDCLASSA)
-import(Windows/Drawing/SimpleLabel)
+import(Windows/Components/SimpleLabel)
 import(Windows/FormEventArgs)
 import(List<SimpleLabel>)
 import(StringTool)
@@ -41,6 +41,11 @@ import(Windows/Drawing/SIZE)
 import(Windows/Drawing/BITMAP)
 import(Windows/Drawing/RECTF)
 import(List<RECTF>)
+import(Windows/Components/Component)
+import(Windows/Components/ProgressBar)
+import(Windows/PaintMsg)
+import(List<Component>)
+import(Windows/MessageBox)
 
 dllref(Kernel32,str) GetModuleHandleA int
 dllref(User32,WNDCLASSA) RegisterClassA int
@@ -97,17 +102,20 @@ pullable int WM_LBUTTONDOWN becomes 513
 pullable int brushHandle becomes GetSysColorBrush(COLOR_WINDOW)
 public int contentsHandle becomes GetSysColorBrush(COLOR_WINDOWTEXT)
 StringTool st becomes new(StringTool)
-public List<SimpleLabel> simpleLabels becomes new(List<SimpleLabel>)
-public List<FormTimer> timers becomes new(List<FormTimer>)
+
 public List<RECT> rectangles becomes new(List<RECT>)
 public List<RECT> roundRectangles becomes new(List<RECT>)
 public List<RECT> ellipses becomes new(List<RECT>)
 public List<List<POINT>> polyLines becomes new(List<List<POINT>>)
 public List<FormImage> images becomes new(List<FormImage>)
 public List<Line> lines becomes new(List<Line>)
+public List<RECTF> fillRectangles becomes new(List<RECTF>)
+public List<Component> components becomes new(List<Component>)
+
+public List<FormTimer> timers becomes new(List<FormTimer>)
 public List<RECT> hitboxes becomes new(List<RECT>)
 public List<FUNCPTR> fncExecQueue becomes new(List<FUNCPTR>) ; Funcs are expected to have no parameters. Ran at start of next wndProc call
-public List<RECTF> fillRectangles becomes new(List<RECTF>)
+
 pullable int w ;Width
 pullable int h ;Height
 pullable int x ;X
@@ -152,8 +160,11 @@ func(HWND hwnd,int uMsg,int wParam,int lParam) wndProc int {
 		int maxBottom becomes rc.bottom
 		FillRect(hdc,rc,brushHandle)
 		SetDCPenColor(hdc,RGBref)
-		foreach (lbl,simpleLabels.toArray) {
-			TextOutA(hdc,lbl.x,lbl.y,lbl.text,st.lengthOf(lbl.text))
+		foreach (component,components.toArray) {
+			PaintMsg pm becomes new(PaintMsg)
+			pm.hdc becomes hdc
+			pm.windowHandle becomes windowHandle
+			component.onPaint(pm)
 		}
 		foreach (rct,rectangles.toArray) {
 			FillRect(hdc,rct,contentsHandle)
@@ -272,6 +283,20 @@ func(HWND hwnd,int uMsg,int wParam,int lParam) wndProc int {
 		args.x becomes mouseX
 		args.y becomes mouseY
 		onLmbDown.raise(args)
+		foreach (component,components.toArray) {
+			if (component.x,<,mouseX) {
+				if (component.x+component.width,>,mouseX) {
+					if (component.y,<,mouseY) {
+						if (component.y+component.height,>,mouseY) {
+							MouseEventArgs args0 becomes new(MouseEventArgs)
+							args0.x becomes mouseX
+							args0.y becomes mouseY
+							component.onClick(args0)
+						}
+					}
+				}
+			}
+		}
 		if (onHitboxLmbDown.references,=/=,0) {
 			foreach (bounds,hitboxes.toArray) {
 				if (bounds.left,<,mouseX) {
@@ -292,27 +317,6 @@ func(HWND hwnd,int uMsg,int wParam,int lParam) wndProc int {
 	}
 	
 	retn(DefWindowProcA(hwnd,uMsg,wParam,lParam))
-	
-}
-
-public func(SimpleLabel lbl) addComponent {
-	
-	simpleLabels.add(lbl)
-	
-}
-
-constructor(str formTitle,int X,int Y,int width,int height) {
-		
-	wndClassA becomes new(WNDCLASSA)
-	wndClassA.hInstance becomes GetModuleHandleA(null)
-	wndClassA.lpfnWndProc becomes $wndProc
-	wndClassA.lpszClassName becomes className
-	RegisterClassA(wndClassA)
-	x becomes X
-	y becomes Y
-	w becomes width
-	h becomes height
-	title becomes formTitle
 	
 }
 
@@ -406,7 +410,7 @@ public func(int x,int y,str text) drawBtn RECT {
 	lbl.text becomes text
 	lbl.x becomes x+1
 	lbl.y becomes y+1
-	addComponent(lbl)
+	components.add(lbl)
 	RECT hitbox becomes new(RECT)
 	hitbox.left becomes x
 	hitbox.top becomes y
@@ -425,5 +429,20 @@ public func(int x1,int y1,int x2,int y2) reDraw {
 	rcb.top becomes y1
 	rcb.bottom becomes y2
 	RedrawWindow(windowHandle,rcb,null,RDW_INVALIDATE)
+	
+}
+
+constructor(str formTitle,int X,int Y,int width,int height) {
+	
+	wndClassA becomes new(WNDCLASSA)
+	wndClassA.hInstance becomes GetModuleHandleA(null)
+	wndClassA.lpfnWndProc becomes $wndProc
+	wndClassA.lpszClassName becomes className
+	RegisterClassA(wndClassA)
+	x becomes X
+	y becomes Y
+	w becomes width
+	h becomes height
+	title becomes formTitle
 	
 }

@@ -20,16 +20,16 @@ namespace Sunset.Keywords {
 		
 		public override KeywordResult execute (Parser sender,String[] @params) {
 			if (@params.Length!=2)
-				throw new ParsingError("Expected 2 parameters for \""+constName+"\" (NAME OF ITEM,ARRAY NAME)");
+				throw new ParsingError("Expected 2 parameters for \""+constName+"\" (NAME OF ITEM,ARRAY NAME)",sender);
 			sender.addBytes(new Byte[]{0x31,0xC9}); //XOR ECX,ECX
 			UInt32 cMemAddr=sender.GetStaticInclusiveAddress();
 			Block foreachBlock=new Block(delegate {sender.writeJump(cMemAddr);sender.pseudoStack.pop();},0,new Byte[]{0x59,0x83,0xC4,4}/*POP ECX,ADD ESP,4*/,false,false){isLoopOrSwitchBlock=true,continueAddress=cMemAddr};
 			foreachBlock.continueInstructions=foreachBlock.breakInstructions=new Byte[]{0x59,0x83,0xC4,4};//POP ECX && ADD ESP,4
 			String arrName=@params[1],varName=@params[0];
 			if (sender.nameExists(varName))
-				throw new ParsingError("Foreach iteration variable name \""+varName+"\" is already in use");
+				throw new ParsingError("Foreach iteration variable name \""+varName+"\" is already in use",sender);
 			if (varName.Any(x=>!Char.IsLetterOrDigit(x)))
-				throw new ParsingError("Invalid foreach iteration variable name \""+varName+"\" (should be alphanumeric)");
+				throw new ParsingError("Invalid foreach iteration variable name \""+varName+"\" (should be alphanumeric)",sender);
 			// EBX can be preserved throughout the whole loop so it doesn't have to constantly run pushValue instructions
 			// (but it doesn't happen here, it is an optimization idea)
 			sender.addByte(0x51);//PUSH ECX
@@ -77,7 +77,7 @@ namespace Sunset.Keywords {
 				sender.addBytes(new Byte[]{0x80,0x3C,0x19,0}); //CMP BYTE [ECX+EBX],0
 				foreachBlock.blockMemPositions.Add(sender.GetStaticInclusiveOpcodesCount(2));
 				sender.addBytes(new Byte[]{0x0F,0x84,0,0,0,0});//JZ
-				foreachBlock.startMemAddr=sender.memAddress;
+				foreachBlock.startMemAddr=sender.GetStaticInclusiveAddress();
 				sender.addBytes(new Byte[]{0x33,0xD2}); //XOR EDX,EDX
 				sender.addBytes(new Byte[]{0x8A,0x14,0x19}); //MOV DL,[ECX+EBX]
 				sender.addByte(0x52);//PUSH EDX
@@ -92,7 +92,7 @@ namespace Sunset.Keywords {
 				return base.execute(sender,@params);
 			}
 			else
-				throw new ParsingError("Expected var of type array or string, got \""+arrName+"\" of type \""+vt.Item1+"\" (\""+vt.Item2.ToString()+"\")");
+				throw new ParsingError("Expected var of type array or string, got \""+arrName+"\" of type \""+vt.Item1+"\" (\""+vt.Item2.ToString()+"\")",sender);
 			
 		}		
 				

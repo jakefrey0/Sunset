@@ -1,0 +1,6 @@
+import(Windows/MouseEventArgs)
+import(Event<MouseEventArgs>)
+public str text
+public Event<MouseEventArgs> onClick becomes new(Event<MouseEventArgs>)
+local int top
+local int bottom

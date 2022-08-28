@@ -1,0 +1,5 @@
+acknowledge HDC as PTR
+acknowledge HWND as PTR
+STRUCT
+public HDC hdc
+public HWND windowHandle

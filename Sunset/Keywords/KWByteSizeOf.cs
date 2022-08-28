@@ -20,10 +20,10 @@ namespace Sunset.Keywords {
 		public override KeywordResult execute (Parser sender,String[] @params) {
 			
 			if (@params.Length!=1)
-				throw new ParsingError("Expected 1 parameter for \""+constName+"\", got "+@params.Length.ToString()+" parameters");
+				throw new ParsingError("Expected 1 parameter for \""+constName+"\", got "+@params.Length.ToString()+" parameters",sender);
 			
 			if (!sender.importedClasses.Select(x=>x.className).Contains(@params[0]))
-				throw new ParsingError("Class does not exist/is not imported: \""+@params[0]+'"');
+				throw new ParsingError("Class does not exist/is not imported: \""+@params[0]+'"',sender);
 			
 			sender.addBytes(new Byte[]{0xB8}.Concat(BitConverter.GetBytes(sender.importedClasses.Where(x=>x.className.Equals(@params[0])).First().byteSize))); //MOV EAX,DWORD
 			outputType=new Tuple<String,VarType>(KWInteger.constName,VarType.NATIVE_VARIABLE);

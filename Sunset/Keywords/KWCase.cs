@@ -18,8 +18,8 @@ namespace Sunset.Keywords {
 		public KWCase () : base (constName,KeywordType.NATIVE_CALL,true) { }
 		
 		public override KeywordResult execute(Parser sender,String[] @params) {
-			if (@params.Length==0) throw new ParsingError("Expected at least 1 parameter for \""+constName+'"');
-			if (sender.blocks.Keys.Where(x=>x.switchBlock).Count()==0) throw new ParsingError("Can't \""+constName+"\" outside of a \""+KWSwitch.constName+"\" block.");
+			if (@params.Length==0) throw new ParsingError("Expected at least 1 parameter for \""+constName+'"',sender);
+			if (sender.blocks.Keys.Where(x=>x.switchBlock).Count()==0) throw new ParsingError("Can't \""+constName+"\" outside of a \""+KWSwitch.constName+"\" block.",sender);
 			KWCase.checkForCaseFallThrough(sender);
 			Block caseBlock=null;
 			caseBlock=new Block(null,sender.GetStaticInclusiveAddress(),new Byte[0],false){caseOrDefaultBlock=true,hasParentheses=false};

@@ -21,11 +21,13 @@ namespace Sunset.Keywords {
 		public override KeywordResult execute (Parser sender,String[] @params) {
 			
 			if (@params.Length==0)
-				throw new ParsingError("Expected 1 or more parameters for \""+constName+'"');
+				throw new ParsingError("Expected 1 or more parameters for \""+constName+'"',sender);
 			
-			List<Tuple<String,VarType>>varTypes=new List<Tuple<String,VarType>>(@params.Length-1);
-			foreach (String s in @params.Skip(1))
-				varTypes.Add(sender.getVarType(s));
+			List<ValueTuple<String,VarType>>varTypes=new List<ValueTuple<String,VarType>>(@params.Length-1);
+			foreach (String s in @params.Skip(1)) {
+				Tuple<String,VarType>vt=sender.getVarType(s);
+				varTypes.Add(new ValueTuple<String,VarType>(vt.Item1,vt.Item2));
+			}
 			
 			sender.nextFunctionParamTypes=varTypes.ToArray();
 			sender.nextType=FunctionType.DLL_REFERENCED;
