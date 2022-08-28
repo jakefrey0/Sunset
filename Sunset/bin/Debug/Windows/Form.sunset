@@ -17,7 +17,7 @@ import(Windows/WNDCLASSA)
 import(Windows/Components/SimpleLabel)
 import(Windows/FormEventArgs)
 import(List<SimpleLabel>)
-import(StringTool)
+import(String)
 import(Event<FormEventArgs>)
 import(Windows/TimerEventArgs)
 import(Event<TimerEventArgs>)
@@ -28,7 +28,7 @@ import(Windows/KeyEventArgs)
 import(Event<KeyEventArgs>)
 import(List<POINT>)
 import(List<List<POINT>>)
-import(Windows/Drawing/FormImage)
+import(Windows/Components/FormImage)
 import(List<FormImage>)
 import(Windows/Drawing/Line)
 import(List<Line>)
@@ -48,6 +48,7 @@ import(List<Component>)
 import(Windows/MessageBox)
 
 dllref(Kernel32,str) GetModuleHandleA int
+dllref(User32,int) GetSysColorBrush HBRUSH
 dllref(User32,WNDCLASSA) RegisterClassA int
 dllref(User32,HWND,int,int,int) DefWindowProcA int
 dllref(User32,int,str,str,int,int,int,int,int,HWND,HMENU,HINSTANCE,int) CreateWindowExA HWND
@@ -57,7 +58,6 @@ dllref(User32,MSG) DispatchMessageA void
 dllref(User32,HWND,PAINTSTRUCT) BeginPaint HDC
 dllref(User32,HDC,RECT,HBRUSH) FillRect int
 dllref(User32,HWND,PAINTSTRUCT) EndPaint bool
-dllref(User32,int) GetSysColorBrush HBRUSH
 dllref(User32,HWND,RECT) GetClientRect bool
 dllref(Gdi32,HDC,int,int,str,int) TextOutA bool
 dllref(User32,int) PostQuitMessage void
@@ -65,8 +65,6 @@ dllref(User32,HWND,str,str,int) MessageBoxA int
 dllref(User32,HWND,int,int,FUNCPTR) SetTimer int
 dllref(User32,HWND,RECT,HRGN,int) RedrawWindow bool
 dllref(Kernel32,int) ExitProcess void
-dllref(Gdi32,HDC,int,int,int,int) Ellipse bool
-dllref(Gdi32,HDC,int,int,int,int,int,int) RoundRect bool
 dllref(Gdi32,HDC,int) SetDCBrushColor int
 dllref(Gdi32,HDC,int) SetDCPenColor int
 dllref(Gdi32,HDC,POINT#,int) Polyline bool
@@ -101,15 +99,10 @@ pullable int WM_MOUSEMOVE becomes 512
 pullable int WM_LBUTTONDOWN becomes 513
 pullable int brushHandle becomes GetSysColorBrush(COLOR_WINDOW)
 public int contentsHandle becomes GetSysColorBrush(COLOR_WINDOWTEXT)
-StringTool st becomes new(StringTool)
 
-public List<RECT> rectangles becomes new(List<RECT>)
-public List<RECT> roundRectangles becomes new(List<RECT>)
 public List<RECT> ellipses becomes new(List<RECT>)
 public List<List<POINT>> polyLines becomes new(List<List<POINT>>)
-public List<FormImage> images becomes new(List<FormImage>)
 public List<Line> lines becomes new(List<Line>)
-public List<RECTF> fillRectangles becomes new(List<RECTF>)
 public List<Component> components becomes new(List<Component>)
 
 public List<FormTimer> timers becomes new(List<FormTimer>)
@@ -166,39 +159,12 @@ func(HWND hwnd,int uMsg,int wParam,int lParam) wndProc int {
 			pm.windowHandle becomes windowHandle
 			component.onPaint(pm)
 		}
-		foreach (rct,rectangles.toArray) {
-			FillRect(hdc,rct,contentsHandle)
-		}
-		foreach (rct,roundRectangles.toArray) {
-			RoundRect(hdc,rct.left,rct.top,rct.right,rct.bottom,15,15)
-		}
-		foreach (rct,ellipses.toArray) {
-			Ellipse(hdc,rct.left,rct.top,rct.right,rct.bottom)
-		}
 		foreach (polyLine,polyLines.toArray) {
 			Polyline(hdc,polyLine.toArray+8,lengthof(polyLine.toArray))
-		}
-		foreach (img,images.toArray) {
-			HBITMAP bitmap becomes img.bitmap
-			HDC hMemDC becomes CreateCompatibleDC(hdc)
-			HGDIOBJ oldBitmap becomes SelectObject(hMemDC,cast(bitmap,HGDIOBJ))
-			BITMAP bmp becomes new(BITMAP)
-			GetObjectA(bitmap,Bsizeof(BITMAP),bmp)
-			BitBlt(hdc,img.x,img.y,bmp.bmWidth,bmp.bmHeight,hMemDC,0,0,SRCCOPY)
-			SelectObject(hMemDC,oldBitmap)
-			DeleteDC(hMemDC)
 		}
 		foreach (line,lines.toArray) {
 			MoveToEx(hdc,line.x,line.y,null)
 			LineTo(hdc,line.x0,line.y0)
-		}
-		foreach (rct,fillRectangles.toArray) {
-			RECT rcb becomes new(RECT)
-			rcb.left becomes rct.left
-			rcb.top becomes rct.top
-			rcb.bottom becomes rct.bottom
-			rcb.right becomes rct.right
-			FillRect(hdc,rcb,rct.brush)
 		}
 		EndPaint(hwnd,pstrc)
 		retn(null)
@@ -372,7 +338,7 @@ public func kill {
 public func(str text) getStdTextSize SIZE {
 	
 	SIZE strSize becomes new(SIZE)
-	GetTextExtentPoint32A(GetDC(windowHandle),text,st.lengthOf(text),strSize)
+	GetTextExtentPoint32A(GetDC(windowHandle),text,String.lengthOf(text),strSize)
 	retn(strSize)
 	
 }

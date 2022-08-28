@@ -1,0 +1,27 @@
+acknowledge HBRUSH as PTR
+acknowledge HDC as PTR
+import(Windows/Components/Component)
+import(Windows/MouseEventArgs)
+import(Windows/PaintMsg)
+import(String)
+import(Windows/Drawing/RECT)
+dllref(User32,int) GetSysColorBrush HBRUSH
+dllref(User32,HDC,RECT,HBRUSH) FillRect int
+INHERIT(Component)
+public int x
+public int y
+public int width
+public int height
+public int brush becomes GetSysColorBrush(8)
+public func(PaintMsg pm) onPaint {
+	
+	RECT rct becomes new(RECT)
+	rct.left becomes x
+	rct.top becomes y
+	rct.right becomes x+width
+	rct.bottom becomes y+height
+	FillRect(pm.hdc,rct,brush)
+	
+}
+
+public func(MouseEventArgs e) onClick { }

@@ -1,0 +1,17 @@
+acknowledge HDC as PTR
+import(Windows/Components/Component)
+import(Windows/MouseEventArgs)
+import(Windows/PaintMsg)
+dllref(Gdi32,HDC,int,int,int,int) Ellipse bool
+INHERIT(Component)
+public int x
+public int y
+public int width
+public int height
+public func(PaintMsg pm) onPaint {
+	
+	Ellipse(pm.hdc,x,y,x+width,y+height)
+		
+}
+
+public func(MouseEventArgs e) onClick { }

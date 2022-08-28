@@ -3,15 +3,43 @@ import(Windows/Form)
 import(Windows/FormEventArgs)
 import(Windows/MessageBox)
 import(Windows/MouseEventArgs)
+import(Windows/Components/Rectangle)
 import(Windows/Components/SimpleLabel)
+import(Windows/Components/RoundRectangle)
+import(Windows/Components/Ellipse)
+import(Windows/Drawing/ImageUtil)
+import(Windows/Components/FormImage)
 import(String)
 Form form becomes new(Form,"",300,300,300,300)
 func(FormEventArgs e) start {
 	SimpleLabel sl becomes new(SimpleLabel)
 	sl.text becomes "Hello world"
 	form.components.add(sl)
-	crash
-	MessageBox.mboxNumber(String.A)
+	Rectangle rect becomes new(Rectangle)
+	rect.x becomes 50
+	rect.y becomes 50
+	rect.width becomes 50
+	rect.height becomes 50
+	form.components.add(rect)
+	RoundRectangle rr becomes new(RoundRectangle)
+	rr.x becomes 150
+	rr.y becomes 50
+	rr.height becomes 50
+	rr.width becomes 50
+	form.components.add(rr)
+	Ellipse ellip becomes new(Ellipse)
+	ellip.x becomes 50
+	ellip.y becomes 150
+	ellip.width becomes 50
+	ellip.height becomes 50
+	form.components.add(ellip)
+	FormImage img becomes new(FormImage)
+	img.x becomes 150
+	img.y becomes 150
+	img.height becomes 50
+	img.width becomes 50
+	img.bitmap becomes ImageUtil.loadBitmap("Alien.bmp",50,50)
+	form.components.add(img)
 }
 form.onFormCreation.addFunction($start)
 form.show

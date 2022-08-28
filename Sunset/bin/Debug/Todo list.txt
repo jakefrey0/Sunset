@@ -1,23 +1,23 @@
 Current:
 
- - move StringUtil into String and make it static (also go through all lib files and replace StringTool instances with String and test each 1)
-
+ - Array Styles: static, stack, heap. For static make it so the length has to be set immediately or throw error. The length also has to be constant and it can't be a localvar. Static arrays shouldn't have the 2 dwords behind it in the memory block that indicate the length and var type byte size.
+ 
  - Enum
  - free array heaps on block end (when the block they were defined in closes) or if they weren't defined in a block, on class end
  - blogic (pb)
  - for loops - Set the parser to parse the first parameter normally but set the block to the for block
  - anonymous functions
- - magic #'s, neural network, creative ways all to give unique performance !
  
   ~~~
 TODO/FIXME :: in solution
   ~~~
 REDO DOCS, TEST (INCLUDE) ALL FEATURES OF LANGUAGE AND ALL UPDATED LIBS. (FIRST OPTIMIZE LIBS SO THEY WON'T CHANGE MUCH AND A LEGACY CHANGE (DEPRECATION) WOULDN'T BE THE END OF THE WORLD)
   ~~~
-LET ARRAYS BE PASSED EXTERNALLY EASILY (i.e without +8, maybe make automatic.)
+LET ARRAYS BE PASSED EXTERNALLY EASILY (i.e without +8, maybe make automatic, or for native support maybe just add Arrays.toNative(arr). Be sure to count for array styles because static arrays shouldn't have +8.)
   ~~~
 LINUX LIBS & LINUX SUPPORT
   ~~~
-STANDALONE LIBS, ALLOW OS TO BE MADE ENTIRELY USING SUNSET
+STANDALONE LIBS, ALLOW OS TO BE MADE ENTIRELY USING SUNSET, (using arraystyle.static arrays to write bytes and such). Also make SetOrigin keyword that is like the org instruction in fasm
   ~~~
    - Only one class reference block should be made per compilation, so if it already exists from a previous Parser, don't make a new one, instead reference the initial one
+   - magic #'s, neural network, creative ways all to give unique performance !

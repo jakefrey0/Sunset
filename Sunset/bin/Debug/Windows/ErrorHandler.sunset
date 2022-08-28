@@ -1,22 +1,21 @@
-import(StringTool)
+import(String)
 dllref(Kernel32) GetLastError int
 dllref(Kernel32,int,int,int,int,str,int,int#) FormatMessageA int
 dllref(User32,int,str,str,int) MessageBoxA int
 setpheapvar
 
-func getLastErrorCode int { retn(GetLastError) }
-func(int errorCode) errorCodeToString str {
+private static constant int bufferLength becomes 512
+public static func getLastErrorCode int { retn(GetLastError) }
+public static func(int errorCode) errorCodeToString str {
 	
-	int bufferLength becomes 512
 	byte# buffer becomes #bufferLength
-	StringTool st becomes new(StringTool)
 	int flags becomes 4608 ; FORMAT_MESSAGE_FROM_SYSTEM, FORMAT_MESSAGE_IGNORE_INSERTS
 	int lang becomes 1024 ; LANG_NEUTRAL, SUBLANG_DEFAULT
 	FormatMessageA(4608,null,errorCode,lang,buffer,bufferLength,null)
-	retn(buffer)
+	retn(String.fromBytes(buffer))
 	
 }
-func mboxLastError int {
+public static func mboxLastError int {
 	
 	retn(MessageBoxA(0,errorCodeToString(getLastErrorCode),"An error has occurred",0))
 	

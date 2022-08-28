@@ -272,6 +272,7 @@ namespace Sunset {
             	//RETN
             	tableAddrIndex=tableAddrIndexConst;//should be opcodes.Count + 5 if opcodes are added before this
             	this.addBytes(tableFuncBytes);
+            	Parser.dataSectBytes.AddRange(new Byte[32]);
             }
 			
 			status=ParsingStatus.SEARCHING_NAME;

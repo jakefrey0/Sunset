@@ -1,0 +1,33 @@
+acknowledge HDC as PTR
+acknowledge HBITMAP as PTR
+acknowledge HGDIOBJ as PTR
+import(Windows/Components/Component)
+import(Windows/MouseEventArgs)
+import(Windows/PaintMsg)
+import(Windows/Drawing/BITMAP)
+dllref(Gdi32,HDC,int,int,int,int) Ellipse bool
+dllref(Gdi32,HDC) CreateCompatibleDC HDC
+dllref(Gdi32,HDC,HGDIOBJ) SelectObject HGDIOBJ
+dllref(Gdi32,HDC,int,int,int,int,HDC,int,int,int) BitBlt bool
+dllref(Gdi32,HDC) DeleteDC bool
+dllref(Gdi32,HBITMAP,int,BITMAP) GetObjectA int
+dllref(Kernel32,int) ExitProcess void
+INHERIT(Component)
+public int x
+public int y
+public int width
+public int height
+public HBITMAP bitmap
+public func(PaintMsg pm) onPaint {
+	
+	HDC hMemDC becomes CreateCompatibleDC(pm.hdc)
+	HGDIOBJ oldBitmap becomes SelectObject(hMemDC,cast(bitmap,HGDIOBJ))
+	BITMAP bmp becomes new(BITMAP)
+	GetObjectA(bitmap,Bsizeof(BITMAP),bmp)
+	BitBlt(pm.hdc,x,y,width,height,hMemDC,0,0,13369376)
+	SelectObject(hMemDC,oldBitmap)
+	DeleteDC(hMemDC)
+	
+}
+
+public func(MouseEventArgs e) onClick { }

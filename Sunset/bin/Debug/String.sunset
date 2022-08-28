@@ -14,3 +14,140 @@ public static func(str string) lengthOf int {
 	retn(i)
 	
 }
+;stringFromBytes -> Parameter bytes should contain a null terminator byte
+public static func(byte# bytes) fromBytes str { retn(bytes+8) }
+public static func(str string) toBytes byte# {
+	
+	byte# arr becomes #lengthOf(string)+1
+	int i becomes 0
+	foreach (b,string) {
+		
+		arr[i] becomes b
+		++i
+		
+	}
+	retn(arr)
+	
+}
+public static func(str prefix,str suffix) concat str {
+	
+	byte# arr becomes #lengthOf(prefix)+lengthOf(suffix)+1
+	int i becomes 0
+	foreach (b,prefix) { 
+		
+		arr[i] becomes b
+		++i
+ 		
+	}
+	foreach (b,suffix) {
+		
+		arr[i] becomes b
+		++i
+		
+	}
+	retn(fromBytes(arr))
+	
+}
+public static func(str string,int startIndex,int endIndex) substring str {
+	
+	if (startIndex,>,endIndex) { retn("") }
+	
+	byte# arr becomes #(endIndex-startIndex)+1
+	byte# arr0 becomes toBytes(string)
+	int i becomes 0
+	while (startIndex,=/=,endIndex) {
+		
+		arr[i] becomes arr0[startIndex]
+		
+		++i
+		++startIndex
+		
+	}
+	retn(fromBytes(arr))
+	
+}
+public static func(byte b) byteToCorrespondingASCII str {
+	
+	byte# arr becomes #2
+	arr[0] becomes b
+	retn(fromBytes(arr))
+	
+}
+public static func(str string) quote str {
+	
+	str quotation becomes byteToCorrespondingASCII(34)
+	string becomes concat(quotation,string)
+	string becomes concat(string,quotation)
+	retn(string)
+	
+}
+
+; FUNCPTR func -> 1 Paramter: Byte (the current char), Return Value: Bool (true if meets criteria and vice versa)
+public static func (str string,FUNCPTR func) where str {
+	
+	byte# arr becomes #lengthOf(string)+1
+	int i becomes 0
+	foreach (b,string) {
+		
+		if (callptr(func,b),=/=,0) {
+			
+			arr[i] becomes b
+			++i
+			
+		}
+		
+	}
+	retn(fromBytes(arr))
+	
+}
+public static func(str string) toUpper str {
+	
+	byte# arr becomes #lengthOf(string)+1
+	int i becomes 0
+	foreach (b,string) {
+		
+		if (b,>=,a) {
+			if (b,<=,z) {
+				b becomes cast(b-32,byte)
+				
+			}
+		}
+		arr[i] becomes b
+		++i
+		
+	}
+	retn(fromBytes(arr))
+	
+}
+public static func(str string) toLower str {
+	
+	byte# arr becomes #lengthOf(string)+1
+	int i becomes 0
+	foreach (b,string) {
+		
+		if (b,>=,A) {
+			if (b,<=,Z) {
+				b becomes cast(b+32,byte)
+				
+			}
+		}
+		arr[i] becomes b
+		++i
+		
+	}
+	retn(fromBytes(arr))
+	
+}
+public static func(str string) toWchars WCHAR# {
+	
+	int# arr becomes #lengthOf(string)+1
+	int ctr becomes 0
+	foreach (b,string) {
+		
+		arr[ctr] becomes cast(b,int)
+		++ctr
+		
+	}
+	retn(cast(arr,WCHAR#))
+	
+}	

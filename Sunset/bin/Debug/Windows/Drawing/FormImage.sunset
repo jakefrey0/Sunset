@@ -1,5 +1,0 @@
-acknowledge HBITMAP as PTR
-STRUCT
-public HBITMAP bitmap
-public int x
-public int y

@@ -1,0 +1,21 @@
+acknowledge HBRUSH as PTR
+acknowledge HDC as PTR
+import(Windows/Components/Component)
+import(Windows/MouseEventArgs)
+import(Windows/PaintMsg)
+import(String)
+dllref(Gdi32,HDC,int,int,int,int,int,int) RoundRect bool
+INHERIT(Component)
+public int x
+public int y
+public int width
+public int height
+public int cornerEllipseWidth becomes 15
+public int cornerEllipseHeight becomes 15
+public func(PaintMsg pm) onPaint {
+	
+	RoundRect(pm.hdc,x,y,x+width,y+height,cornerEllipseWidth,cornerEllipseHeight)
+	
+}
+
+public func(MouseEventArgs e) onClick { }
