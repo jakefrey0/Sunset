@@ -19,4 +19,5 @@ LINUX LIBS & LINUX SUPPORT
 STANDALONE LIBS, ALLOW OS TO BE MADE ENTIRELY USING SUNSET, (using arraystyle.static arrays to write bytes and such). Also make SetOrigin keyword that is like the org instruction in fasm
   ~~~
    - Only one class reference block should be made per compilation, so if it already exists from a previous Parser, don't make a new one, instead reference the initial one
+   - Let enums be of different types other than native var int (i.e add syntax ENUM(shr) and there can be shr enums like in C# public enum yatta : UInt16 { ... })
    - magic #'s, neural network, creative ways all to give unique performance !

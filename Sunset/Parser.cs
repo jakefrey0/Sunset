@@ -954,7 +954,7 @@ namespace Sunset {
 				}
 				Console.WriteLine("\n -------------- ");
 				
-				Tuple<String,VarType>type=new Tuple<String,VarType>("int",VarType.NATIVE_VARIABLE);
+				Tuple<String,VarType>type=new Tuple<String,VarType>(className,VarType.ENUM);
 				if (name==KWBecomes.constName) {
 					referencedVariable=lastReferencedVariable;
 					lastReferencedVariable=null;
@@ -1059,7 +1059,7 @@ namespace Sunset {
 			if (this.classes.ContainsKey(name)) {
 				
 				lastReferencedVariableIsLocal=lastReferencedVariableIsStatic=false;
-				this.lastReferencedVarType=VarType.CLASS;
+				this.lastReferencedVarType=(this.classes[name].Item3.parserUsed.@enum)?VarType.ENUM:VarType.CLASS;
 				this.status=ParsingStatus.SEARCHING_NAME;
 				this.nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT,KeywordType.INCREMENT,KeywordType.DECREMENT};
 				this.lastReferencedVariable=name;
@@ -1179,20 +1179,21 @@ namespace Sunset {
 				}
 			
 				this.varType=name;
-				this.lastReferencedVarType=VarType.CLASS;
+				VarType vt=(importedClasses.Where(x=>x.className==name).First().parserUsed.@enum)?VarType.ENUM:VarType.CLASS;
+				this.lastReferencedVarType=vt;
 				status=ParsingStatus.SEARCHING_VARIABLE_NAME;
 				
 				if (wasSearchingFuncReturnType) {
                       String fn=this.functions.Last().Key;
                       Function f=this.functions[fn];
-					this.functions[fn]=new Function(f.memAddr,new Tuple<String,VarType>(this.varType,VarType.CLASS),f.expectedParameterCount,f.functionType,f.callingConvention,f.modifier,f.parameterTypes,f.instanceID,f.isInherited);
+					this.functions[fn]=new Function(f.memAddr,new Tuple<String,VarType>(this.varType,vt),f.expectedParameterCount,f.functionType,f.callingConvention,f.modifier,f.parameterTypes,f.instanceID,f.isInherited);
 					if (this.inhFuncsToDefine.ContainsKey(fn)) {
 						if ((this.inhFuncsToDefine[fn].returnType==null&&functions[fn].returnType!=null)||!this.inhFuncsToDefine[fn].returnType.Equals(this.functions[fn].returnType))
 							throw new ParsingError("Expected "+(inhFuncsToDefine[fn].returnType==null?"no return type":"return type \""+inhFuncsToDefine[fn].returnType.Item1+"\" of \""+inhFuncsToDefine[fn].returnType.Item2+"\"")+ " for func \""+fn+"\".",this);
 						this.inhFuncsToDefine.Remove(fn);
 					}
 					if (staticFunctions[ID].ContainsKey(fn))
-                            staticFunctions[ID][fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(f.memAddr,new Tuple<String,VarType>(this.varType,VarType.CLASS),f.expectedParameterCount,f.functionType,f.callingConvention,f.modifier);
+                            staticFunctions[ID][fn]=new Tuple<UInt32,Tuple<String,VarType>,UInt16,FunctionType,CallingConvention,Modifier>(f.memAddr,new Tuple<String,VarType>(this.varType,vt),f.expectedParameterCount,f.functionType,f.callingConvention,f.modifier);
                        status=ParsingStatus.SEARCHING_NAME;
 					this.setExpectsBlock=1;
 				}
@@ -1202,14 +1203,15 @@ namespace Sunset {
 			}
 			else if (attemptingClassAccess) {
 				
-                  Boolean homeStatic=staticInstances[ID].ContainsKey(name)&&staticInstances[ID][name].Item2.Item2==VarType.CLASS;
+				
+				Boolean homeStatic=staticInstances[ID].ContainsKey(name)&&IsClassOrEnum(staticInstances[ID][name].Item2.Item2);
                   if(!homeStatic)
                     this.tryCreateRestoreEsiFunc();
 				this.attemptingClassAccess=false;
 				
 				if (lastReferencedClassInstance.Count!=0) {
 					
-					if (this.getOriginFinalClass(lastReferencedClassInstance,lastReferencedVariableIsLocal).classes.ContainsKey(name)||(lastReferencedClassInstance.Count==1&&isImportedClass(lastReferencedClassInstance.First())&&staticInstances[getImportedClass(lastReferencedClassInstance.First()).classID].Where(x=>x.Key==name&&x.Value.Item2.Item2==VarType.CLASS).Count()!=0)) {
+					if (this.getOriginFinalClass(lastReferencedClassInstance,lastReferencedVariableIsLocal).classes.ContainsKey(name)||(lastReferencedClassInstance.Count==1&&isImportedClass(lastReferencedClassInstance.First())&&staticInstances[getImportedClass(lastReferencedClassInstance.First()).classID].Where(x=>x.Key==name&&IsClassOrEnum(x.Value.Item2.Item2)).Count()!=0)) {
 						
 						this.lastReferencedClassInstance.Add(name);
 						gettingClassItem=true;
@@ -1230,7 +1232,7 @@ namespace Sunset {
 					return;
 					
 				}
-				else if (this.isALocalVar(name)&&this.getLocalVarHomeBlock(name).localVariables[name].Item1.Item2==VarType.CLASS) {
+				else if (this.isALocalVar(name)&&IsClassOrEnum(this.getLocalVarHomeBlock(name).localVariables[name].Item1.Item2)) {
 					
 					this.lastReferencedVariable=name;
 					this.lastReferencedVariableIsLocal=true;
@@ -1303,7 +1305,7 @@ namespace Sunset {
 					Console.WriteLine("LRV:"+this.lastReferencedVariable);
 					this.status=ParsingStatus.SEARCHING_NAME;
 					this.nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT,KeywordType.INCREMENT,KeywordType.DECREMENT};
-					this.lastReferencedVarType=VarType.CLASS;
+					this.lastReferencedVarType=cl.classes[name].Item3.parserUsed.@enum?VarType.ENUM:VarType.CLASS;
 					return;
 					
 				}
@@ -1573,7 +1575,7 @@ namespace Sunset {
 
             }
             else if (!(this.referencedVariableIsLocal)) {
-				type=(this.referencedVarType==VarType.NATIVE_ARRAY||this.referencedVarType==VarType.NATIVE_ARRAY_INDEXER)?this.arrays[this.referencedVariable].Item2:(this.referencedVarType==VarType.CLASS?this.classes[this.referencedVariable].Item2:this.variables[this.referencedVariable].Item2);
+            	type=(this.referencedVarType==VarType.NATIVE_ARRAY||this.referencedVarType==VarType.NATIVE_ARRAY_INDEXER)?this.arrays[this.referencedVariable].Item2:(IsClassOrEnum(this.referencedVarType)?this.classes[this.referencedVariable].Item2:this.variables[this.referencedVariable].Item2);
                 mods=modsOf(this.referencedVariable,this.referencedVarType);
             }
 			else {
@@ -1952,7 +1954,7 @@ namespace Sunset {
 				}
 				
 			}
-			else if (this.referencedVarType==VarType.CLASS&&this.referencedVariableIsFromClass) {
+			else if (IsClassOrEnum(this.referencedVarType)&&this.referencedVariableIsFromClass) {
 				
 				this.moveClassOriginItemAddrIntoEax(this.lastReferencedClassInstance,this.referencedVariable,this.referencedVarType,referencedVariableIsLocal);
 				
@@ -1968,7 +1970,7 @@ namespace Sunset {
 				
 			}
 			
-			else if (this.referencedVarType==VarType.CLASS) {
+			else if (IsClassOrEnum(this.referencedVarType)) {
 				
 				Tuple<String,VarType> tpl=this.pushValue(value);
 				this.tryConvertVars(new Tuple<String,VarType>(type,this.referencedVarType),tpl,referencedVariable);
@@ -2884,6 +2886,8 @@ namespace Sunset {
 			}
 			else if (value==Parser.THIS_STR) {
 				
+				if (@enum) throw new ParsingError("Can't use \""+Parser.THIS_STR+"\" in enum",this);// HACK:: don't think this is possible anyway
+				
 				if (addEsiToLocalAddresses) {
 					int32sToSubtractByFinalOpcodesCount.Add((UInt32)(this.opcodes.Count+2));
 					this.addBytes(new Byte[]{0x8D,0x86,0,0,0,0}); //LEA EAX,[ESI+-DWORD OFFSET]
@@ -3149,7 +3153,7 @@ namespace Sunset {
 					this.classReferences[value].Add((UInt32)this.opcodes.Count+2);
 					this.addBytes(new Byte[]{0xFF,0x35,0,0,0,0}); //PUSH DWORD [PTR]
 				}
-				return new Tuple<String,VarType>(this.classes[value].Item2,VarType.CLASS);
+				return new Tuple<String,VarType>(this.classes[value].Item2,this.classes[value].Item3.parserUsed.@enum?VarType.ENUM:VarType.CLASS);
 				
 			}
 			else if (value.StartsWith("\"")&&value.EndsWith("\"")) {
@@ -3234,7 +3238,7 @@ namespace Sunset {
 				if (this.isALocalVar(first)) {
 					
 					local=true;
-					if (this.getLocalVarHomeBlock(first).localVariables[first].Item1.Item2!=VarType.CLASS)
+					if (!IsClassOrEnum(this.getLocalVarHomeBlock(first).localVariables[first].Item1.Item2))
 						throw new ParsingError("Not a class, can't read member of: \""+first+'"',this);
 					
 					initialClass=this.importedClasses.Where(x=>x.className==this.getLocalVarHomeBlock(first).localVariables[first].Item1.Item1).First();
@@ -3296,10 +3300,10 @@ namespace Sunset {
 					return retVal;
 					
 				}
-				else if (initialClass.constants.ContainsKey(pValue)) { // abc
+				else if (initialClass.constants.ContainsKey(pValue)) {
 					throwIfCantAccess(initialClass.constants[pValue].Item3,pValue,initialClass.path,true);
                   	this.addBytes(new Byte[]{0x68}.Concat(BitConverter.GetBytes(initialClass.constants[pValue].Item1)));
-                  	return new Tuple<String,VarType>("int",VarType.NATIVE_VARIABLE);
+                  	return new Tuple<String,VarType>(initialClass.className,VarType.ENUM);
 				}
                 else if (imported&&staticInstances[initialClass.classID].ContainsKey(pValue)) {
                         
@@ -3467,7 +3471,7 @@ namespace Sunset {
 					this.addBytes(new Byte[]{0xFF,0x37}/*PUSH DWORD[EDI]*/);
 					
 					UInt32 size=keywordMgr.getVarTypeByteSize(varType);
-					return new Tuple<String,VarType>(initialClass.classes[pValue].Item2,VarType.CLASS);
+					return new Tuple<String,VarType>(initialClass.classes[pValue].Item2,initialClass.classes[pValue].Item3.parserUsed.@enum?VarType.ENUM:VarType.CLASS);
 					
 				}
 				else if (initialClass.functions.ContainsKey(pValue)) {
@@ -4020,7 +4024,7 @@ namespace Sunset {
 			//CLASS
 			if (this.containsImportedClass(value)) {
 				
-				return new Tuple<String,VarType>(value,VarType.CLASS);
+				return new Tuple<String,VarType>(value,importedClasses.Where(x=>x.className==value).First().parserUsed.@enum?VarType.ENUM:VarType.CLASS);
 				
 			}
 			
@@ -4065,6 +4069,10 @@ namespace Sunset {
   
 			Console.WriteLine("tryConvertVars: "+to.Item1+','+to.Item2.ToString()+" - "+from.Item1+','+from.Item2.ToString());
 			
+			if (from.Item2==VarType.ENUM&&to.Item1==KWInteger.constName&&to.Item2==VarType.NATIVE_VARIABLE) return;
+			if (to.Item2==VarType.ENUM&&from.Item1==KWInteger.constName&&from.Item2==VarType.NATIVE_VARIABLE) return;
+			if (from.Item2==VarType.ENUM&&to.Item2==VarType.ENUM) return;
+			
 			if (from.Item2==VarType.NATIVE_VARIABLE) {
 				if (keywordMgr.getVarTypeByteSize(to.Item1)<keywordMgr.getVarTypeByteSize(from.Item1))
 					throw new ParsingError("Can't convert \""+to.Item1+"\" to \""+from.Item1+'"',this);
@@ -4085,7 +4093,7 @@ namespace Sunset {
             		throw new ParsingError("Cannot convert class \""+from.Item1+"\" to \""+to.Item1+'"',this);
             }
 			else if (from.Item2!=VarType.NONE&&((from.Item2==VarType.CLASS&&to.Item2!=VarType.CLASS)||(to.Item2==VarType.CLASS&&from.Item2!=VarType.CLASS)))
-				throw new ParsingError("Can't cross convert classes with other var types! (\""+from.Item1+"\" to \""+to.Item1+"\")",this);
+				throw new ParsingError("Can't cross convert classes with other var types! ("+from.Item2.ToString()+" \""+from.Item1+"\" to "+to.Item2.ToString()+" \""+to.Item1+"\")",this);
 			else if (from.Item2==VarType.NATIVE_VARIABLE&&to.Item2==VarType.NATIVE_VARIABLE&&(from.Item1==KWString.constName||to.Item1==KWString.constName)&&from.Item1!=to.Item1)
 				throw new ParsingError("Can't convert \""+from.Item1+"\" to \""+to.Item1+'"',this);
 			else if (from.Item2!=to.Item2&&keywordMgr.getVarTypeByteSize(to.Item1)!=4)// What this does is allow pointers of native arrays etc to be moved into native integers!
@@ -4154,8 +4162,8 @@ namespace Sunset {
 
 			this.tryIncreaseBlockVarCount();
     			
-            var vt=new Tuple<Tuple<String,VarType>>(new Tuple<String,VarType>(this.varType,VarType.CLASS));
             Class cl=this.importedClasses.Where(x=>x.className==this.varType).First();
+            var vt=new Tuple<Tuple<String,VarType>>(new Tuple<String,VarType>(this.varType,cl.parserUsed.@enum?VarType.ENUM:VarType.CLASS));
             if (currentMods.HasFlag(Modifier.STATIC)) {
                 
                 staticInstances[ID].Add(varName,new Tuple<UInt32,Tuple<String,VarType>,Modifier,Class>((UInt32)dataSectBytes.Count,vt.Item1,currentMods,cl));
@@ -4896,6 +4904,7 @@ namespace Sunset {
 					}
 					break;
 					
+				case VarType.ENUM:
 				default:
 					throw new ParsingError("Invalid VarType (?!) ("+vt.ToString()+')',this);
 					
@@ -5353,7 +5362,8 @@ namespace Sunset {
 
             if (isImportedClass(origin.Last())) return staticInstances[pc.classID][item].Item3;
             switch (vt) {
-
+				
+            	case VarType.ENUM:
                 case VarType.CLASS: 
                     return pc.classes[item].Item4;
                 case VarType.FUNCTION:
@@ -5427,7 +5437,8 @@ namespace Sunset {
         private Modifier modsOf (String varName,VarType varType) {
 
             switch (varType) {
-
+				
+        		case VarType.ENUM:
                 case VarType.CLASS:
                     return this.classes[varName].Item4;
                 case VarType.FUNCTION:
@@ -5704,6 +5715,10 @@ namespace Sunset {
 			return charCtr==-1;
 		}
 		
+		
+		internal Boolean IsClassOrEnum (VarType vt) {
+			return vt==VarType.CLASS||vt==VarType.ENUM;
+		}
 	}
 	
 }
