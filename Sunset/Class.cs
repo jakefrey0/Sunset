@@ -24,7 +24,7 @@ namespace Sunset {
 		public Dictionary<String,Function>functions;//Function Name,(Memory Address,(Return Type, Return Var Type),No. of expected parameters,Function Type,Calling Convention,Modifiers)
 		public Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>> arrays=new Dictionary<String,Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>>();//Name,(Ptr To Mem Address of Heap Handle(Dynamic) or Mem Block(Static),Array Var Type,ArrayStyle(Dynamic or Static)),Instance ID
 		public Tuple<UInt32,List<Tuple<String,VarType>>> constructor;//Memory Address,Func Param Types
-        public Dictionary<String,Tuple<UInt32,Tuple<String,VarType>>>constants=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>>>();//var name,(constant value,(Generic Var Type Tuple))		
+        public Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier>>constants=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier>>();//var name,(constant value,(Generic Var Type Tuple))		
         private List<String>defineTimeOrder;
         public List<Class>inheritedClasses;
 		

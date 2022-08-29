@@ -103,6 +103,8 @@ namespace Sunset.Keywords {
 				sender.addByte(0x58); //POP EAX
 				
 			}
+			else if (cl.classType==ClassType.ENUM)
+				throw new ParsingError("Can't initialize the class \""+cl.className+"\" using the keyword \""+constName+"\" because \""+cl.className+"\" is an enum.",sender);
 			sender.addByte(0x5E);//POP ESI
 			outputType=new Tuple<String,VarType>(cl.className,VarType.CLASS);
 			

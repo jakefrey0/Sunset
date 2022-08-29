@@ -23,7 +23,7 @@ namespace Sunset {
 		IN_COMMENT,
 		STOP_PARSING_IMMEDIATE,
         READING_LABEL,
-		SEARCHING_COLON,
+		SEARCHING_COLON
 		
 	}
 	

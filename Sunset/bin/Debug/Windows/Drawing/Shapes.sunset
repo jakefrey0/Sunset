@@ -1,10 +1,34 @@
 import(Windows/Drawing/RECT)
+import(Windows/Components/Rectangle)
 dllref(User32,RECT,RECT,RECT) IntersectRect bool
 
-pullable RECT lastRectIntersection becomes new(RECT)
+pullable static RECT lastRectIntersection
 
-public func(RECT r,RECT r0) areRectsIntersecting bool {
+public static func(RECT r,RECT r0) areRectsIntersecting bool {
 	
+	if (lastRectIntersection,=,null) { lastRectIntersection becomes new(RECT) }
 	retn(IntersectRect(lastRectIntersection,r,r0))
+	
+}
+
+public static func(Rectangle r) toNativeRect RECT {
+	
+	RECT r0 becomes new(RECT)
+	r0.left becomes r.x
+	r0.right becomes r.x+r.width
+	r0.top becomes r.y
+	r0.bottom becomes r.y+r.height
+	retn(r0)
+	
+}
+
+public static func(int x,int y,int width,int height) createNativeRect RECT {
+	
+	RECT r0 becomes new(RECT)
+	r0.left becomes x
+	r0.right becomes x+width
+	r0.top becomes y
+	r0.bottom becomes y+height
+	retn(r0)
 	
 }

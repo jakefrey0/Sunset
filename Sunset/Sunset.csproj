@@ -82,6 +82,7 @@
     <Compile Include="Keywords\KWDefault.cs" />
     <Compile Include="Keywords\KWDllReference.cs" />
     <Compile Include="Keywords\KWElse.cs" />
+    <Compile Include="Keywords\KWEnum.cs" />
     <Compile Include="Keywords\KWExpectedTypes.cs" />
     <Compile Include="Keywords\KWFinishCompiling.cs" />
     <Compile Include="Keywords\KWForeach.cs" />

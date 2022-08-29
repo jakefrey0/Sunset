@@ -49,7 +49,7 @@ namespace Sunset {
 		public String referencedVariable,rTypeDefinition;
 		public Boolean referencedVariableIsLocal,referencedVariableIsFromClass,referencedVariableIsStatic;
 
-         public UInt32 byteCountBeforeDataSect;
+         public UInt32 byteCountBeforeDataSect,namesChked;
          public SunsetProject attatchedProject;
          public Boolean hasAttatchedProject;
 		
@@ -86,7 +86,7 @@ namespace Sunset {
 			
 		}
 		
-		internal Boolean expectsBlock=false,expectsElse=false,searchingFunctionReturnType=false,inFunction=false,@struct=false,inConstructor=false;
+		internal Boolean expectsBlock=false,expectsElse=false,searchingFunctionReturnType=false,inFunction=false,@struct=false,inConstructor=false,@enum=false;
 		internal Byte setExpectsElse=0,setExpectsBlock=0;
 		
 		internal Dictionary<String,Function> functions;//Function Name,(Memory Address,(Return Type, Return Var Type),No. of expected parameters,Function Type,Calling Convention,Modifiers,Instance ID)
@@ -170,7 +170,7 @@ namespace Sunset {
 		private List<UInt32>int32sToSubtractByFinalOpcodesCount=new List<UInt32>();
 		private List<String>pvClassInstanceOrigin;
          private Dictionary<String,UInt32>labels=new Dictionary<String,UInt32>();//Name, Mem Address
-         private Dictionary<String,Tuple<UInt32,Tuple<String,VarType>>>constants=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>>>();//var name,(constant value,(Generic Var Type Tuple))
+         private Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier>>constants=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier>>();//var name,(constant value,(Generic Var Type Tuple))
          private List<UInt32>dwordsToIncByOpcodes=new List<UInt32>();
 
 		private List<Tuple<UInt32,List<UInt32>>>stringsAndRefs; //(Mem Addr,List of References by Opcode Index),Note: Currently the Inner list of Opcode Indexes will only have a length of 1 (6/19/2021 5:19PM)
@@ -326,9 +326,14 @@ namespace Sunset {
 							else {
 							
 								inDoubleQuotes=c=='"';
+								if (this.splitsParameters(c)) {
+									nameReader.Append(c);
+									this.chkName(nameReader.ToString());
+									nameReader.Clear();
+									break;
+								}
 								nameReader.Append(c);
-								++status;
-								if (status==ParsingStatus.READING_VALUE) 
+								if (++status==ParsingStatus.READING_VALUE) 
 									rbbrv=this.modRbbrv(c,inDoubleQuotes,rbbrv);
 								
 							}
@@ -425,6 +430,14 @@ namespace Sunset {
 						}
 						else if (this.splitsParameters(c)&&sharprv!=0) nameReader.Append(c);
 						else if (this.isValidNameChar(c)||this.refersToIncrementOrDecrement(c)) nameReader.Append(c);
+                        else if (this.splitsParameters(c)&&@enum) {
+                        	
+                        	this.chkName(nameReader.ToString());
+							lastReferencedVariable=referencedVariable=null;
+							status=ParsingStatus.SEARCHING_NAME;
+							nameReader.Clear();
+							
+                        }
 						else {
 							
 							String prevLastReferencedVariable=lastReferencedVariable;
@@ -925,12 +938,61 @@ namespace Sunset {
 			
 			//HACK:: check var type
 			
+			++namesChked;
+			
 			KeywordType[] pKTs=this.nextExpectedKeywordTypes;
 			Boolean wasSearchingFuncReturnType=searchingFunctionReturnType,expectsCaseOrDefault=this.blocks.Count>0&&this.blocks.Last().Key.switchBlock;
 			this.nextExpectedKeywordTypes=new []{KeywordType.NONE};
 			searchingFunctionReturnType=false;
 			
 			Console.WriteLine("Got name: \""+name+'"');
+			
+			if (@enum) {
+				Console.WriteLine("Current enum set:\n");
+				foreach (KeyValuePair<String,Tuple<UInt32,Tuple<String,VarType>,Modifier>>kvp in constants) {
+					Console.WriteLine(" - "+kvp.Key+": "+kvp.Value.Item1.ToString());
+				}
+				Console.WriteLine("\n -------------- ");
+				
+				Tuple<String,VarType>type=new Tuple<String,VarType>("int",VarType.NATIVE_VARIABLE);
+				if (name==KWBecomes.constName) {
+					referencedVariable=lastReferencedVariable;
+					lastReferencedVariable=null;
+				}
+				else if (lastReferencedVariable==null&&referencedVariable==null) {
+					if (nameExists(name))
+						throw new ParsingError("Invalid name for enum instance (already exists/in use): \""+name+'"',this);
+					lastReferencedVariable=name;
+					UInt32[]sel=constants.Select(x=>x.Value.Item1).OrderBy(x=>x).ToArray();
+					Console.WriteLine("sel.Length: "+sel.Length.ToString());
+					Boolean flag=false;
+					UInt32 i=0,nextNumInOrder=(sel.Length==0?0:sel.TakeUntil(x=>{
+		             	if (flag) return true;
+		            	if (i==0) {
+		            		if (sel.Length==1) flag=true;
+		            		return false;
+		            	}
+		            	else if (sel[i-1]!=x-1) return true;
+		            	++i;
+		            	return false;
+		             }).Last()+1);
+					constants.Add(lastReferencedVariable,new Tuple<UInt32,Tuple<String,VarType>,Modifier>(nextNumInOrder,type,Modifier.PUBLIC|Modifier.STATIC|Modifier.CONSTANT));
+				}
+				else if (name.Length==1&&this.splitsParameters(name[0]))
+					lastReferencedVariable=referencedVariable=null;
+				else {
+					if (referencedVariable==null)
+						throw new ParsingError("Invalid value: \""+name+'"',this);
+					UInt32 val;
+					getConstantValue(name,out val);
+					if (constants.Select(x=>x.Value.Item1).Contains(val)&&constants[referencedVariable].Item1!=val)
+						throw new ParsingError("Enum already contains instance with value \""+val.ToString()+"\"",this);
+					constants[referencedVariable]=new Tuple<UInt32,Tuple<String,VarType>,Modifier>(val,type,constants[referencedVariable].Item3);
+					referencedVariable=null;
+				}
+				status=ParsingStatus.SEARCHING_NAME;
+				return;
+			}
 			
 			if (!pKTs.Contains(KeywordType.NONE)||attemptingClassAccess||gettingClassItem||expectsCaseOrDefault)
 				goto checkKeywords;
@@ -1215,6 +1277,10 @@ namespace Sunset {
                             return;
 
                         }
+                    	else if (cl.constants.Where(x=>x.Value.Item3.HasFlag(Modifier.STATIC)).Select(x=>x.Key).Contains(name)) {
+                    		throwIfCantAccess(cl.constants[name].Item3,name,cl.path,false);
+                    		throw new ParsingError("Can't modify static instance \""+name+"\" from \""+cl.className+"\" because it is constant.",this);
+                    	}
                         throw new ParsingError(scName+" does not contain the static instance \""+name+'"',this);
                     }
                     this.lastReferencedVarType=staticInstances[cl.classID][name].Item2.Item2;
@@ -1472,7 +1538,7 @@ namespace Sunset {
             if (currentMods.HasFlag(Modifier.CONSTANT)) {
                 nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT };
                 constantBeingSet=varName;
-                constants.Add(varName,new Tuple<UInt32,Tuple<String,VarType>>(0,null));
+                constants.Add(varName,new Tuple<UInt32,Tuple<String,VarType>,Modifier>(0,null,currentMods));
             }
             currentMods=Modifier.NONE;
 			status=ParsingStatus.SEARCHING_NAME;
@@ -1522,7 +1588,7 @@ namespace Sunset {
 
                 UInt32 constantValue;
                 Tuple<String,VarType>returnType=getConstantValue(value,out constantValue);
-                constants[constantBeingSet]=new Tuple<UInt32,Tuple<String,VarType>>(constantValue,returnType);
+                constants[constantBeingSet]=new Tuple<UInt32,Tuple<String,VarType>,Modifier>(constantValue,returnType,constants[constantBeingSet].Item3);
                 goto done;
 
             }
@@ -2175,7 +2241,7 @@ namespace Sunset {
 			if (currentMods.HasFlag(Modifier.CONSTANT)) {
                 nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT };
                 constantBeingSet=arrayName;
-                constants.Add(arrayName,new Tuple<uint, Tuple<string, VarType>>(0,null));
+                constants.Add(arrayName,new Tuple<UInt32,Tuple<String,VarType>,Modifier>(0,null,currentMods));
             }
             else nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT,KeywordType.MODIFIER,KeywordType.FUNCTION,KeywordType.TYPE };
 			this.lastReferencedVariable=arrayName;
@@ -2519,7 +2585,8 @@ namespace Sunset {
                 this.acknowledgements.ContainsKey(name) ||
 				name==Parser.THIS_STR                   ||
                 staticInstances[ID].ContainsKey(name)   ||
-                this.labels.ContainsKey(name)            ;
+                this.labels.ContainsKey(name)           ||
+				this.constants.ContainsKey(name)		 ;
 			
 		}
 		
@@ -3183,7 +3250,7 @@ namespace Sunset {
 				else initialClass=this.classes[first].Item3;
                     
 				String pValue=accessors[1];
-				Boolean classOriginRecursor=accessors.Count>2&&initialClass.classes.ContainsKey(pValue);
+				Boolean classOriginRecursor=accessors.Count>2&&initialClass.classes.ContainsKey(pValue),isConstant=false;
 				clearNextPvOrigin=!classOriginRecursor&&pvClassInstanceOrigin.Count==0;
                 
                     Console.WriteLine("clearNextPvOrigin: "+clearNextPvOrigin);
@@ -3197,17 +3264,17 @@ namespace Sunset {
 					
 				}
                 else if (imported) {
-                    if (staticInstances[initialClass.classID].ContainsKey(pValue))
+					if (initialClass.constants.Where(x=>x.Value.Item3.HasFlag(Modifier.STATIC)).Select(x=>x.Key).Contains(pValue))
+						isConstant=true;
+					else if (staticInstances[initialClass.classID].ContainsKey(pValue))
                         this.addBytes(new Byte[]{0xA1}.Concat(BitConverter.GetBytes((UInt32)(PEHeaderFactory.dataSectAddr+staticInstances[initialClass.classID][pValue].Item1)))); // MOV EAX,[PTR]
-                    else if (!staticFunctions[initialClass.classID].ContainsKey(pValue)&&!isFuncWithParams(pValue,initialClass,true))
+                   else if (!staticFunctions[initialClass.classID].ContainsKey(pValue)&&!isFuncWithParams(pValue,initialClass,true))
                         throw new ParsingError("Does not exist in \""+initialClass.className+"\": "+pValue,this);
                 }
                 else if (staticHome) {
                     this.addBytes(new Byte[]{0xA1}.Concat(BitConverter.GetBytes((UInt32)(PEHeaderFactory.dataSectAddr+staticInstances[ID][first].Item1)))); // MOV EAX,[PTR]
-               
-
                 }
-				else if (this.pvClassInstanceOrigin.Count<2&&!classOriginRecursor) {
+				else if (this.pvClassInstanceOrigin.Count<2&&!classOriginRecursor&&!isConstant) {
 					
                           if (addEsiToLocalAddresses)
 						this.addBytes(new Byte[]{0x8B,0x86}.Concat(BitConverter.GetBytes(this.appendAfterIndex[first])));//MOV EAX,DWORD[PTR+ESI]
@@ -3229,7 +3296,12 @@ namespace Sunset {
 					return retVal;
 					
 				}
-                  else if (imported&&staticInstances[initialClass.classID].ContainsKey(pValue)) {
+				else if (initialClass.constants.ContainsKey(pValue)) { // abc
+					throwIfCantAccess(initialClass.constants[pValue].Item3,pValue,initialClass.path,true);
+                  	this.addBytes(new Byte[]{0x68}.Concat(BitConverter.GetBytes(initialClass.constants[pValue].Item1)));
+                  	return new Tuple<String,VarType>("int",VarType.NATIVE_VARIABLE);
+				}
+                else if (imported&&staticInstances[initialClass.classID].ContainsKey(pValue)) {
                         
                         var inst=staticInstances[initialClass.classID][pValue];
 
@@ -3974,12 +4046,16 @@ namespace Sunset {
 				this.callClassFunc(executor.classFunc,@params);
 				this.lastReferencedClassInstance.Clear();
 			}
-              else if (executor.externalStaticFunc!=null) {
-                   this.CallStaticClassFunc(executor.externalStaticFunc.Item1,executor.externalStaticFunc.Item2,@params);
-                   this.lastReferencedClassInstance.Clear();
-              }
-              else if (executor.internalStaticFunc!=null)
-                   this.CallStaticClassFunc(executor.internalStaticFunc.Item1,executor.internalStaticFunc.Item2,executor.internalStaticFunc.Item3,@params);
+          else if (executor.externalStaticFunc!=null) {
+               this.CallStaticClassFunc(executor.externalStaticFunc.Item1,executor.externalStaticFunc.Item2,@params);
+               this.lastReferencedClassInstance.Clear();
+               lastReferencedVariableIsStatic=false;
+          }
+			else if (executor.internalStaticFunc!=null) {
+	               this.CallStaticClassFunc(executor.internalStaticFunc.Item1,executor.internalStaticFunc.Item2,executor.internalStaticFunc.Item3,@params);
+	               lastReferencedVariableIsStatic=false;
+			
+			}
 			
 		}
 		
@@ -4118,7 +4194,7 @@ namespace Sunset {
             if (currentMods.HasFlag(Modifier.CONSTANT)) {
                 nextExpectedKeywordTypes=new []{KeywordType.ASSIGNMENT };
                 constantBeingSet=varName;
-                constants.Add(varName,new Tuple<uint, Tuple<string, VarType>>(0,null));
+                constants.Add(varName,new Tuple<UInt32,Tuple<String,VarType>,Modifier>(0,null,currentMods));
             }
 			this.lastReferencedVariable=varName;
             currentMods=Modifier.NONE;
@@ -5346,7 +5422,7 @@ namespace Sunset {
 
         }
 
-        internal Dictionary<String,Tuple<UInt32,Tuple<String,VarType>>> getConstants () { return this.constants; }
+        internal Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier>> getConstants () { return this.constants; }
 
         private Modifier modsOf (String varName,VarType varType) {
 
@@ -5618,6 +5694,14 @@ namespace Sunset {
 			opcodes.Clear();
 			memAddress=startingMemAddr;
 			tableAddrIndex=0;
+		}
+		
+		/// <summary>
+		///  do not use
+		/// </summary>
+		internal Boolean charCtrNegOneParsErr() {
+			lastDataToParse+=' ';
+			return charCtr==-1;
 		}
 		
 	}

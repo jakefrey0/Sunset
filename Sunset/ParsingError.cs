@@ -19,7 +19,7 @@ namespace Sunset {
 			((sender==null)?"":
 				"Class: "+sender.className+'\n'+
 				"Path: "+sender.fileName+'\n'+
-				((sender.charCtr==-1)?"":
+				((sender.charCtrNegOneParsErr())?"":
 					"\nLine: "+(sender.lastDataToParse.Substring(0,sender.charCtr).Where(x=>x=='\n').Count()+1).ToString()+", Char: "+sender.charCtr.ToString()+'\n'+
 					"At: "+String.Concat(sender.lastDataToParse.Substring(sender.lastDataToParse.Substring(0,sender.charCtr).LastIndexOf('\n')+1).TakeUntil(x=>x=='\n')).Replace("\r","").Replace("\t","")+'\n'+
 					String.Concat(new Char[sender.charCtr-(sender.lastDataToParse.Substring(0,sender.charCtr).LastIndexOf('\n')+1)+2])+"^\n"+

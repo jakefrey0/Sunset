@@ -47,7 +47,7 @@ namespace Sunset {
                 else if (farg=="mkproj") {
                     
                     if (args.Length<=2) {
-                        Console.WriteLine("Argument \"mkproj\" expects1 additional arguments: project name, and the directory");
+                        Console.WriteLine("Argument \"mkproj\" expects additional arguments: project name, and the directory");
                         return;
                     }
                     String dir=Parser.merge(args.Skip(2)," "),pName=args[1],mainFn=mainFn=pName+".sunset";

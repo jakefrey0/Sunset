@@ -194,7 +194,7 @@ namespace Sunset.Keywords {
 		    if (Parser.classByIDs.ContainsKey(id))
                 cl=Parser.classByIDs[id];
             else {
-                cl=new Class(className,path,childParser.byteCountBeforeDataSect,childParser.@struct?ClassType.STRUCT:ClassType.NORMAL,childParser,childParser.memAddress,(UInt32)initialDataSectBytesCount,(UInt32)childParser.getAppendAfterCount(),id);
+		    	cl=new Class(className,path,childParser.byteCountBeforeDataSect,childParser.@struct?ClassType.STRUCT:childParser.@enum?ClassType.ENUM:ClassType.NORMAL,childParser,childParser.memAddress,(UInt32)initialDataSectBytesCount,(UInt32)childParser.getAppendAfterCount(),id);
                 Parser.classByIDs.Add(id,cl);
             }
             sender.importedClasses.Add(cl);

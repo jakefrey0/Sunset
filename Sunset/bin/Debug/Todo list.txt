@@ -1,7 +1,6 @@
 Current:
 
  - Array Styles: static, stack, heap. For static make it so the length has to be set immediately or throw error. The length also has to be constant and it can't be a localvar. Static arrays shouldn't have the 2 dwords behind it in the memory block that indicate the length and var type byte size.
- 
  - Enum
  - free array heaps on block end (when the block they were defined in closes) or if they weren't defined in a block, on class end
  - blogic (pb)
