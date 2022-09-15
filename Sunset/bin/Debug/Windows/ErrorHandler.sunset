@@ -4,14 +4,14 @@ dllref(Kernel32,int,int,int,int,str,int,int#) FormatMessageA int
 dllref(User32,int,str,str,int) MessageBoxA int
 setpheapvar
 
-private static constant int bufferLength becomes 512
+private static constant int bufferLength becomes 200h
 public static func getLastErrorCode int { retn(GetLastError) }
 public static func(int errorCode) errorCodeToString str {
 	
 	byte# buffer becomes #bufferLength
-	int flags becomes 4608 ; FORMAT_MESSAGE_FROM_SYSTEM, FORMAT_MESSAGE_IGNORE_INSERTS
-	int lang becomes 1024 ; LANG_NEUTRAL, SUBLANG_DEFAULT
-	FormatMessageA(4608,null,errorCode,lang,buffer,bufferLength,null)
+	int flags becomes 1200h ; FORMAT_MESSAGE_FROM_SYSTEM, FORMAT_MESSAGE_IGNORE_INSERTS
+	int lang becomes 400h ; LANG_NEUTRAL, SUBLANG_DEFAULT
+	FormatMessageA(flags,null,errorCode,lang,buffer,bufferLength,null)
 	retn(String.fromBytes(buffer))
 	
 }

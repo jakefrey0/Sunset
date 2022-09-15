@@ -90,13 +90,13 @@ pullable int ETO_CLIPPED becomes 4
 pullable int WM_TIMER becomes 275
 pullable int COLOR_WINDOWTEXT becomes 8
 pullable int RDW_INVALIDATE becomes 1
-pullable int WM_KEYDOWN becomes 256
-pullable int WM_KEYUP becomes 257
-pullable int SRCCOPY becomes 13369376
-pullable int RDW_UPDATENOW becomes 256
+pullable int WM_KEYDOWN becomes 100h
+pullable int WM_KEYUP becomes 101h
+pullable int SRCCOPY becomes 0CC0020h
+pullable int RDW_UPDATENOW becomes 100h
 pullable HWND windowHandle
-pullable int WM_MOUSEMOVE becomes 512
-pullable int WM_LBUTTONDOWN becomes 513
+pullable int WM_MOUSEMOVE becomes 200h
+pullable int WM_LBUTTONDOWN becomes 201h
 pullable int brushHandle becomes GetSysColorBrush(COLOR_WINDOW)
 public int contentsHandle becomes GetSysColorBrush(COLOR_WINDOWTEXT)
 
@@ -287,7 +287,7 @@ func(HWND hwnd,int uMsg,int wParam,int lParam) wndProc int {
 }
 
 public func show {
-	CreateWindowExA(null,className,title,273154048,x,y,w,h,null,null,wndClassA.hInstance,null)
+	CreateWindowExA(null,className,title,10480000h,x,y,w,h,null,null,wndClassA.hInstance,null)
 	msg becomes new(MSG)
 	while (GetMessageA(msg,null,null,null)) {
 		

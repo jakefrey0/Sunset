@@ -24,7 +24,7 @@ public func(PaintMsg pm) onPaint {
 	HGDIOBJ oldBitmap becomes SelectObject(hMemDC,cast(bitmap,HGDIOBJ))
 	BITMAP bmp becomes new(BITMAP)
 	GetObjectA(bitmap,Bsizeof(BITMAP),bmp)
-	BitBlt(pm.hdc,x,y,width,height,hMemDC,0,0,13369376)
+	BitBlt(pm.hdc,x,y,width,height,hMemDC,0,0,0CC0020h)
 	SelectObject(hMemDC,oldBitmap)
 	DeleteDC(hMemDC)
 	
