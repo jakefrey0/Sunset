@@ -21,6 +21,7 @@ namespace Sunset {
 		static extern private UInt32 MapFileAndCheckSum (String Filename,out UInt32 HeaderSum,out UInt32 CheckSum);
 		private static TextWriter tw=Console.Out;
 		private static Boolean silenced=false,showStackTrace=false;
+		private static CompileType compileType=CompileType.WINDOWS;
 		
 		public static void Main (String[] args) {
 
@@ -41,6 +42,7 @@ namespace Sunset {
     				Console.WriteLine(" - \"-v\" ~ this stands for \"verbose\" and will print all compiler debug output\n");
     				Console.WriteLine(" - \"-s\" ~ this stands for \"silence\" and will disable error/compiling result output\n");
                     Console.WriteLine(" - \"-st\" ~ this stands for \"stack trace\" and will show the stack trace on exception \n");
+                    Console.WriteLine(" - \"-bin\" ~ this stands for \"binary\" and will signal the parser to produce a non-formatted binary output \n");
                     Console.WriteLine("\nTo make a project (optional), use arguments \"mkproj [name] [path]\"");
     				return;
                 }
@@ -83,9 +85,9 @@ namespace Sunset {
 
             }
 			
-			Parser psr=new Parser("Main parser",args[0]){className=args[0].Split('.')[0].Split(new Char[]{'\\','/'}).Last(),attatchedProject=sp,hasAttatchedProject=hasAttatchedProject};
+			Parser psr=new Parser("Main parser",args[0],compileType==CompileType.WINDOWS){className=args[0].Split('.')[0].Split(new Char[]{'\\','/'}).Last(),attatchedProject=sp,hasAttatchedProject=hasAttatchedProject};
 			
-			String outputFilename=hasAttatchedProject?projPath+"/bin/"+sp.name+".exe":args[0].Contains('.')?args[0].Split('\\').Last().Split('/').Last().Split('.').First()+".exe":"output.exe",sourceFilename=args[0];
+			String outputFilename=hasAttatchedProject?projPath+"/bin/"+sp.name+((compileType==CompileType.WINDOWS)?".exe":".bin"):args[0].Contains('.')?args[0].Split('\\').Last().Split('/').Last().Split('.').First()+".exe":"output.exe",sourceFilename=args[0];
 
 			try {
 				File.WriteAllBytes(outputFilename,psr.parse(File.ReadAllText(sourceFilename)));
@@ -119,16 +121,19 @@ namespace Sunset {
 				
 			}
 			
-			UInt32 checkSum;
-			Program.MapFileAndCheckSum(outputFilename,out checkSum,out checkSum);
-			using (FileStream fs=File.Open(outputFilename,FileMode.Open)) {
-				
-				fs.Seek(216,SeekOrigin.Current);
-				fs.Write(BitConverter.GetBytes(checkSum),0,4);
-				
+			UInt32 checkSum=0;
+			
+			if (compileType==CompileType.WINDOWS) {
+				Program.MapFileAndCheckSum(outputFilename,out checkSum,out checkSum);
+				using (FileStream fs=File.Open(outputFilename,FileMode.Open)) {
+					
+					fs.Seek(216,SeekOrigin.Current);
+					fs.Write(BitConverter.GetBytes(checkSum),0,4);
+					
+				}
 			}
 			
-			Console.WriteLine((hasAttatchedProject?"\n\nDone compiling project "+sp.name+",\nSource file: ":"\n\nDone compiling,\nSource file: ")+sourceFilename+"\nOutput file: "+outputFilename+"\nChecksum: "+checkSum.ToString("X")+"\nAt: "+DateTime.Now.ToString()+'\n');
+			Console.WriteLine((hasAttatchedProject?"\n\nDone compiling project "+sp.name+",\nSource file: ":"\n\nDone compiling,\nSource file: ")+sourceFilename+"\nOutput file: "+outputFilename+(checkSum==0?"":"\nChecksum: "+checkSum.ToString("X"))+"\nAt: "+DateTime.Now.ToString()+'\n');
 			
 		}
 		
@@ -160,7 +165,8 @@ namespace Sunset {
 				Program.disableOutput();
 			Program.silenced=args.Contains("-s");
             Program.showStackTrace=args.Contains("-st");
-			newArgs=args.Where(x=>x!="-s"&&x!="-v"&&x!="-dg"&&x!="-st").ToArray();
+            if (args.Contains("-bin")) Program.compileType=CompileType.NON_FORMATTED_BINARY;
+			newArgs=args.Where(x=>x!="-s"&&x!="-v"&&x!="-st"&&x!="-bin").ToArray();
 			
 		}
 		

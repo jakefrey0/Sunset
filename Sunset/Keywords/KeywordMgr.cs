@@ -73,7 +73,9 @@ namespace Sunset.Keywords {
                                     new KWExit(),
                                     new KWByteSizeOf(),
                                     new KWInherit(),
-                                    new KWEnum()
+                                    new KWEnum(),
+                                    new KWSetStyle(),
+                                    new KWSetOrigin()
 			                       	
 			                       });
 			

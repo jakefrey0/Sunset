@@ -25,6 +25,7 @@ namespace Sunset {
 		public readonly Byte[] opcodesToAddOnBlockEnd;
 		
 		public Dictionary<String,Tuple<Tuple<String,VarType>>> localVariables;
+		public Dictionary<String,ArrayStyle> arrayStyles;
 		
 		public readonly Boolean shouldXOREAX,addEnterAutomatically;
 		
@@ -70,6 +71,7 @@ namespace Sunset {
 			this.blockRVAPositions=new List<Tuple<UInt32,UInt32>>();
 			this.restoreArraySetValueFuncs=new List<String>();
 			this.children=new List<Block>();
+			this.arrayStyles=new Dictionary<String,ArrayStyle>();
 			
 		}
 		

@@ -73,12 +73,7 @@ namespace Sunset {
 		internal Dictionary<Block,UInt32> enterPositions; //Block,Position in opcodes of the parameters (total 3 bytes) for ENTER 0,0
 		//Any references of a local var outside of its home block should have its EBP increased by +4 per new local variable created afterwards in a lower nested block
 		internal Dictionary<Block,List<UInt32>> localVarEBPPositionsToOffset; //Referencing Block,Indexes in the opcodes list - (Block where variable was referenced, List of all references to variables from a lower nested level block)
-		internal UInt32 memAddress {
-			
-			private set;
-			get;
-			
-		}
+		internal UInt32 memAddress;
 		internal UInt32 restoreEsiFuncAddr {
 			
 			private set;
@@ -172,6 +167,7 @@ namespace Sunset {
          private Dictionary<String,UInt32>labels=new Dictionary<String,UInt32>();//Name, Mem Address
          private Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier>>constants=new Dictionary<String,Tuple<UInt32,Tuple<String,VarType>,Modifier>>();//var name,(constant value,(Generic Var Type Tuple))
          private List<UInt32>dwordsToIncByOpcodes=new List<UInt32>();
+         private ArrayStyle lastChkedArrStyle;
 
 		private List<Tuple<UInt32,List<UInt32>>>stringsAndRefs; //(Mem Addr,List of References by Opcode Index),Note: Currently the Inner list of Opcode Indexes will only have a length of 1 (6/19/2021 5:19PM)
 		private Dictionary<String,UInt32> setArrayValueFuncPtrs;
@@ -540,14 +536,17 @@ namespace Sunset {
 								this.lastReferencedVariableIsLocal=this.isALocalVar(this.lastReferencedClassInstance.First());
 								gettingClassItem=false;
 								lastReferencedVariableIsFromClass=true;
-								this.moveClassOriginItemAddrIntoEax(this.lastReferencedClassInstance,arrName,VarType.NATIVE_ARRAY,this.lastReferencedVariableIsLocal);
-								this.addBytes(new Byte[]{0x8B,0});//MOV EAX,[EAX]
-								status=this.indexArray(null,nameReader.ToString(),0,true,this.keywordMgr.getVarTypeByteSize(this.getOriginFinalClass(this.lastReferencedClassInstance,this.lastReferencedVariableIsLocal).arrays[arrName].Item2));
+								Class cl=this.moveClassOriginItemAddrIntoEax(this.lastReferencedClassInstance,arrName,VarType.NATIVE_ARRAY,this.lastReferencedVariableIsLocal);
+								ArrayStyle arrStyle=cl.arrays[arrName].Item3;
+								if (arrStyle==ArrayStyle.DYNAMIC_MEMORY_HEAP)
+									this.addBytes(new Byte[]{0x8B,0});//MOV EAX,[EAX]
+								status=this.indexArray(null,nameReader.ToString(),arrStyle,0,true,this.keywordMgr.getVarTypeByteSize(this.getOriginFinalClass(this.lastReferencedClassInstance,this.lastReferencedVariableIsLocal).arrays[arrName].Item2));
 								
 							}
 							else {
-								this.lastReferencedVariableIsLocal=this.isALocalVar(arrName);
-								status=this.indexArray(arrName,nameReader.ToString());
+								ArrayStyle arrStyle=GetArrayStyle(arrName);
+								status=this.indexArray(arrName,nameReader.ToString(),arrStyle);
+								if (blocks.Count!=0) lastReferencedVariableIsLocal=true;
 							}
 							nameReader.Clear();
 							this.lastReferencedVariable=arrName;
@@ -770,6 +769,7 @@ namespace Sunset {
 		}
 		
 		private Byte[] compile () {
+			
 			if (inhVarsToDefine.Count!=0)
 				throw new ParsingError("Missing inherited variable: \""+inhVarsToDefine.First().Key+"\" of type "+inhVarsToDefine.First().Value.Item2,this);
 			if (inhArrsToDefine.Count!=0)
@@ -779,11 +779,11 @@ namespace Sunset {
 			if (inhFuncsToDefine.Count!=0)
 				throw new ParsingError("Missing inherited function: \""+inhFuncsToDefine.First().Key+(inhFuncsToDefine.First().Value.parameterTypes.Count==0?"\" with no parameters":"\" with parameters "+merge(inhFuncsToDefine.First().Value.parameterTypes.Select(x=>x.Item1),", "))+" and "+(inhFuncsToDefine.First().Value.returnType==null?"no return value":"return type of "+inhFuncsToDefine.First().Value.returnType.Item1)+".",this);
 			
-			Console.WriteLine("Compiling: "+this.parserName);
+			Console.WriteLine("Compiling: "+this.parserName+"\nOpcodes: "+opcodes.Count.ToString()+"\nAppendAfter: "+appendAfter.Count.ToString());
 			
-			if (!@struct) {
+			if (!@struct&&winApp) {
 				
-				this.addBytes(new Byte[]{0x6A,0}); //PUSH 0EAX
+				this.addBytes(new Byte[]{0x6A,0}); //PUSH 0
 				freeHeapsMemAddr=memAddress;
 				this.freeHeaps();
 				this.addByte(0x58); //POP  to set the exit code (return value) of process (HACK:: NOTICE::return value is an UNSIGNED value)
@@ -1605,82 +1605,110 @@ namespace Sunset {
 				
 				if (this.isNativeArrayCreationIndicator(value[0])) {
 				    
-					Console.WriteLine("Making array named \""+this.referencedVariable+"\" of array type \""+type+"\" with value \""+value+"\".");
-					String adjustedValue=value.Substring(1);
-					const String HL="HeapAlloc";
-					this.referenceDll(Parser.KERNEL32,HL);
+					Console.WriteLine("Making array named \""+this.referencedVariable+"\" of array type \""+type+"\" with value \""+value+"\" of style \""+style.ToString()+"\".");
 					
+					const String HL="HeapAlloc";
+					String adjustedValue=value.Substring(1);
+					UInt32 arrVarTypeByteSize=keywordMgr.getVarTypeByteSize(type);
+				
 					if (!this.splitsParameters(adjustedValue[0])) {
 						
-						this.addByte(0x51); //PUSH ECX
+						ArrayStyle _style=GetArrayStyle(referencedVariable);
 						
-						if (Parser.processHeapVar==UInt32.MaxValue)
-							this.setProcessHeapVar();
+						// Also switch(style) for the #,(...,...) syntax which is the else statement after this current if block is over
+						switch(_style) {
 						
-						this.pushValue(adjustedValue);
-						this.addByte(0xBB);//MOV FOLLOWING UINT32 TO EBX
-						this.addBytes(BitConverter.GetBytes(keywordMgr.getVarTypeByteSize(type)));//UINT32 HERE
-						this.addBytes(new Byte[]{0x0F,0xAF,0x1C,0x24});//IMUL EAX BY [ESP]
-						this.addBytes(new Byte[]{0x83,0xC4,4});//ADD 4 TO ESP
-						this.addBytes(new Byte[]{0x83,0xC3,8});//ADD 8 TO EBX
-						this.addByte(0x53);//PUSH EBX
-						this.addBytes(new Byte[]{0xBB}.Concat(BitConverter.GetBytes((UInt32)8))); //MOV EBX,08000000 (HEAP_ZERO_MEMORY)
-						this.addByte(0x53);//PUSH EBX
-						this.pushProcessHeapVar();
-                           ReferenceRefdFunc(HL,2);
-						this.addBytes(new Byte[]{0xFF,0x15,0,0,0,0});//CALL FUNC HeapAlloc
-	//					Console.WriteLine(this.referencedVariable);
-	//					Console.WriteLine("------------");
-	//					foreach (String s in this.arrays.Select(x=>x.Key))
-	//						Console.WriteLine(" - "+s);
-	//					Console.WriteLine("------------");
-						if (this.referencedVariableIsLocal) {
-							
-							if (this.getLocalVarHomeBlock(this.referencedVariable)!=this.getCurrentBlock())
-								this.localVarEBPPositionsToOffset[this.getCurrentBlock()].Add((UInt32)(this.opcodes.Count+2));
-							this.addBytes(new Byte[]{0x89,0x45,this.pseudoStack.getVarEbpOffset(this.referencedVariable)}); //MOV [EBP+-OFFSET],EAX
-							
-						}
-						else {
-							
-							if (referencedVariableIsFromClass) {
+							case ArrayStyle.DYNAMIC_MEMORY_HEAP:
+								if (@struct) throw new ParsingError("Can only create static arrays in a struct",this);
+								this.referenceDll(Parser.KERNEL32,HL);
+
+								this.addByte(0x51); //PUSH ECX
 								
-								this.addByte(0x91);//XCHG EAX,ECX
-								this.moveClassOriginItemAddrIntoEax(this.lastReferencedClassInstance,this.referencedVariable,VarType.NATIVE_ARRAY,lastReferencedVariableIsFromClass);
-								this.addBytes(new Byte[]{0x89,8});//MOV [EAX],ECX
+								if (Parser.processHeapVar==UInt32.MaxValue)
+									this.setProcessHeapVar();
 								
-							}
-							else {
-								
-								if (addEsiToLocalAddresses)
-									this.addBytes(new Byte[]{0x89,0x86}.Concat(BitConverter.GetBytes(this.appendAfterIndex[referencedVariable])));
-								else {
-									this.arrayReferences[this.referencedVariable].Add((UInt32)(opcodes.Count+1));
-									this.addBytes(new Byte[]{0xA3,0,0,0,0});//STORE ALLOCATED PTR TO VARIABLE
+								this.pushValue(adjustedValue);
+								this.addByte(0xBB);//MOV FOLLOWING UINT32 TO EBX
+								this.addBytes(BitConverter.GetBytes(arrVarTypeByteSize));//UINT32 HERE
+								this.addBytes(new Byte[]{0x0F,0xAF,0x1C,0x24});//IMUL EAX BY [ESP]
+								this.addBytes(new Byte[]{0x83,0xC4,4});//ADD 4 TO ESP
+								this.addBytes(new Byte[]{0x83,0xC3,8});//ADD 8 TO EBX
+								this.addByte(0x53);//PUSH EBX
+								this.addBytes(new Byte[]{0xBB}.Concat(BitConverter.GetBytes((UInt32)8))); //MOV EBX,08000000 (HEAP_ZERO_MEMORY)
+								this.addByte(0x53);//PUSH EBX
+								this.pushProcessHeapVar();
+		                           ReferenceRefdFunc(HL,2);
+								this.addBytes(new Byte[]{0xFF,0x15,0,0,0,0});//CALL FUNC HeapAlloc
+			//					Console.WriteLine(this.referencedVariable);
+			//					Console.WriteLine("------------");
+			//					foreach (String s in this.arrays.Select(x=>x.Key))
+			//						Console.WriteLine(" - "+s);
+			//					Console.WriteLine("------------");
+								if (this.referencedVariableIsLocal) {
+									
+									if (this.getLocalVarHomeBlock(this.referencedVariable)!=this.getCurrentBlock())
+										this.localVarEBPPositionsToOffset[this.getCurrentBlock()].Add((UInt32)(this.opcodes.Count+2));
+									this.addBytes(new Byte[]{0x89,0x45,this.pseudoStack.getVarEbpOffset(this.referencedVariable)}); //MOV [EBP+-OFFSET],EAX
+									
 								}
+								else {
+									
+									if (referencedVariableIsFromClass) {
+										
+										this.addByte(0x91);//XCHG EAX,ECX
+										this.moveClassOriginItemAddrIntoEax(this.lastReferencedClassInstance,this.referencedVariable,VarType.NATIVE_ARRAY,lastReferencedVariableIsFromClass);
+										this.addBytes(new Byte[]{0x89,8});//MOV [EAX],ECX
+										
+									}
+									else {
+										
+										if (addEsiToLocalAddresses)
+											this.addBytes(new Byte[]{0x89,0x86}.Concat(BitConverter.GetBytes(this.appendAfterIndex[referencedVariable]))); // mov [ptr+esi],eax
+										else {
+											this.arrayReferences[this.referencedVariable].Add((UInt32)(opcodes.Count+1));
+											this.addBytes(new Byte[]{0xA3,0,0,0,0});//STORE ALLOCATED PTR TO VARIABLE
+										}
+										
+									}
 								
-							}
-						
+								}
+								this.addBytes(new Byte[]	{
+								             				0x59,//POP ECX
+								              				0x6A,0,//PUSH 0
+								              				});
+								
+								this.pushValue(adjustedValue); // PUSH ARRAY LENGTH
+								this.callSetArrayValue(this.referencedVariable);
+								this.addBytes(new Byte[]{
+								              				0x6A,4,//PUSH 4
+								              				0x6A//PUSH FOLLOWING BYTE
+								              });
+								this.addByte((Byte)(keywordMgr.getVarTypeByteSize(type)));//THIS BYTE (array member byte size)
+								this.callSetArrayValue(this.referencedVariable);
+								break;
+							case ArrayStyle.STATIC_MEMORY_BLOCK:
+								if (blocks.Count!=0) throw new ParsingError("Can't define a static array in a block.",this);
+								UInt32 arrSize;
+								getConstantValue(adjustedValue,out arrSize);
+								this.appendAfterIndex.Add(referencedVariable,(UInt32)appendAfter.Count);
+								this.arrayReferences.Add(referencedVariable,new List<UInt32>());
+								appendAfter.AddRange(new Byte[arrSize*arrVarTypeByteSize]);
+								break;
+							case ArrayStyle.STACK_ALLOCATION:
+								if (@struct) throw new ParsingError("Can only create static arrays in a struct",this);	
+								break;
+							default: throw new ParsingError("?!",this);
 						}
-						this.addBytes(new Byte[]	{
-						             				0x59,//POP ECX
-						              				0x6A,0,//PUSH 0
-						              				});
-						
-						this.pushValue(adjustedValue); // PUSH ARRAY LENGTH
-						this.callSetArrayValue(this.referencedVariable);
-						this.addBytes(new Byte[]{
-						              				0x6A,4,//PUSH 4
-						              				0x6A//PUSH FOLLOWING BYTE
-						              });
-						this.addByte((Byte)(keywordMgr.getVarTypeByteSize(type)));//THIS BYTE (array member byte size)
-						this.callSetArrayValue(this.referencedVariable);
 					}
 					else {
 						
 						if (adjustedValue.Length<=2||!this.beginsParameters(adjustedValue[1])) throw new ParsingError("Invalid syntax for initializing array by set of values: expected format \"#,(value,value0,value1,...)\"",this);
 						
+						ArrayStyle _style=GetArrayStyle(referencedVariable);
+						//TODO:: Undone needss a switch(_style) (see above switch(_style))
+						
 						List<String>@params=parseParameters(adjustedValue.Substring(2));
+						
 						Int32 bytesToReserve=(Int32)((@params.Count*keywordMgr.getVarTypeByteSize(type))+8),stackSpace=(Int32)(@params.Count*4);
 						if (bytesToReserve>SByte.MaxValue)
 							this.addBytes(new Byte[]{0x68}.Concat(BitConverter.GetBytes(bytesToReserve))); //PUSH DWORD
@@ -2211,7 +2239,6 @@ namespace Sunset {
                 
 				this.defineTimeOrder.Add(arrayName);
 				this.arrays.Add(arrayName,new Tuple<UInt32,String,ArrayStyle,Modifier,UInt32>(this.memAddress+(UInt32)(appendAfter.Count),this.varType,this.style,currentMods,(isPrivate?0:instanceID)));
-				this.appendAfterIndex.Add(arrayName,(UInt32)appendAfter.Count);
 				if (!isPrivate) { 
 					if (inhArrsToDefine.ContainsKey(arrayName)) {
 						Int32 idx=(Int32)this.inhArrsToDefine[arrayName].Item5;
@@ -2230,13 +2257,18 @@ namespace Sunset {
 					}
 				}
 //						this.debugLine(referencedVariable+','+appendAfter.Count.ToString());
-				this.appendAfter.AddRange(new Byte[4]);
-				this.arrayReferences.Add(arrayName,new List<UInt32>());
+				if (style== ArrayStyle.DYNAMIC_MEMORY_HEAP) {
+					this.appendAfterIndex.Add(arrayName,(UInt32)appendAfter.Count);
+					this.appendAfter.AddRange(new Byte[4]);//abc
+					this.arrayReferences.Add(arrayName,new List<UInt32>());
+				}
 	//			this.appendAfter.AddRange(new Byte[keywordMgr.getVarTypeByteSize(this.varType)]);
 			}
 			else {//should be local var
+            	if (style==ArrayStyle.STATIC_MEMORY_BLOCK) throw new ParsingError("Can't have a static array in a block",this);
 				this.pseudoStack.push(new LocalVar(arrayName));
 				this.getCurrentBlock().localVariables.Add(arrayName,vt);
+				this.getCurrentBlock().arrayStyles.Add(arrayName,style);
 				this.lastReferencedVariableIsLocal=true;
 				this.offsetEBPs(4);
 			}
@@ -2553,13 +2585,19 @@ namespace Sunset {
 				
 				String referencedArray=str.Split('[')[0];
 				
-				if (this.arrays.ContainsKey(referencedArray))
+				if (this.arrays.ContainsKey(referencedArray)) {
+					lastChkedArrStyle=this.arrays[referencedArray].Item3;
 					return true;
+				}
 				
-				foreach (Block blc in this.blocks.Keys)
-					foreach (String str0 in blc.localVariables.Keys)
-						if (blc.localVariables[str0].Item1.Item2==VarType.NATIVE_ARRAY)
+				foreach (Block blc in this.blocks.Keys) {
+					foreach (String str0 in blc.localVariables.Keys) {
+						if (blc.localVariables[str0].Item1.Item2==VarType.NATIVE_ARRAY) {
+							lastChkedArrStyle=blc.arrayStyles[str0];
 							return true;
+						}
+					}
+				}
 				
 				throw new ParsingError("Invalid array indexer: Array \""+referencedArray+"\" does not exist",this);
 				
@@ -2599,7 +2637,7 @@ namespace Sunset {
 		/// <param name="indexer">value inside first set of square brackets (not including first and last square brackets)</param>
 		/// <param name="noName">if this is true,array address should be in EAX</param>
 		/// <returns>new status to update</returns>
-		private ParsingStatus indexArray (String arrName,String indexer,Byte recursionDepth=0,Boolean noName=false,UInt32 arrMemSize=0) {
+		private ParsingStatus indexArray (String arrName,String indexer,ArrayStyle arrStyle,Byte recursionDepth=0,Boolean noName=false,UInt32 arrMemSize=0) {
 			
 			if (noName) {
 				if (recursionDepth==0) {
@@ -2635,7 +2673,7 @@ namespace Sunset {
 										Console.WriteLine("indexer0: \""+indexer0+'"');
 										Console.WriteLine("sub: \""+sub+'"');
 										Console.WriteLine("slack: \""+slack+'"');
-										this.indexArray(arrName0,indexer0,0);
+										this.indexArray(arrName0,indexer0,arrStyle,0);
 										
 										this.addBytes(
 											(keywordMgr.getVarTypeByteSize(this.arrays[arrName0].Item2)==1) ?
@@ -2668,7 +2706,8 @@ namespace Sunset {
 							                                                                                                                 	0xF7,0xE1,//MUL ECX
 							                                                                                                                 	0x59,//POP ECX
 							                                                                                                                     }));
-					this.addBytes(new Byte[]{0x83,0xC0,8});//ADD EAX,8
+					if (arrStyle==ArrayStyle.DYNAMIC_MEMORY_HEAP)
+						this.addBytes(new Byte[]{0x83,0xC0,8});//ADD EAX,8
 					if (!noName) {
 						if (addEsiToLocalAddresses) 
 							this.addBytes(new Byte[]{3,0x86}.Concat(BitConverter.GetBytes(this.appendAfterIndex[arrName])));//ADD EAX,VALUE @ [ESI+PTR]
@@ -2693,7 +2732,7 @@ namespace Sunset {
 					arrName0=indexer.Split('[')[0].Replace(" ","");
 					indexer0=(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub;
 					
-					this.indexArray(arrName0,indexer0,(Byte)(recursionDepth+1));
+					this.indexArray(arrName0,indexer0,arrStyle,(Byte)(recursionDepth+1));
 					
 					this.addBytes(
 						(keywordMgr.getVarTypeByteSize(this.arrays[arrName0].Item2)==1) ?
@@ -2735,7 +2774,8 @@ namespace Sunset {
 					else {
 						this.addBytes(new Byte[]{3,0x55,unchecked((Byte)(-(4+(4*recursionDepth))))});//ADD EDX,[EBP+-OFFSET]
 					}
-					this.addBytes(new Byte[]{0x83,0xC2,8});//ADD EDX,8
+					if (arrStyle==ArrayStyle.DYNAMIC_MEMORY_HEAP)
+						this.addBytes(new Byte[]{0x83,0xC2,8});//ADD EDX,8
 					if (recursionDepth!=0)
 						this.addByte(0x92);//XCHG EAX,EDX
 					else
@@ -2753,7 +2793,8 @@ namespace Sunset {
 				Byte arrMemByteSize=(Byte)(arrMemSize==0?(Byte)keywordMgr.getVarTypeByteSize((this.isALocalVar(arrName)?this.getLocalVarHomeBlock(arrName).localVariables[arrName].Item1.Item1:this.arrays[arrName].Item2)):arrMemSize);
 				if (arrMemByteSize!=1)
 					this.addBytes(new Byte[]{0x6B,0xC0,arrMemByteSize});//IMUL EAX BY ARRAY MEMBER BYTE SIZE
-				this.addBytes(new Byte[]{0x83,0xC0,8}); //ADD 8 TO EAX
+				if (arrStyle==ArrayStyle.DYNAMIC_MEMORY_HEAP)
+					this.addBytes(new Byte[]{0x83,0xC0,8}); //ADD 8 TO EAX
 				if (this.isALocalVar(arrName)) { 
 					
 					if (this.getLocalVarHomeBlock(arrName)!=this.getCurrentBlock())
@@ -2809,9 +2850,12 @@ namespace Sunset {
 			//constants:
 			UInt32 _value;
 			Int32 _value0;
-			if (UInt32.TryParse(value,out _value)) {
+			Boolean hexIndicator=value.Last()=='h';
+			if (UInt32.TryParse(value,out _value)||(Char.IsDigit(value[0])&&hexIndicator)) {
 				
 				this.throwIfAddr(gettingAddr,value);
+				if (hexIndicator)
+					_value=Convert.ToUInt32(value.Substring(0,value.Length-1),0x10);
 				
 				String rv;
 				
@@ -2904,7 +2948,7 @@ namespace Sunset {
                 return this.constants[value].Item2;
 
             }
-			else if (@struct)
+			else if (@struct&&style!=ArrayStyle.STATIC_MEMORY_BLOCK)
 				throw new ParsingError("Can only apply constant values to a struct",this);
 			else if (this.isALocalVar(value)) {
 				
@@ -3028,7 +3072,7 @@ namespace Sunset {
 				if (gettingAddr)
 					value='$'+value;
 				
-				return this.parseMath(value,delegate(String str){ if (this.isArrayIndexer(str))this.pushArrValue(str); else this.pushValue(str); },pushValue=>(this.isArrayIndexer(pushValue))?this.pushArrValue(pushValue):this.pushValue(pushValue));
+				return this.parseMath(value,delegate(String str){ if (this.isArrayIndexer(str)){this.tryCheckIfValidArrayIndexer(str);this.pushArrValue(str,lastChkedArrStyle); }else this.pushValue(str); },pushValue=>{if (this.isArrayIndexer(pushValue)){this.tryCheckIfValidArrayIndexer(pushValue);return this.pushArrValue(pushValue,lastChkedArrStyle); }else return this.pushValue(pushValue);});
 				
 			}
 			else if (this.isFuncWithParams(value)) {
@@ -3550,10 +3594,12 @@ namespace Sunset {
 				else if (this.isArrayIndexer(pValue)) {
 
 					String arrName=pValue.Split('[')[0];
-                    throwIfCantAccess(initialClass.arrays[pValue].Item4,pValue,initialClass.path,true);
-                    throwIfStatic(initialClass.arrays[pValue].Item4,pValue);
+					Console.WriteLine("pValue: "+pValue);
+					Console.WriteLine("arrName: "+arrName);
 					if (!(initialClass.arrays.ContainsKey(arrName)))
 						throw new ParsingError("Array does not exist in \""+initialClass.className+"\": \""+arrName+'"',this);
+                    throwIfCantAccess(initialClass.arrays[arrName].Item4,pValue,initialClass.path,true);
+                    throwIfStatic(initialClass.arrays[arrName].Item4,pValue);
 					if (initialClass.arrays[arrName].Item4.HasFlag(Modifier.PRIVATE)||initialClass.parserUsed.@struct) {
 						this.addByte(5);//ADD EAX,FOLLOWING DWORD
 						this.addBytes(BitConverter.GetBytes(initialClass.arrays[arrName].Item1+initialClass.opcodePortionByteSize)); //DWORD HERE
@@ -3569,8 +3615,9 @@ namespace Sunset {
 						
 						
 					}
-					this.addBytes(new Byte[]{0x8B,0}); //MOV EAX,[EAX]
-					return this.pushArrValue(value,gettingAddr,true,this.keywordMgr.getVarTypeByteSize(initialClass.arrays[arrName].Item2));
+                    if (initialClass.arrays[arrName].Item3==ArrayStyle.DYNAMIC_MEMORY_HEAP)
+						this.addBytes(new Byte[]{0x8B,0}); //MOV EAX,[EAX]
+                    return this.pushArrValue(value,initialClass.arrays[arrName].Item3,gettingAddr,true,this.keywordMgr.getVarTypeByteSize(initialClass.arrays[arrName].Item2),local);
 					
 				}
 				else if (initialClass.arrays.ContainsKey(pValue)) {
@@ -3609,9 +3656,7 @@ namespace Sunset {
 			}
 			
 			else if (this.tryCheckIfValidArrayIndexer(value)) { 
-				
-				return this.pushArrValue(value,gettingAddr);
-				
+				return this.pushArrValue(value,lastChkedArrStyle,gettingAddr);
 			}
 			
 			else throw new ParsingError("Invalid value: \""+value+'"',this);
@@ -4481,7 +4526,7 @@ namespace Sunset {
 		}
 		
 		/// <param name="noName">If true, the memory address to the array should be in EAX, and arrMemSize should be set</param>
-		private Tuple<String,VarType> pushArrValue (String value,Boolean gettingAddr=false,Boolean noName=false,UInt32 arrMemSize=0) {
+		private Tuple<String,VarType> pushArrValue (String value,ArrayStyle arrStyle,Boolean gettingAddr=false,Boolean noName=false,UInt32 arrMemSize=0,Boolean originLocal=false) {
 			
 			this.writeStrOpcodes("PAV S");
 			
@@ -4497,10 +4542,19 @@ namespace Sunset {
 			   
 			Console.WriteLine("sub: "+sub+", arrName: "+arrName+", slack: "+slack);
 			Console.WriteLine("------------------------------------------------------------");
-			this.indexArray(arrName,(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub,0,noName,arrMemSize);
+			this.indexArray(arrName,(sub.EndsWith("]"))?String.Concat(sub.Take(sub.Length-1)):sub,arrStyle,0,noName,arrMemSize);
 			
 			UInt32 varTypeByteSize=(arrMemSize!=0?arrMemSize:(this.isALocalVar(arrName))?this.keywordMgr.getVarTypeByteSize(this.getLocalVarHomeBlock(arrName).localVariables[arrName].Item1.Item1):this.keywordMgr.getVarTypeByteSize(this.arrays[arrName].Item2));
-			String varType=(this.isALocalVar(arrName))?this.getLocalVarHomeBlock(arrName).localVariables[arrName].Item1.Item1:this.arrays[arrName].Item2;
+			Console.WriteLine(arrName);
+			String varType;
+			if (hasClassAccessorOutsideParentheses(arrName)) {
+				String[]sp=arrName.Split('.');
+				Boolean imported=isImportedClass(sp[0]);
+				Class pc=imported?getImportedClass(sp[0]):GetClassByName(sp[0],originLocal);
+				varType=(imported)?staticInstances[pc.classID][sp[1]].Item2.Item1:pc.arrays[sp[1]].Item2;
+            	
+			}
+			else varType=(this.isALocalVar(arrName))?this.getLocalVarHomeBlock(arrName).localVariables[arrName].Item1.Item1:this.arrays[arrName].Item2;
 			if (!gettingAddr)
 				this.addBytes((varTypeByteSize==4)?
 				              new Byte[]{0x5B,           //POP EBX
@@ -4520,7 +4574,7 @@ namespace Sunset {
 				
 				if (slack.Any(x=>this.isMathOperator(x))) {
 					
-					this.parseMath(value,delegate(String str){ if (this.isArrayIndexer(str))this.pushArrValue(str); else this.pushValue(str); },pushValue=>(this.isArrayIndexer(pushValue))?this.pushArrValue(pushValue):this.pushValue(pushValue),true);
+					this.parseMath(value,delegate(String str){ if (this.isArrayIndexer(str))this.pushArrValue(str,arrStyle); else this.pushValue(str); },pushValue=>(this.isArrayIndexer(pushValue))?this.pushArrValue(pushValue,arrStyle):this.pushValue(pushValue),true);
 				
 					/*
 					Char[]splitChars;
@@ -4891,6 +4945,7 @@ namespace Sunset {
 					var a=cl.arrays[item];
 					if (a.Item4.HasFlag(Modifier.PRIVATE))
 						this.addBytes(new Byte[]{5}.Concat(BitConverter.GetBytes(cl.arrays[item].Item1+cl.opcodePortionByteSize))); // ADD EAX,DWORD HERE
+					else if (a.Item3!=ArrayStyle.DYNAMIC_MEMORY_HEAP) { break; }
 					else {
 						// push esi
 						// push edx
@@ -5325,6 +5380,18 @@ namespace Sunset {
 
 
         }
+		
+		private ArrayStyle GetArrayStyle (String name) {
+			if (this.arrays.ContainsKey(name))
+				return this.arrays[name].Item3;
+			else {
+				foreach (Block blc in this.blocks.Keys)
+					foreach (String str0 in blc.localVariables.Keys)
+						if (str0.Equals(name)&&blc.localVariables[str0].Item1.Item2==VarType.NATIVE_ARRAY)
+							return blc.arrayStyles[str0];
+				throw new ParsingError("Invalid ArrayStyle (?!)",this);
+			}
+		}
 
         private void throwIfCantAccess (Modifier mods,String instanceName,String classFilePath,Boolean getting) {
 
@@ -5368,6 +5435,7 @@ namespace Sunset {
                     return pc.classes[item].Item4;
                 case VarType.FUNCTION:
                     return pc.functions[item].modifier;
+                case VarType.NATIVE_ARRAY_INDEXER:
                 case VarType.NATIVE_ARRAY:
                     return pc.arrays[item].Item4;
                 case VarType.NATIVE_VARIABLE:

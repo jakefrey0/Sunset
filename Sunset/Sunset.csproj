@@ -63,6 +63,7 @@
     <Compile Include="Block.cs" />
     <Compile Include="Class.cs" />
     <Compile Include="ClassType.cs" />
+    <Compile Include="CompileType.cs" />
     <Compile Include="Executor.cs" />
     <Compile Include="FunctionType.cs" />
     <Compile Include="Keywords\Keyword.cs" />
@@ -97,7 +98,9 @@
     <Compile Include="Keywords\KWNew.cs" />
     <Compile Include="Keywords\KWNofunc.cs" />
     <Compile Include="Keywords\KWReturn.cs" />
+    <Compile Include="Keywords\KWSetOrigin.cs" />
     <Compile Include="Keywords\KWSetProcessHeapVar.cs" />
+    <Compile Include="Keywords\KWSetStyle.cs" />
     <Compile Include="Keywords\KWShort.cs" />
     <Compile Include="Keywords\KWSizeOf.cs" />
     <Compile Include="Keywords\KWString.cs" />
