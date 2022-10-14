@@ -1,0 +1,9 @@
+STRUCT
+
+public shr sin_family ; temporary until structs can be made of shorts and etc (it's on my todo list) then I will change it to AddressFamily
+; For now etc.sin_family becomes cast(AddressFamily.AF_INET,shr) can be done for example
+
+public shr sin_port
+public int sin_addr
+
+int resi int resi0

@@ -1,1 +1,3 @@
-exec & wine ProgrammingLanguageTutorialIdea.exe "/home/elite/Documents/GitHub/AKWACJ/AKWACJ.sunproj"
+exec & wine Sunset "/home/boss/NetPong/Server/Server.sunproj"
+exec & wine Sunset "/home/boss/NetPong/Player/Player.sunproj"
+exec & wine "/home/boss/NetPong/Server/bin/Server.exe"

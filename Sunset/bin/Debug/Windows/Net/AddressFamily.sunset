@@ -1,0 +1,10 @@
+ENUM
+
+UNSPEC,
+INET becomes 2,
+IPX becomes 6,
+APPLETALK becomes 16,
+NETBIOS becomes 17,
+INET6 becomes 23,
+IRDA becomes 26,
+BTH becomes 32

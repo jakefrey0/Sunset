@@ -29,7 +29,7 @@ namespace Sunset {
         public List<Class>inheritedClasses;
 		
 		public Class (String className,String path,UInt32 byteSize,ClassType classType,Parser parserUsed,UInt32 opcodePortionByteSize,UInt32 skeletonIndex,UInt32 classAppendAfterCount,String classID) {
-
+			
 			this.bytesToReserve=parserUsed.byteCountBeforeDataSect;
 			this.className=className;
 			this.byteSize=byteSize;

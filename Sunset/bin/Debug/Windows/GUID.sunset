@@ -1,0 +1,8 @@
+STRUCT
+public int Data1
+public shr Data2
+public shr Data3
+; setStyle(Array,Static)
+; public byte# Data4 becomes #8
+public int Data4
+public int Data5

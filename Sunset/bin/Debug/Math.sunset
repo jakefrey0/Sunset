@@ -1,0 +1,8 @@
+public static func(int num) absolute int {
+	
+	if (num,<,0) {
+		retn(num*(-1))
+	}
+	retn(num)
+	
+}

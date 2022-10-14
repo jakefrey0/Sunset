@@ -17,11 +17,12 @@ namespace Sunset {
 	
 	internal class Program {
 		
+		public static CompileType compileType=CompileType.WINDOWS;
+
 		[DllImport("ImageHlp.dll")]
-		static extern private UInt32 MapFileAndCheckSum (String Filename,out UInt32 HeaderSum,out UInt32 CheckSum);
+		private static extern UInt32 MapFileAndCheckSum (String Filename,out UInt32 HeaderSum,out UInt32 CheckSum);
 		private static TextWriter tw=Console.Out;
 		private static Boolean silenced=false,showStackTrace=false;
-		private static CompileType compileType=CompileType.WINDOWS;
 		
 		public static void Main (String[] args) {
 

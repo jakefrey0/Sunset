@@ -36,4 +36,4 @@ public func(PaintMsg pm) onPaint {
 
 }
 
-public func(MouseEventArgs e) onClick { crash }
+public func(MouseEventArgs e) onClick {  }

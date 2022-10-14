@@ -1,0 +1,45 @@
+import(Windows/PaintMsg)
+import(Windows/Drawing/POINT)
+import(Windows/Components/Component)
+import(Windows/Drawing/SIZE)
+import(String)
+import(Windows/MouseEventArgs)
+import(Event<MouseEventArgs>)
+acknowledge HBRUSH as PTR
+acknowledge HDC as PTR
+acknowledge HWND as PTR
+dllref(Gdi32,HDC,int,int,POINT) MoveToEx bool
+dllref(Gdi32,HDC,int,int) LineTo bool
+dllref(Gdi32,HDC,str,int,SIZE) GetTextExtentPoint32A bool
+dllref(User32,HWND) GetDC HDC
+dllref(Gdi32,HDC,int,int,str,int) TextOutA bool
+
+INHERIT(Component)
+public int x
+public int y
+public int width
+public int height
+public str text
+public Event<MouseEventArgs> onBtnClick becomes new(Event<MouseEventArgs>)
+
+public func(PaintMsg pm) onPaint {
+	
+	MoveToEx(pm.hdc,x,y,null)
+	LineTo(pm.hdc,x+width,y)
+	LineTo(pm.hdc,x+width,y+height)
+	LineTo(pm.hdc,x,y+height)
+	LineTo(pm.hdc,x,y)
+	
+	SIZE textSize becomes new(SIZE)
+	int strlen becomes String.lengthOf(text)
+	if (GetTextExtentPoint32A(pm.hdc,text,strlen,textSize)) {
+		while (textSize.cx,>=,width) {
+			strlen becomes strlen-1
+			GetTextExtentPoint32A(pm.hdc,text,strlen,textSize)
+		}
+		TextOutA(pm.hdc,x+1,y+1,text,strlen)
+	}
+	
+}
+
+public func(MouseEventArgs e) onClick { onBtnClick.raise(e) }

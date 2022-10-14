@@ -1,0 +1,23 @@
+STRUCT
+import(Windows/GUID)
+import(Windows/Net/WSAPROTOCOLCHAIN)
+public int dwServiceFlags1
+public int dwServiceFlags2
+public int dwServiceFlags3
+public int dwServiceFlags4
+public int dwProviderFlags
+public GUID ProviderId
+public int dwCatalogEntryId
+public WSAPROTOCOLCHAIN ProtocolChain
+public int iVersion
+public int iAddressFamily
+public int iMaxSockAddr
+public int iMinSockAddr
+public int iSocketType
+public int iProtocol
+public int iProtocolMaxOffset
+public int iNetworkByteOrder
+public int iSecurityScheme
+public int dwMessageSize
+public int dwProviderReserved
+public byte# szProtocol

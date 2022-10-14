@@ -177,7 +177,7 @@ namespace Sunset {
 		private UInt32 freeHeapsMemAddr,esiFuncVarIndex=0;
 		private const UInt32 tableAddrIndexConst=5,appendAfterIndexConst=10;
 		private Boolean attemptingClassAccess=false,gettingClassItem=false,clearNextPvOrigin=false;
-         private String constantBeingSet=null,ID;
+		private String constantBeingSet=null,ID;
 		
 		private const String KERNEL32="KERNEL32.DLL";
 		private readonly Char[] mathOperators=new []{'+','-','*','/','%'};
@@ -190,7 +190,7 @@ namespace Sunset {
 			memAddress=winApp?0x00401000:(UInt32)0;
 			startingMemAddr=memAddress;
 			keywordMgr=new KeywordMgr(this);
-			style=winApp?ArrayStyle.DYNAMIC_MEMORY_HEAP:ArrayStyle.STATIC_MEMORY_BLOCK;
+			style=(Program.compileType==CompileType.WINDOWS)?ArrayStyle.DYNAMIC_MEMORY_HEAP:ArrayStyle.STATIC_MEMORY_BLOCK;
 			this.winApp=winApp;
 			toImport=new Dictionary<String,List<String>>();
 			this.referencedFuncPositions=new Dictionary<String,List<OpcodeIndexReference>>();
@@ -781,12 +781,12 @@ namespace Sunset {
 			
 			Console.WriteLine("Compiling: "+this.parserName+"\nOpcodes: "+opcodes.Count.ToString()+"\nAppendAfter: "+appendAfter.Count.ToString());
 			
-			if (!@struct&&winApp) {
+			if (!@struct&&!@enum) {
 				
 				this.addBytes(new Byte[]{0x6A,0}); //PUSH 0
 				freeHeapsMemAddr=memAddress;
 				this.freeHeaps();
-				this.addByte(0x58); //POP  to set the exit code (return value) of process (HACK:: NOTICE::return value is an UNSIGNED value)
+				this.addByte(0x58); //POP  to set the exit code (return value) of process, return value is an unsigned value
 				this.addByte(0xC3); //Add RETN call to end of our exe, so no matter what happens in terms of the source, it should not be a blank application & will exit
 			}
 			
@@ -946,7 +946,7 @@ namespace Sunset {
 			searchingFunctionReturnType=false;
 			
 			Console.WriteLine("Got name: \""+name+'"');
-			
+
 			if (@enum) {
 				Console.WriteLine("Current enum set:\n");
 				foreach (KeyValuePair<String,Tuple<UInt32,Tuple<String,VarType>,Modifier>>kvp in constants) {
@@ -1554,6 +1554,7 @@ namespace Sunset {
 			String type;
             Modifier mods;
             Class cl=null;
+            
 			if (this.referencedVariableIsFromClass) {
 
                 cl=getOriginFinalClass(this.lastReferencedClassInstance,referencedVariableIsLocal);
@@ -2259,7 +2260,7 @@ namespace Sunset {
 //						this.debugLine(referencedVariable+','+appendAfter.Count.ToString());
 				if (style== ArrayStyle.DYNAMIC_MEMORY_HEAP) {
 					this.appendAfterIndex.Add(arrayName,(UInt32)appendAfter.Count);
-					this.appendAfter.AddRange(new Byte[4]);//abc
+					this.appendAfter.AddRange(new Byte[4]);
 					this.arrayReferences.Add(arrayName,new List<UInt32>());
 				}
 	//			this.appendAfter.AddRange(new Byte[keywordMgr.getVarTypeByteSize(this.varType)]);
@@ -2611,9 +2612,6 @@ namespace Sunset {
 			
 			//HACK:: check var type
 			
-			foreach (String str in keywordMgr.getKeywords().Select(x=>x.name))
-				if (str==name) return true;
-			
 			return this.arrays.ContainsKey(name)        ||
 				this.variables.ContainsKey(name)        ||
 				name==KWBoolean.constFalse              ||
@@ -2626,7 +2624,8 @@ namespace Sunset {
 				name==Parser.THIS_STR                   ||
                 staticInstances[ID].ContainsKey(name)   ||
                 this.labels.ContainsKey(name)           ||
-				this.constants.ContainsKey(name)		 ;
+				this.constants.ContainsKey(name)		||
+				keywordMgr.getKeywords().Select(x=>x.name).Where(x=>x==name).Count()!=0;
 			
 		}
 		
@@ -4753,13 +4752,21 @@ namespace Sunset {
 					              	0xF7,0x24,0x24, //MUL [ESP]
 					              	0x89,4,0x24     //MOV [ESP],EAX
 					              });
-				else if (this.isDivision(op)||this.isModulus(op))
+				else if (this.isModulus(op))
 					this.addBytes(new Byte[]{
 					              	0x31,0xD2, // XOR EDX,EDX
 					              	0x87,4,0x24, //XCHG [ESP],EAX
 					              	0xF7,0x34,0x24, //DIV [ESP+4]
-					              	0x89,(Byte)((this.isDivision(op))?4:0x14),0x24 // MOV [ESP],EAX || MOV [ESP],EDX
+					              	0x89,0x14,0x24 // MOV [ESP],EDX
 					              });
+				else if (this.isDivision(op))
+					this.addBytes(new Byte[]{
+						0x31,0xD2, // XOR EDX,EDX
+						0x87,4,0x24, //XCHG [ESP],E
+						0x99, // CDQ
+						0xF7,0x3C,0x24, //IDIV [ESP+4]
+						0x89,4,0x24 // MOV [ESP],EAX 
+					});
 				else
 					throw new ParsingError("Unexpected math operator \""+op+"\" (?!)",this);
 				
@@ -4887,8 +4894,9 @@ namespace Sunset {
             }
             // Not Static:
             switch (vt) {
-		    		
+	            
 				case VarType.NATIVE_VARIABLE:
+					
             		var v=cl.variables[item];
             		if (v.Item3.HasFlag(Modifier.PRIVATE)||cl.parserUsed.@struct)
             			this.addBytes(new Byte[]{5}.Concat(BitConverter.GetBytes(v.Item1+cl.opcodePortionByteSize))); //ADD EAX,DWORD HERE
@@ -4905,7 +4913,8 @@ namespace Sunset {
             			
             		}
             		break;
-					
+				
+				case VarType.ENUM:
 				case VarType.CLASS:
             		var c=cl.classes[item];
             		if (c.Item4.HasFlag(Modifier.PRIVATE)||cl.parserUsed.@struct)
@@ -4959,7 +4968,6 @@ namespace Sunset {
 					}
 					break;
 					
-				case VarType.ENUM:
 				default:
 					throw new ParsingError("Invalid VarType (?!) ("+vt.ToString()+')',this);
 					
@@ -5452,17 +5460,47 @@ namespace Sunset {
             //constants:
             UInt32 _value;
             Int32 _value0;
-            if (UInt32.TryParse(value,out _value)) {
-                String rv;
-                constValue=_value;
-                if (_value<=SByte.MaxValue)
-                    return new Tuple<String,VarType>(KWByte.constName,VarType.NATIVE_VARIABLE);
-                else if (_value<=UInt16.MaxValue)
-                    rv=KWShort.constName;
-                else rv=KWInteger.constName;
-                
-                return new Tuple<String,VarType>(rv,VarType.NATIVE_VARIABLE);
-                
+            Boolean hexIndicator=value.Last()=='h';
+            if (UInt32.TryParse(value,out _value)||(Char.IsDigit(value[0])&&hexIndicator)) {
+				
+	            if (hexIndicator)
+		            _value=Convert.ToUInt32(value.Substring(0,value.Length-1),0x10);
+				
+	            String rv;
+	            constValue=_value;
+				
+	            if (_value<=SByte.MaxValue) {
+					
+		            if (@struct)
+			            this.appendAfter[(Int32)(this.variables[this.referencedVariable].Item1)]=(Byte)(_value);
+		            else
+			            this.addBytes(new Byte[]{0x6A,(Byte)(_value)});//PUSH BYTE _value
+		            return new Tuple<String,VarType>(KWByte.constName,VarType.NATIVE_VARIABLE);
+					
+	            }
+	            else if (_value<=UInt16.MaxValue)
+		            rv=KWShort.constName;
+	            else rv=KWInteger.constName;
+				
+	            //Words & Dwords use the same push opcode
+				
+	            if (@struct) {
+					
+		            UInt32 sz=keywordMgr.getVarTypeByteSize(rv),i=0;
+		            Byte[]bytes=BitConverter.GetBytes(_value);
+		            while (i!=sz) {
+						
+			            this.appendAfter[(Int32)(i+this.variables[this.referencedVariable].Item1)]=bytes[i];
+			            ++i;
+						
+		            }
+					
+	            }
+	            else
+		            this.addBytes(new Byte[]{0x68}.Concat(BitConverter.GetBytes(_value)));
+				
+	            return new Tuple<String,VarType>(rv,VarType.NATIVE_VARIABLE);
+				
             }
             else if (Int32.TryParse(value,out _value0)) {
                 

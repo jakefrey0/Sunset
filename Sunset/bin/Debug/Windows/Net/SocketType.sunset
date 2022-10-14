@@ -1,0 +1,7 @@
+ENUM
+
+STREAM becomes 1,
+DGRAM,
+RAW,
+RDM,
+SEQPACKET

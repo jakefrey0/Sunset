@@ -46,6 +46,7 @@ import(Windows/Components/ProgressBar)
 import(Windows/PaintMsg)
 import(List<Component>)
 import(Windows/MessageBox)
+import(ASCIIKey)
 
 dllref(Kernel32,str) GetModuleHandleA int
 dllref(User32,int) GetSysColorBrush HBRUSH
@@ -150,6 +151,7 @@ func(HWND hwnd,int uMsg,int wParam,int lParam) wndProc int {
 		RECT rc becomes new(RECT)
 		HDC hdc becomes BeginPaint(hwnd,pstrc)
 		GetClientRect(hwnd,rc)
+		
 		int maxBottom becomes rc.bottom
 		FillRect(hdc,rc,brushHandle)
 		SetDCPenColor(hdc,RGBref)
@@ -199,7 +201,7 @@ func(HWND hwnd,int uMsg,int wParam,int lParam) wndProc int {
 	if (uMsg,=,WM_KEYDOWN) {
 		
 		KeyEventArgs args becomes new(KeyEventArgs)
-		args.keyCode becomes wParam
+		args.key becomes cast(wParam,ASCIIKey)
 		args.flags becomes lParam
 		onKeyDown.raise(args)
 		
@@ -208,7 +210,7 @@ func(HWND hwnd,int uMsg,int wParam,int lParam) wndProc int {
 	if (uMsg,=,WM_KEYUP) {
 		
 		KeyEventArgs args becomes new(KeyEventArgs)
-		args.keyCode becomes wParam
+		args.key becomes cast(wParam,ASCIIKey)
 		args.flags becomes lParam
 		onKeyUp.raise(args)
 		

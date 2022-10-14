@@ -1,0 +1,10 @@
+ENUM
+
+UNSPECIFIED,
+ICMP,
+IGMP,
+RFCOMM,
+TCP becomes 6,
+UDP becomes 17,
+ICMPV6 becomes 58,
+RM becomes 113

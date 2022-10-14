@@ -1,0 +1,6 @@
+STRUCT
+public str h_name
+public str# h_aliases
+shr h_addrtype
+shr h_length
+str# h_addr_list

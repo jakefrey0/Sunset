@@ -1,3 +1,4 @@
 STRUCT
-public int keyCode
+import(ASCIIKey)
+public ASCIIKey key
 public int flags

@@ -1,0 +1,64 @@
+import(Windows/Net/AddressFamily)
+import(Windows/Net/SocketType)
+import(Windows/Net/IpProtocol)
+import(Windows/Net/WSADATA)
+import(Windows/MessageBox)
+import(Windows/Net/SOCKADDR_IN)
+import(Windows/Net/WSAPROTOCOL_INFOA)
+import(String)
+dllref(Ws2_32,AddressFamily,SocketType,IpProtocol) socket int
+dllref(Ws2_32) WSAGetLastError int
+dllref(Ws2_32,shr,WSADATA) WSAStartup int
+dllref(Ws2_32,int) closesocket int
+dllref(Ws2_32,int,byte#,int,int,SOCKADDR_IN,int) sendto int
+dllref(Ws2_32,str,int,WSAPROTOCOL_INFOA,SOCKADDR_IN,PTR) WSAStringToAddressA int
+dllref(Ws2_32,int,byte#,int,int,SOCKADDR_IN,PTR) recvfrom int
+
+pullable int sockDesc
+pullable int lastError becomes 0
+
+private SOCKADDR_IN serverAddr
+
+public func(byte# data,int dataLen) send bool {
+	
+	sendto(sockDesc,data,dataLen+8,0,serverAddr,Bsizeof(SOCKADDR_IN))
+	
+}
+
+public func close int {
+	sockDesc becomes 0
+	retn(closesocket(sockDesc))
+}
+
+public func getResponse byte# {
+	
+	byte# buffer becomes #1024
+	int ln becomes Bsizeof(SOCKADDR_IN)
+	int n becomes recvfrom(sockDesc,buffer,1024,0,serverAddr,$ln)
+	retn(buffer)
+	
+}
+
+constructor(str ip,shr port) {
+
+	; Initialize winsock
+	; https://learn.microsoft.com/en-us/windows/win32/winsock/initializing-winsock
+	WSADATA wd becomes new(WSADATA)
+	int res becomes WSAStartup(0202,wd)
+	if (res,=/=,0) { lastError becomes res }
+	
+	sockDesc becomes socket(AddressFamily.INET,SocketType.DGRAM,IpProtocol.UDP)
+	if (sockDesc,<,0) {
+		; Error (+ Invalid socket, no point continuing)
+		lastError becomes WSAGetLastError
+	}
+	else {
+		; Socket OK	
+		serverAddr becomes new(SOCKADDR_IN)
+		int len becomes Bsizeof(SOCKADDR_IN)
+		WSAStringToAddressA(ip,AddressFamily.INET,null,serverAddr,$len)
+		serverAddr.sin_family becomes cast(AddressFamily.INET,shr)
+		serverAddr.sin_port becomes port
+	}
+
+}

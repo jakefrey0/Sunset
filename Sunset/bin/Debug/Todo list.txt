@@ -1,11 +1,11 @@
 Current:
 
- - Array Styles: static, stack, heap. For static make it so the length has to be set immediately or throw error. The length also has to be constant and it can't be a localvar. Static arrays shouldn't have the 2 dwords behind it in the memory block that indicate the length and var type byte size.
- - Enum
+ - dowhile {...} (like do{...}while(...))
  - free array heaps on block end (when the block they were defined in closes) or if they weren't defined in a block, on class end
  - blogic (pb)
  - for loops - Set the parser to parse the first parameter normally but set the block to the for block
- - anonymous functions
+ - or keyword (See bottom of doc)
+ - fix the issue where if a class gets too big (byte size) there is a crash
  
   ~~~
 TODO/FIXME :: in solution
@@ -21,3 +21,19 @@ STANDALONE LIBS, ALLOW OS TO BE MADE ENTIRELY USING SUNSET, (using arraystyle.st
    - Only one class reference block should be made per compilation, so if it already exists from a previous Parser, don't make a new one, instead reference the initial one
    - Let enums be of different types other than native var int (i.e add syntax ENUM(shr) and there can be shr enums like in C# public enum yatta : UInt16 { ... })
    - magic #'s, neural network, creative ways all to give unique performance !
+   
+   
+; or keyword: (abs is a synonym for absolute without making a new func in memory)   
+public static func(int num) absolute or abs int {
+
+	if (num,<,0) {
+		retn(num*(-1))
+	}
+	retn(num)
+
+}
+
+; It can also be done like this:
+func test or test0 or test1 {
+
+}
