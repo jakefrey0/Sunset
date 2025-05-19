@@ -19,10 +19,13 @@
 ## Example Code
 
 ```sunset
-let count = 5;
-while (count > 0) {
-    print(count);
-    count = count - 1;
+public static func(int num) absolute int {
+	
+	if (num,<,0) {
+		retn(num*(-1))
+	}
+	retn(num)
+	
 }
 ```
 
