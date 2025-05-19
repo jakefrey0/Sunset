@@ -31,7 +31,7 @@ To explore the Sunset programming language:
 
 4. **Write and Compile Sunset Code**:
 
-   Create your own `.sunset` files and use the compiler to generate standalone executables.
+   Create your own `.sunset` files and use the compiler to generate standalone executables. In command line you would run `sunset main_file_path.sunset`
 
 ## Syntax Highlighting
 
