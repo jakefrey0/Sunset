@@ -7,7 +7,7 @@
 ## Features
 
 - **Self-Written Compiler and Parser**: Built entirely in C#, Sunset tokenizes and parses source code without external libraries. It compiles to native assembly and produces runnable `.exe` files.
-- **Turing-Complete Language**: Supports conditionals, loops, variables, arrays, structs, functions, and more.
+- **Turing-Complete Language**: Sunset can be rewritten in Sunset and the libraries are written in Sunset
 - **Standalone Executable Generation**: Sunset can compile your `.sunset` files into native Windows executables — no runtime needed.
 - **Cross-Platform Design**: Designed with cross-platform compatibility in mind; current builds and testing focused on Windows.
 - **Self-Implemented Standard Library**: Sunset's standard functions are written in Sunset itself, proving the language is expressive enough to support real-world usage.
